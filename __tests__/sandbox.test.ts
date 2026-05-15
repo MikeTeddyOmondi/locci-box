@@ -154,7 +154,7 @@ describe("Sandbox API", () => {
     it("should return metrics with admin key", async () => {
       const response = await fetch("http://localhost:5757/api/metrics", {
         headers: {
-          Authorization: "Bearer admin_your_secret_key_here",
+          Authorization: "Bearer admin-secret-key",
         },
       });
 

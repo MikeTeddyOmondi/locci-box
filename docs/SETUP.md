@@ -39,15 +39,15 @@ MCP_ENABLED=true
 npm run dev
 ```
 
-The server will start on `http://localhost:3000`
+The server will start on `http://localhost:5757`
 
 You should see output like:
 
 ```
 [INFO] Locci Box API server started
 [INFO] Default API key for testing: sk_test_default_key_12345
-[INFO] Health check: http://localhost:3000/health
-[INFO] API endpoint: http://localhost:3000/api/sandbox/run
+[INFO] Health check: http://localhost:5757/health
+[INFO] API endpoint: http://localhost:5757/api/sandbox/run
 ```
 
 ### 4. Test the API
@@ -55,13 +55,13 @@ You should see output like:
 #### Health Check
 
 ```bash
-curl http://localhost:3000/health
+curl http://localhost:5757/health
 ```
 
 #### Run Python Code
 
 ```bash
-curl -X POST http://localhost:3000/api/sandbox/run \
+curl -X POST http://localhost:5757/api/sandbox/run \
   -H "Authorization: Bearer sk_test_default_key_12345" \
   -H "Content-Type: application/json" \
   -d '{
@@ -74,7 +74,7 @@ curl -X POST http://localhost:3000/api/sandbox/run \
 #### Run Node.js Code
 
 ```bash
-curl -X POST http://localhost:3000/api/sandbox/run \
+curl -X POST http://localhost:5757/api/sandbox/run \
   -H "Authorization: Bearer sk_test_default_key_12345" \
   -H "Content-Type: application/json" \
   -d '{
@@ -87,7 +87,7 @@ curl -X POST http://localhost:3000/api/sandbox/run \
 #### Check Metrics (Admin)
 
 ```bash
-curl http://localhost:3000/api/metrics \
+curl http://localhost:5757/api/metrics \
   -H "Authorization: Bearer admin_your_secret_key_here"
 ```
 
@@ -204,7 +204,7 @@ npm install
 
 ### Port Already in Use
 
-If port 3000 is already in use, change it in `.env`:
+If port 5757 is already in use, change it in `.env`:
 
 ```env
 PORT=3001

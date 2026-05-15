@@ -27,10 +27,10 @@ Open a new terminal and run:
 
 ```bash
 # Test health check
-curl http://localhost:3000/health
+curl http://localhost:5757/health
 
 # Run Python code
-curl -X POST http://localhost:3000/api/sandbox/run \
+curl -X POST http://localhost:5757/api/sandbox/run \
   -H "Authorization: Bearer sk_test_default_key_12345" \
   -H "Content-Type: application/json" \
   -d '{
@@ -62,7 +62,7 @@ Your Locci Box API is now running locally.
 ### What's Next?
 
 - **Try other languages**: Change `"language"` to `"node"`, `"bash"`, or `"ruby"`
-- **Check metrics**: `curl http://localhost:3000/api/metrics -H "Authorization: Bearer admin_your_secret_key_here"`
+- **Check metrics**: `curl http://localhost:5757/api/metrics -H "Authorization: Bearer admin_your_secret_key_here"`
 - **Read full docs**: See [README.md](README.md) for complete API reference
 - **Set up MCP**: See [SETUP.md](SETUP.md) for MCP server configuration
 

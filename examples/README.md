@@ -16,7 +16,7 @@ This directory contains example code snippets for testing Locci Box with differe
 #### Python Example
 
 ```bash
-curl -X POST http://localhost:3000/api/sandbox/run \
+curl -X POST http://localhost:5757/api/sandbox/run \
   -H "Authorization: Bearer sk_test_default_key_12345" \
   -H "Content-Type: application/json" \
   -d @- << 'EOF'
@@ -30,7 +30,7 @@ EOF
 #### Node.js Example
 
 ```bash
-curl -X POST http://localhost:3000/api/sandbox/run \
+curl -X POST http://localhost:5757/api/sandbox/run \
   -H "Authorization: Bearer sk_test_default_key_12345" \
   -H "Content-Type: application/json" \
   -d @- << 'EOF'
@@ -44,7 +44,7 @@ EOF
 #### Bash Example
 
 ```bash
-curl -X POST http://localhost:3000/api/sandbox/run \
+curl -X POST http://localhost:5757/api/sandbox/run \
   -H "Authorization: Bearer sk_test_default_key_12345" \
   -H "Content-Type: application/json" \
   -d @- << 'EOF'
@@ -58,7 +58,7 @@ EOF
 #### Ruby Example
 
 ```bash
-curl -X POST http://localhost:3000/api/sandbox/run \
+curl -X POST http://localhost:5757/api/sandbox/run \
   -H "Authorization: Bearer sk_test_default_key_12345" \
   -H "Content-Type: application/json" \
   -d @- << 'EOF'
@@ -113,7 +113,7 @@ This will test:
 ### Test with Timeout
 
 ```bash
-curl -X POST http://localhost:3000/api/sandbox/run \
+curl -X POST http://localhost:5757/api/sandbox/run \
   -H "Authorization: Bearer sk_test_default_key_12345" \
   -H "Content-Type: application/json" \
   -d '{
@@ -126,7 +126,7 @@ curl -X POST http://localhost:3000/api/sandbox/run \
 ### Test Error Handling
 
 ```bash
-curl -X POST http://localhost:3000/api/sandbox/run \
+curl -X POST http://localhost:5757/api/sandbox/run \
   -H "Authorization: Bearer sk_test_default_key_12345" \
   -H "Content-Type: application/json" \
   -d '{
@@ -138,7 +138,7 @@ curl -X POST http://localhost:3000/api/sandbox/run \
 ### Test with Environment Variables (Future Feature)
 
 ```bash
-curl -X POST http://localhost:3000/api/sandbox/run \
+curl -X POST http://localhost:5757/api/sandbox/run \
   -H "Authorization: Bearer sk_test_default_key_12345" \
   -H "Content-Type: application/json" \
   -d '{

@@ -87,7 +87,7 @@ Scaffold the full CLI structure:
 
 2. cli/src/commands/init.ts
    - `loccibox init` — interactive Clack wizard
-   - Asks: API base URL (default: http://localhost:3000)
+   - Asks: API base URL (default: http://localhost:5757)
    - Asks: API Key (masked input)
    - Saves to ~/.loccibox/config.json
    - Shows a success confirmation with Clack's outro()
@@ -151,7 +151,7 @@ wizard using Clack. It should:
    "Welcome to Locci Box — let's get you set up"
 
 2. Use text() to ask for the API base URL
-   - Default value: http://localhost:3000
+   - Default value: http://localhost:5757
    - Validate it starts with http:// or https://
 
 3. Use password() to ask for the API key

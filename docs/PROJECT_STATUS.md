@@ -124,8 +124,8 @@ Expected output:
 ```
 [INFO] Locci Box API server started
 [INFO] Default API key for testing: sk_test_default_key_12345
-[INFO] Health check: http://localhost:3000/health
-[INFO] API endpoint: http://localhost:3000/api/sandbox/run
+[INFO] Health check: http://localhost:5757/health
+[INFO] API endpoint: http://localhost:5757/api/sandbox/run
 ```
 
 ### 3. Test the API
@@ -133,13 +133,13 @@ Expected output:
 #### Quick Test
 
 ```bash
-curl http://localhost:3000/health
+curl http://localhost:5757/health
 ```
 
 #### Run Python Code
 
 ```bash
-curl -X POST http://localhost:3000/api/sandbox/run \
+curl -X POST http://localhost:5757/api/sandbox/run \
   -H "Authorization: Bearer sk_test_default_key_12345" \
   -H "Content-Type: application/json" \
   -d '{
@@ -343,6 +343,6 @@ Your Locci Box project is complete and ready for:
 npm install && npm run dev
 ```
 
-Then visit: http://localhost:3000/health
+Then visit: http://localhost:5757/health
 
 Good luck with your hackathon! 🚀

@@ -5,7 +5,7 @@ Complete API testing collection with curl commands for all endpoints.
 ## Base Configuration
 
 ```bash
-export API_URL="http://localhost:3000"
+export API_URL="http://localhost:5757"
 export API_KEY="sk_test_default_key_12345"
 export ADMIN_KEY="admin_your_secret_key_here"
 ```
@@ -466,7 +466,7 @@ Import this JSON into Postman:
   "variable": [
     {
       "key": "base_url",
-      "value": "http://localhost:3000"
+      "value": "http://localhost:5757"
     },
     {
       "key": "api_key",

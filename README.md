@@ -46,7 +46,7 @@ cp .env.example .env
 npm run dev
 ```
 
-The API will be available at `http://localhost:3000`
+The API will be available at `http://localhost:5757`
 
 ## API Reference
 
@@ -69,7 +69,7 @@ Execute code in an isolated microVM.
 **Request:**
 
 ```bash
-curl -X POST http://localhost:3000/api/sandbox/run \
+curl -X POST http://localhost:5757/api/sandbox/run \
   -H "Authorization: Bearer sk_test_default_key_12345" \
   -H "Content-Type: application/json" \
   -d '{
@@ -112,7 +112,7 @@ Check the status of a running sandbox.
 **Request:**
 
 ```bash
-curl http://localhost:3000/api/sandbox/sbox_abc123xyz/status \
+curl http://localhost:5757/api/sandbox/sbox_abc123xyz/status \
   -H "Authorization: Bearer sk_test_default_key_12345"
 ```
 
@@ -141,7 +141,7 @@ Stop and destroy a running sandbox.
 **Request:**
 
 ```bash
-curl -X DELETE http://localhost:3000/api/sandbox/sbox_abc123xyz \
+curl -X DELETE http://localhost:5757/api/sandbox/sbox_abc123xyz \
   -H "Authorization: Bearer sk_test_default_key_12345"
 ```
 
@@ -167,7 +167,7 @@ Admin-only endpoint for system-wide metrics.
 **Request:**
 
 ```bash
-curl http://localhost:3000/api/metrics \
+curl http://localhost:5757/api/metrics \
   -H "Authorization: Bearer admin_your_secret_key_here"
 ```
 
@@ -206,7 +206,7 @@ Health check endpoint (no authentication required).
 **Request:**
 
 ```bash
-curl http://localhost:3000/health
+curl http://localhost:5757/health
 ```
 
 **Response:**
@@ -251,7 +251,7 @@ All tools require an `api_key` parameter for authentication.
 
 ```env
 # Server Configuration
-PORT=3000
+PORT=5757
 NODE_ENV=development
 
 # Admin key for /metrics endpoint

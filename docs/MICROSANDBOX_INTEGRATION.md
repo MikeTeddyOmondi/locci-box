@@ -248,7 +248,7 @@ npm run dev
 ### 2. Test Python Execution
 
 ```bash
-curl -X POST http://localhost:3000/api/sandbox/run \
+curl -X POST http://localhost:5757/api/sandbox/run \
   -H "Authorization: Bearer sk_test_default_key_12345" \
   -H "Content-Type: application/json" \
   -d '{

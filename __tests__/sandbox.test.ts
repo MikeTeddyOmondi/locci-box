@@ -12,7 +12,7 @@ describe("Sandbox API", () => {
 
   describe("POST /api/sandbox/run", () => {
     it("should execute Python code successfully", async () => {
-      const response = await fetch("http://localhost:3000/api/sandbox/run", {
+      const response = await fetch("http://localhost:5757/api/sandbox/run", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${testApiKey}`,
@@ -37,7 +37,7 @@ describe("Sandbox API", () => {
     });
 
     it("should execute Node.js code successfully", async () => {
-      const response = await fetch("http://localhost:3000/api/sandbox/run", {
+      const response = await fetch("http://localhost:5757/api/sandbox/run", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${testApiKey}`,
@@ -57,7 +57,7 @@ describe("Sandbox API", () => {
     });
 
     it("should reject invalid API key", async () => {
-      const response = await fetch("http://localhost:3000/api/sandbox/run", {
+      const response = await fetch("http://localhost:5757/api/sandbox/run", {
         method: "POST",
         headers: {
           Authorization: "Bearer invalid_key",
@@ -73,7 +73,7 @@ describe("Sandbox API", () => {
     });
 
     it("should reject missing authorization header", async () => {
-      const response = await fetch("http://localhost:3000/api/sandbox/run", {
+      const response = await fetch("http://localhost:5757/api/sandbox/run", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -88,7 +88,7 @@ describe("Sandbox API", () => {
     });
 
     it("should reject invalid language", async () => {
-      const response = await fetch("http://localhost:3000/api/sandbox/run", {
+      const response = await fetch("http://localhost:5757/api/sandbox/run", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${testApiKey}`,
@@ -104,7 +104,7 @@ describe("Sandbox API", () => {
     });
 
     it("should reject missing code", async () => {
-      const response = await fetch("http://localhost:3000/api/sandbox/run", {
+      const response = await fetch("http://localhost:5757/api/sandbox/run", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${testApiKey}`,
@@ -121,7 +121,7 @@ describe("Sandbox API", () => {
     it("should reject code exceeding size limit", async () => {
       const largeCode = 'x = "a" * 2000000'; // > 1MB
 
-      const response = await fetch("http://localhost:3000/api/sandbox/run", {
+      const response = await fetch("http://localhost:5757/api/sandbox/run", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${testApiKey}`,
@@ -139,7 +139,7 @@ describe("Sandbox API", () => {
 
   describe("GET /health", () => {
     it("should return healthy status", async () => {
-      const response = await fetch("http://localhost:3000/health");
+      const response = await fetch("http://localhost:5757/health");
       const data = await response.json();
 
       expect(response.status).toBe(200);
@@ -152,7 +152,7 @@ describe("Sandbox API", () => {
 
   describe("GET /api/metrics", () => {
     it("should return metrics with admin key", async () => {
-      const response = await fetch("http://localhost:3000/api/metrics", {
+      const response = await fetch("http://localhost:5757/api/metrics", {
         headers: {
           Authorization: "Bearer admin_your_secret_key_here",
         },
@@ -167,7 +167,7 @@ describe("Sandbox API", () => {
     });
 
     it("should reject invalid admin key", async () => {
-      const response = await fetch("http://localhost:3000/api/metrics", {
+      const response = await fetch("http://localhost:5757/api/metrics", {
         headers: {
           Authorization: "Bearer invalid_admin_key",
         },
@@ -177,7 +177,7 @@ describe("Sandbox API", () => {
     });
 
     it("should reject missing admin key", async () => {
-      const response = await fetch("http://localhost:3000/api/metrics");
+      const response = await fetch("http://localhost:5757/api/metrics");
 
       expect(response.status).toBe(401);
     });

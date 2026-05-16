@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
-import { tenantService } from "../services/TenantService";
-import { logger } from "../utils/logger";
-import { env } from "../config/env";
+import { tenantService } from "../services/TenantService.js";
+import { logger } from "../utils/logger.js";
+import { env } from "../config/env.js";
 
 /**
  * Authentication middleware - validates API key from Authorization header

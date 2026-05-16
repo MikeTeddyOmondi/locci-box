@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { createApp } from "../src/app";
 import type { Express } from "express";
+import "dotenv/config";
 
 describe("Sandbox API", () => {
   let app: Express;
-  const testApiKey = "sk_test_default_key_12345";
+  const testApiKey = process.env.ADMIN_API_KEY;
 
   beforeAll(() => {
     app = createApp();

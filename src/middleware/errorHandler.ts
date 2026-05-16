@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { logger } from "../utils/logger";
+import { logger } from "../utils/logger.js";
 
 /**
  * Base application error class
@@ -87,7 +87,7 @@ export function errorHandler(
   err: Error,
   req: Request,
   res: Response,
-  next: NextFunction,
+  _next: NextFunction,
 ): void {
   // Log error with context
   logger.error(

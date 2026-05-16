@@ -19,6 +19,40 @@ A B2B API that lets businesses and AI agents run untrusted code safely inside is
 - Bash
 - Ruby
 
+## CLI Tool
+
+Locci Box includes a powerful command-line interface for interacting with the API.
+
+### Installation
+
+```bash
+# From the monorepo
+cd cli
+pnpm install
+pnpm build
+
+# Link globally (optional)
+pnpm link --global
+```
+
+### Quick Start
+
+```bash
+# Initialize configuration
+loccibox init
+
+# Run code
+loccibox run -l python -c "print('Hello from Locci Box!')"
+
+# Check sandbox status
+loccibox status <sandbox-id>
+
+# View metrics
+loccibox metrics
+```
+
+For complete CLI documentation, see [cli/README.md](./cli/README.md).
+
 ## Quick Start
 
 ### Prerequisites
@@ -273,10 +307,11 @@ MCP_ENABLED=true
 
 ```
 locci-box/
-├── src/
+├── src/                          # Backend API
 │   ├── app.ts                    # Express application
 │   ├── server.ts                 # HTTP server entry point
 │   ├── routes/
+│   │   ├── health.ts             # Health check endpoint
 │   │   ├── sandbox.ts            # Sandbox execution routes
 │   │   └── metrics.ts            # Admin metrics routes
 │   ├── services/
@@ -284,16 +319,44 @@ locci-box/
 │   │   └── TenantService.ts      # Multi-tenancy & usage tracking
 │   ├── middleware/
 │   │   ├── auth.ts               # API key validation
-│   │   └── rateLimiter.ts        # Per-tenant rate limiting
+│   │   ├── rateLimiter.ts        # Per-tenant rate limiting
+│   │   ├── errorHandler.ts       # Typed error handling
+│   │   └── notFoundHandler.ts    # 404 handler
 │   ├── mcp/
 │   │   └── server.ts             # MCP server for AI agents
 │   ├── types/
 │   │   └── index.ts              # TypeScript type definitions
+│   ├── config/
+│   │   └── env.ts                # Environment configuration
 │   └── utils/
 │       └── logger.ts             # Pino logger configuration
-├── package.json
+├── cli/                          # CLI Tool
+│   ├── src/
+│   │   ├── index.ts              # CLI entry point
+│   │   ├── commands/             # Command implementations
+│   │   │   ├── init.ts           # Setup wizard
+│   │   │   ├── run.ts            # Execute code
+│   │   │   ├── status.ts         # Check status
+│   │   │   ├── stop.ts           # Stop sandbox
+│   │   │   ├── metrics.ts        # View metrics
+│   │   │   └── keys.ts           # Manage API keys
+│   │   ├── lib/                  # Shared utilities
+│   │   │   ├── api.ts            # API client
+│   │   │   ├── config.ts         # Config management
+│   │   │   └── output.ts         # Terminal formatting
+│   │   └── types/
+│   │       └── index.ts          # TypeScript types
+│   ├── package.json
+│   ├── tsconfig.json
+│   └── README.md
+├── docs/                         # Documentation
+├── examples/                     # Example scripts
+├── package.json                  # Root package.json
+├── pnpm-workspace.yaml           # Monorepo configuration
 ├── tsconfig.json
 ├── .env.example
+├── CHANGELOG.md                  # Change history
+├── LICENSE                       # MIT License
 └── README.md
 ```
 

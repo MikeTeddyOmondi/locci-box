@@ -19,7 +19,7 @@ async function startServer() {
       );
 
       if (isDevelopment) {
-        logger.info("Default API key for testing: sk_test_default_key_12345");
+        logger.info(`Default API key for testing: ${env.ADMIN_API_KEY}`);
         logger.info(`Health check: http://localhost:${env.PORT}/health`);
         logger.info(
           `API endpoint: http://localhost:${env.PORT}/api/sandbox/run`,

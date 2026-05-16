@@ -6,10 +6,10 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { sandboxService } from "../services/SandboxService";
-import { tenantService } from "../services/TenantService";
-import { logger } from "../utils/logger";
-import { env } from "../config/env";
+import { sandboxService } from "../services/SandboxService.js";
+import { tenantService } from "../services/TenantService.js";
+import { logger } from "../utils/logger.js";
+import { env } from "../config/env.js";
 
 /**
  * MCP Server for Locci Box

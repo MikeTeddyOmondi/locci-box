@@ -1,9 +1,9 @@
 import { Router, Request, Response } from "express";
-import { tenantService } from "../services/TenantService";
-import { authenticateAdmin } from "../middleware/auth";
-import { logger } from "../utils/logger";
+import { tenantService } from "../services/TenantService.js";
+import { authenticateAdmin } from "../middleware/auth.js";
+import { logger } from "../utils/logger.js";
 
-const router = Router();
+const router: Router = Router();
 
 /**
  * GET /metrics
@@ -12,7 +12,7 @@ const router = Router();
 router.get(
   "/",
   authenticateAdmin,
-  async (req: Request, res: Response): Promise<void> => {
+  async (_req: Request, res: Response): Promise<void> => {
     try {
       // Get all tenants and their usage stats
       const allTenants = await tenantService.getAllTenants();

@@ -25,7 +25,7 @@ export class TenantService {
   private createDefaultTenant(): void {
     const defaultTenant: Tenant = {
       id: "tenant_default",
-      api_key: "sk_test_default_key_12345",
+      api_key: env.ADMIN_API_KEY,
       organization: "Default Organization",
       max_concurrent_sandboxes: env.DEFAULT_MAX_CONCURRENT_SANDBOXES,
       max_execution_time_seconds: env.DEFAULT_SANDBOX_TIMEOUT_SECONDS,

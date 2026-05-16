@@ -1,10 +1,10 @@
 import { Router, Request, Response } from "express";
-import { sandboxService } from "../services/SandboxService";
-import { tenantService } from "../services/TenantService";
-import { RunSandboxRequest, SupportedLanguage } from "../types";
-import { logger } from "../utils/logger";
+import { sandboxService } from "../services/SandboxService.js";
+import { tenantService } from "../services/TenantService.js";
+import { RunSandboxRequest, SupportedLanguage } from "../types/index.js";
+import { logger } from "../utils/logger.js";
 
-const router = Router();
+const router: Router = Router();
 
 /**
  * POST /sandbox/run

@@ -1,6 +1,7 @@
 {
   "name": "locci-box",
   "version": "1.0.0",
+  "type": "module",
   "description": "B2B API for safe code execution in isolated microVMs",
   "main": "dist/server.js",
   "scripts": {

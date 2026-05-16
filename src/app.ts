@@ -1,14 +1,14 @@
 import express, { Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
-import { logger } from "./utils/logger";
-import { authenticate } from "./middleware/auth";
-import { rateLimiter } from "./middleware/rateLimiter";
-import { errorHandler } from "./middleware/errorHandler";
-import { notFoundHandler } from "./middleware/notFoundHandler";
-import healthRoutes from "./routes/health";
-import sandboxRoutes from "./routes/sandbox";
-import metricsRoutes from "./routes/metrics";
+import { logger } from "./utils/logger.js";
+import { authenticate } from "./middleware/auth.js";
+import { rateLimiter } from "./middleware/rateLimiter.js";
+import { errorHandler } from "./middleware/errorHandler.js";
+import { notFoundHandler } from "./middleware/notFoundHandler.js";
+import healthRoutes from "./routes/health.js";
+import sandboxRoutes from "./routes/sandbox.js";
+import metricsRoutes from "./routes/metrics.js";
 
 /**
  * Configure application middleware

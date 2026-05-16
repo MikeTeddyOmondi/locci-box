@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Microsandbox Execution Fix** - Proper language-specific code execution:
+  - Implemented `sandbox.exec()` with language-specific interpreters (python3, node, ruby)
+  - Added `getExecutionCommand()` method to generate proper command and args for each language
+  - Python: `python3 -c "code"`, Node: `node -e "code"`, Ruby: `ruby -e "code"`
+  - Bash continues to use `sandbox.shell()` for direct shell execution
+  - Fixes issue where all code was executed as shell commands, causing syntax errors
+- `5ba6fc2` - **Microsandbox SDK Integration** - Real hardware-isolated microVM execution:
+  - Replaced simulated execution with actual microsandbox SDK (v0.4.6)
+  - Implemented `Sandbox.builder()` pattern for microVM creation
+  - Configured language-specific Docker images (python:3.11-slim, node:20-alpine, bash:5.2, ruby:3.2-alpine)
+  - Added proper sandbox lifecycle management (create → execute → cleanup)
+  - Implemented environment variable support via builder pattern
+  - Fixed ExecOutput API usage: `result.code`, `result.stdout()`, `result.stderr()`
+  - Added timeout detection and graceful error handling
+  - Fixed iterator issues with `Array.from()` for Map iterations
+- `8dc6a95` - **ESM Migration** - Migrated entire project from CommonJS to ESM:
+  - Added `"type": "module"` to package.json (required for microsandbox SDK)
+  - Changed TypeScript module from `"commonjs"` to `"ES2022"`
+  - Added `.js` extensions to all relative imports (ESM requirement)
+  - Fixed TypeScript compilation errors for ESM compatibility
+- `c84304c` - Added `.js` extensions to imports in core files (app.ts, server.ts, mcp/server.ts)
+- `432c5f1` - Added `.js` extensions and explicit Router type annotations to route files
+- `3efe5e4` - Added `.js` extensions to middleware imports and fixed unused parameter warnings
+- `f68558d` - Added `.js` extensions to utils and service imports
+
+### Added
+
 - `52b27be` - **CLI Tool Implementation** - Complete command-line interface for Locci Box:
   - Interactive setup wizard (`loccibox init`) with Clack prompts
   - Run command with inline code, file input, and interactive modes

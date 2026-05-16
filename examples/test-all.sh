@@ -2,8 +2,8 @@
 # Test script for Locci Box API
 # Tests all supported languages with example code
 
-API_URL="http://localhost:3000"
-API_KEY="sk_test_default_key_12345"
+API_URL="http://localhost:5757"
+API_KEY="${ADMIN_API_KEY:-A9Ytm4GAKfYF3yCanI24DLAV}"
 
 echo "🚀 Testing Locci Box API"
 echo "========================"
@@ -53,7 +53,7 @@ echo ""
 # Test metrics
 echo "6️⃣  Testing metrics endpoint..."
 curl -s "$API_URL/api/metrics" \
-  -H "Authorization: Bearer admin_your_secret_key_here" | jq '.'
+  -H "Authorization: Bearer $API_KEY" | jq '.'
 echo ""
 
 echo "✅ All tests completed!"

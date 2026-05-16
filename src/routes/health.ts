@@ -6,7 +6,7 @@ const router: Router = Router();
  * GET /health
  * Health check endpoint - returns service status
  */
-router.get("/", (req: Request, res: Response) => {
+router.get("/", (_req: Request, res: Response) => {
   res.json({
     success: true,
     data: {

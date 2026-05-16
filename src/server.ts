@@ -1,6 +1,6 @@
-import { createApp } from "./app";
-import { logger } from "./utils/logger";
-import { env, isDevelopment } from "./config/env";
+import { createApp } from "./app.js";
+import { logger } from "./utils/logger.js";
+import { env, isDevelopment } from "./config/env.js";
 
 /**
  * Start the Express server

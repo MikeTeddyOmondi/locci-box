@@ -1,0 +1,33 @@
+{
+  "name": "@loccibox/cli",
+  "version": "1.0.0",
+  "description": "CLI for Locci Box - Execute code in isolated sandboxes",
+  "type": "module",
+  "bin": {
+    "loccibox": "./dist/index.js"
+  },
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "sandbox",
+    "cli",
+    "code-execution",
+    "microvm"
+  ],
+  "author": "MikeTeddyOmondi",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^12.0.0",
+    "@clack/prompts": "^0.7.0",
+    "picocolors": "^1.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "tsx": "^4.7.0",
+    "@types/node": "^22.7.10"
+  }
+}

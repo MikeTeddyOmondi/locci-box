@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `52b27be` - **CLI Tool Implementation** - Complete command-line interface for Locci Box:
+  - Interactive setup wizard (`loccibox init`) with Clack prompts
+  - Run command with inline code, file input, and interactive modes
+  - Status command to check sandbox execution status
+  - Stop command to terminate running sandboxes
+  - Metrics command to view usage statistics
+  - Keys command stub for future API key management
+  - Multi-profile configuration support (`~/.loccibox/config.json`)
+  - Environment variable fallbacks (`LOCCIBOX_API_URL`, `LOCCIBOX_API_KEY`)
+  - Beautiful terminal UI with spinners, colors, and formatted tables
+  - Comprehensive error handling with user-friendly messages
+  - Full TypeScript support with type safety
+  - Modular architecture for easy extension
+- `52b27be` - Created `cli/` directory with complete CLI implementation:
+  - `cli/src/index.ts` - Main CLI entry point with Commander.js
+  - `cli/src/commands/` - All command implementations
+  - `cli/src/lib/api.ts` - API client wrapper with typed responses
+  - `cli/src/lib/config.ts` - Configuration management
+  - `cli/src/lib/output.ts` - Terminal formatting utilities
+  - `cli/src/types/index.ts` - TypeScript type definitions
+  - `cli/README.md` - Comprehensive CLI documentation
+- `52b27be` - Configured monorepo with pnpm workspaces
+- `52b27be` - Updated root README.md with CLI section and usage examples
 - `2c09252` - Added `dotenv` package (v17.4.2) for automatic environment variable loading
 - `52bcc1c` - Integrated dotenv configuration in `src/config/env.ts` to load `.env` file automatically
 - `1c94f44` - Created CHANGELOG.md documenting all project changes
@@ -26,6 +49,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `52b27be` - Project structure now uses monorepo architecture with separate backend and CLI packages
+- `52b27be` - Updated project documentation to reflect CLI availability
 - `52bcc1c` - Environment variables are now automatically loaded from `.env` file on application startup
 - `52bcc1c` - No manual environment variable setup required in development
 - `6014ac4` - **Refactored `src/app.ts`** - Complete restructuring for better maintainability:
@@ -39,6 +64,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Improved
 
+- `52b27be` - Developer experience with intuitive CLI commands and beautiful terminal output
+- `52b27be` - Easier API interaction without writing curl commands
+- `52b27be` - Better error messages and user guidance in CLI
 - `c9b03ab` - Better error categorization and debugging with custom error classes
 - `02d61c2` - Easier to test individual components (health checks, error handling, etc.)
 - `6014ac4` - Clearer overview of middleware stack and route configuration

@@ -120,7 +120,8 @@ describe("Sandbox API", () => {
     });
 
     it("should reject code exceeding size limit", async () => {
-      const largeCode = 'x = "a" * 2000000'; // > 1MB
+      // Create a string that's actually > 1MB (1024 * 1024 bytes)
+      const largeCode = "a".repeat(1024 * 1024 + 1);
 
       const response = await fetch("http://localhost:5757/api/sandbox/run", {
         method: "POST",
@@ -155,7 +156,7 @@ describe("Sandbox API", () => {
     it("should return metrics with admin key", async () => {
       const response = await fetch("http://localhost:5757/api/metrics", {
         headers: {
-          Authorization: "Bearer admin-secret-key",
+          Authorization: `Bearer ${testApiKey}`,
         },
       });
 

@@ -1,7 +1,7 @@
 import { nanoid } from "nanoid";
-import { Tenant, UsageStats } from "../types";
-import { logger } from "../utils/logger";
-import { env } from "../config/env";
+import { Tenant, UsageStats } from "../types/index.js";
+import { logger } from "../utils/logger.js";
+import { env } from "../config/env.js";
 
 /**
  * TenantService manages multi-tenancy, usage tracking, and quota enforcement.

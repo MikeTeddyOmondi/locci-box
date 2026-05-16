@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Microsandbox Execution Fix** - Proper language-specific code execution:
+  - Implemented `sandbox.exec()` with language-specific interpreters (python3, node, ruby)
+  - Added `getExecutionCommand()` method to generate proper command and args for each language
+  - Python: `python3 -c "code"`, Node: `node -e "code"`, Ruby: `ruby -e "code"`
+  - Bash continues to use `sandbox.shell()` for direct shell execution
+  - Fixes issue where all code was executed as shell commands, causing syntax errors
 - `5ba6fc2` - **Microsandbox SDK Integration** - Real hardware-isolated microVM execution:
   - Replaced simulated execution with actual microsandbox SDK (v0.4.6)
   - Implemented `Sandbox.builder()` pattern for microVM creation

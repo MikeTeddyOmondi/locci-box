@@ -33,6 +33,26 @@ export class SandboxService {
   }
 
   /**
+   * Get the execution command and arguments for each language
+   * Uses the proper interpreter with -c or -e flags
+   */
+  private getExecutionCommand(
+    language: string,
+    code: string,
+  ): { cmd: string; args: string[] } {
+    switch (language) {
+      case "python":
+        return { cmd: "python3", args: ["-c", code] };
+      case "node":
+        return { cmd: "node", args: ["-e", code] };
+      case "ruby":
+        return { cmd: "ruby", args: ["-e", code] };
+      default:
+        throw new Error(`Unsupported language: ${language}`);
+    }
+  }
+
+  /**
    * Execute code in a new microVM using microsandbox SDK
    */
   async execute(
@@ -99,11 +119,24 @@ export class SandboxService {
         instance: sandbox,
       });
 
-      // Execute code using shell for simplicity
-      // This works for all languages as they all have shell access
-      logger.debug({ sandbox_id: sandboxId }, "Executing code in microsandbox");
+      // Execute code using the appropriate method for each language
+      logger.debug(
+        { sandbox_id: sandboxId, language: params.language },
+        "Executing code in microsandbox",
+      );
 
-      const result = await sandbox.shell(params.code);
+      let result;
+      if (params.language === "bash") {
+        // For bash, use shell() to execute directly
+        result = await sandbox.shell(params.code);
+      } else {
+        // For other languages, use exec() with the appropriate interpreter
+        const { cmd, args } = this.getExecutionCommand(
+          params.language,
+          params.code,
+        );
+        result = await sandbox.exec(cmd, args);
+      }
 
       const duration = Date.now() - startTime;
 

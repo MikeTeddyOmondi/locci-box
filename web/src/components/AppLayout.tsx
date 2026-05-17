@@ -1,6 +1,6 @@
 import { ReactNode, useState } from "react";
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, Code2, KeyRound, BookOpen, LogOut, Boxes, Bell, Github, Twitter, FileCode2, Sparkles, Building2, Split, Bug, Menu, X } from "lucide-react";
+import { LayoutDashboard, Code2, KeyRound, BookOpen, LogOut, Boxes, Bell, Github, Twitter, FileCode2, Sparkles, Building2, Split, Bug, Menu, X, Download } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -13,6 +13,7 @@ const nav = [
   { to: "/playground", label: "Playground", icon: Split, gradient: "bg-gradient-purple-pink" },
   { to: "/keys", label: "API Keys", icon: KeyRound, gradient: "bg-gradient-teal-green" },
   { to: "/docs", label: "Docs", icon: BookOpen, gradient: "bg-gradient-amber-orange" },
+  { to: "/downloads", label: "Downloads", icon: Download, gradient: "bg-gradient-teal-green" },
 ];
 
 export function AppLayout({ children }: { children: ReactNode }) {

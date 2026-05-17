@@ -1,4 +1,5 @@
 import { nanoid } from "nanoid";
+import { Sandbox } from "microsandbox";
 import {
   SandboxExecutionParams,
   SandboxResult,
@@ -6,24 +7,6 @@ import {
   SandboxStatus,
 } from "../types/index.js";
 import { logger } from "../utils/logger.js";
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnySandbox = any;
-
-let _SandboxCtor: AnySandbox = null;
-async function getSandbox(): Promise<AnySandbox> {
-  if (!_SandboxCtor) {
-    try {
-      const mod = await import("microsandbox");
-      _SandboxCtor = mod.Sandbox;
-    } catch {
-      throw new Error(
-        "microsandbox native module unavailable — ensure the microsandbox daemon is running and KVM is accessible",
-      );
-    }
-  }
-  return _SandboxCtor;
-}
 
 /**
  * SandboxService wraps the microsandbox SDK with error handling,
@@ -33,7 +16,7 @@ export class SandboxService {
   // Track active sandboxes with their microsandbox instances
   private activeSandboxes: Map<
     string,
-    { info: SandboxInfo; instance: AnySandbox }
+    { info: SandboxInfo; instance: Sandbox }
   > = new Map();
 
   /**
@@ -98,10 +81,9 @@ export class SandboxService {
       created_at: new Date().toISOString(),
     };
 
-    let sandbox: AnySandbox | null = null;
+    let sandbox: Sandbox | null = null;
 
     try {
-      const SandboxCtor = await getSandbox();
       // Get image for the language
       const imageName = this.getImageName(params.language);
 
@@ -111,7 +93,7 @@ export class SandboxService {
       );
 
       // Build and create the sandbox using the builder pattern
-      let builder = SandboxCtor.builder(sandboxId)
+      let builder = Sandbox.builder(sandboxId)
         .image(imageName)
         .cpus(params.cpu || 1)
         .memory(params.memory || 128); // MB

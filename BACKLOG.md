@@ -10,7 +10,7 @@
     - Docker workflow: build and push `locci/box-api`, `locci/box-web`, `locci/box-cli` to Docker Hub on each release tag
   - Downloads page links reference Docker Hub images and GitHub Releases assets
 
-- [ ] **Dashboard — Real Stats + Persistent API Keys**
+- [x] **Dashboard — Real Stats + Persistent API Keys**
   - Show real metrics: actual sandbox runs, success/failure rates, execution times per tenant
   - Generate and persist real API keys per user (including the demo account)
   - Keys usable with CLI, MCP server, and SDK

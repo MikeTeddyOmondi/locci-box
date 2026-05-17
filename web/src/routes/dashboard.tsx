@@ -2,7 +2,7 @@ import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/lib/auth";
-import { apiClient, type StatsData } from "@/integrations/api/client";
+import { apiClient, type StatsData, type ApiKeyData } from "@/integrations/api/client";
 import {
   Activity,
   Server,
@@ -12,12 +12,9 @@ import {
   X,
   Loader2,
   TrendingUp,
-  Users,
+  KeyRound,
   Plus,
-  Circle,
-  Code2,
-  FlaskConical,
-  Lock,
+  ExternalLink,
 } from "lucide-react";
 import {
   XAxis,
@@ -30,7 +27,6 @@ import {
 } from "recharts";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/dashboard")({
@@ -38,7 +34,7 @@ export const Route = createFileRoute("/dashboard")({
   component: Page,
 });
 
-const chart = [
+const EMPTY_CHART = [
   { day: "Mon", runs: 0 },
   { day: "Tue", runs: 0 },
   { day: "Wed", runs: 0 },
@@ -92,85 +88,22 @@ const langLabel: Record<string, string> = {
   ruby: "Ruby",
 };
 
-type TeamSandbox = {
-  id: string;
-  name: string;
-  lang: string;
-  status: "live" | "idle" | "private";
-  members: { name: string; color: string }[];
-  updated: string;
-  gradient: string;
-  icon: typeof Code2;
-};
-
-const teamSandboxes: TeamSandbox[] = [
-  {
-    id: "sb_1",
-    name: "payment-webhook-tests",
-    lang: "Python",
-    status: "live",
-    members: [
-      { name: "AC", color: "bg-gradient-cyan-blue" },
-      { name: "JM", color: "bg-gradient-purple-pink" },
-      { name: "RS", color: "bg-gradient-teal-green" },
-    ],
-    updated: "editing now",
-    gradient: "bg-gradient-cyan-blue",
-    icon: Code2,
-  },
-  {
-    id: "sb_2",
-    name: "auth-flow-integration",
-    lang: "Node.js",
-    status: "live",
-    members: [
-      { name: "MK", color: "bg-gradient-purple-pink" },
-      { name: "LT", color: "bg-gradient-amber-orange" },
-    ],
-    updated: "2 min ago",
-    gradient: "bg-gradient-purple-pink",
-    icon: FlaskConical,
-  },
-  {
-    id: "sb_3",
-    name: "fibonacci-bench",
-    lang: "Ruby",
-    status: "idle",
-    members: [
-      { name: "DV", color: "bg-gradient-teal-green" },
-      { name: "AC", color: "bg-gradient-cyan-blue" },
-      { name: "PH", color: "bg-gradient-orange-red" },
-      { name: "EM", color: "bg-gradient-cyan-teal" },
-    ],
-    updated: "1 hour ago",
-    gradient: "bg-gradient-teal-green",
-    icon: Code2,
-  },
-  {
-    id: "sb_4",
-    name: "ml-model-eval",
-    lang: "Python",
-    status: "private",
-    members: [{ name: "RS", color: "bg-gradient-teal-green" }],
-    updated: "yesterday",
-    gradient: "bg-gradient-amber-orange",
-    icon: Lock,
-  },
-];
-
 function Page() {
   const { user } = useAuth();
   const [statsData, setStatsData] = useState<StatsData | null>(null);
+  const [keys, setKeys] = useState<ApiKeyData[]>([]);
 
   useEffect(() => {
     apiClient.getStats().then(setStatsData).catch(() => {});
+    apiClient.listKeys().then(setKeys).catch(() => {});
   }, []);
 
   if (!user) return <Navigate to="/login" />;
 
   const stats = buildStats(statsData);
-  const visibleSandboxes = user.isDemo ? teamSandboxes.slice(0, 2) : teamSandboxes;
+  const chart = statsData?.daily_runs ?? EMPTY_CHART;
   const recentRuns = statsData?.recent_runs ?? [];
+  const activeKeys = keys.filter((k) => k.status === "active");
 
   return (
     <AppLayout>
@@ -288,103 +221,70 @@ function Page() {
           </div>
         </div>
 
-        {/* Team Workspaces */}
+        {/* API Keys */}
         <div className="space-y-4 animate-fade-up" style={{ animationDelay: "350ms" }}>
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
             <div>
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-gradient-purple-pink flex items-center justify-center shadow-lg">
-                  <Users className="w-4 h-4 text-white" />
+                  <KeyRound className="w-4 h-4 text-white" />
                 </div>
-                <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight">
-                  Team Workspaces
-                </h2>
+                <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight">API Keys</h2>
               </div>
               <p className="text-sm text-white/60 mt-2">
-                Collaborate live in shared sandboxes — code, run, and ship together.
+                Your active keys for CLI, SDK, and MCP server access.
               </p>
             </div>
-            <Button
-              onClick={() => toast.success("Team sandbox created — invites sent")}
-              className="bg-gradient-primary text-white hover:opacity-90 shadow-primary self-start sm:self-auto"
-            >
-              <Plus className="w-4 h-4 mr-2" /> New Team Sandbox
-            </Button>
+            <Link to="/keys">
+              <Button className="bg-gradient-primary text-white hover:opacity-90 shadow-primary self-start sm:self-auto">
+                <Plus className="w-4 h-4 mr-2" /> Manage Keys
+              </Button>
+            </Link>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
-            {visibleSandboxes.map((sb) => {
-              const Icon = sb.icon;
-              return (
-                <Link
-                  key={sb.id}
-                  to="/playground"
-                  className="glass glass-hover rounded-2xl p-5 flex flex-col gap-4 group"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div
-                      className={cn(
-                        "w-10 h-10 rounded-xl flex items-center justify-center shadow-lg shrink-0",
-                        sb.gradient,
-                      )}
-                    >
-                      <Icon className="w-5 h-5 text-white" />
-                    </div>
-                    {sb.status === "live" && (
-                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-success/15 text-success text-[10px] font-bold uppercase tracking-wider border border-success/30">
-                        <span className="relative flex w-1.5 h-1.5">
-                          <span className="absolute inset-0 rounded-full bg-success opacity-75 animate-ping" />
-                          <span className="relative w-1.5 h-1.5 rounded-full bg-success" />
-                        </span>
-                        Live
-                      </span>
-                    )}
-                    {sb.status === "idle" && (
-                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-white/5 text-white/60 text-[10px] font-bold uppercase tracking-wider border border-white/10">
-                        <Circle className="w-1.5 h-1.5 fill-current" /> Idle
-                      </span>
-                    )}
-                    {sb.status === "private" && (
-                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-white/5 text-white/60 text-[10px] font-bold uppercase tracking-wider border border-white/10">
-                        <Lock className="w-2.5 h-2.5" /> Private
-                      </span>
-                    )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
+            {keys.length === 0 && (
+              <Link
+                to="/keys"
+                className="glass glass-hover rounded-2xl p-5 flex flex-col items-center justify-center gap-3 text-white/40 hover:text-white/70 transition-colors col-span-full py-10"
+              >
+                <KeyRound className="w-8 h-8" />
+                <span className="text-sm">No API keys yet — create one to get started.</span>
+              </Link>
+            )}
+            {keys.map((k) => (
+              <Link
+                key={k.id}
+                to="/keys"
+                className="glass glass-hover rounded-2xl p-5 flex flex-col gap-3 group"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-cyan-teal flex items-center justify-center shadow-lg shrink-0">
+                    <KeyRound className="w-5 h-5 text-white" />
                   </div>
-
-                  <div className="min-w-0">
-                    <div className="font-semibold truncate group-hover:text-white">{sb.name}</div>
-                    <div className="text-xs text-white/50 mt-0.5">
-                      {sb.lang} · {sb.updated}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between mt-auto">
-                    <div className="flex -space-x-2">
-                      {sb.members.slice(0, 4).map((m, i) => (
-                        <div
-                          key={i}
-                          className={cn(
-                            "w-7 h-7 rounded-full ring-2 ring-[#0a1929] flex items-center justify-center text-[10px] font-bold text-white",
-                            m.color,
-                          )}
-                          title={m.name}
-                        >
-                          {m.name}
-                        </div>
-                      ))}
-                      {sb.members.length > 4 && (
-                        <div className="w-7 h-7 rounded-full ring-2 ring-[#0a1929] bg-white/10 flex items-center justify-center text-[10px] font-bold text-white/70">
-                          +{sb.members.length - 4}
-                        </div>
-                      )}
-                    </div>
-                    <span className="text-xs text-white/50 group-hover:text-white transition-colors">
-                      Open →
-                    </span>
-                  </div>
-                </Link>
-              );
-            })}
+                  <span
+                    className={cn(
+                      "inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border",
+                      k.status === "active"
+                        ? "bg-success/15 text-success border-success/30"
+                        : "bg-white/5 text-white/50 border-white/10",
+                    )}
+                  >
+                    {k.status === "active" ? "Active" : "Revoked"}
+                  </span>
+                </div>
+                <div className="min-w-0">
+                  <div className="font-semibold truncate">{k.name}</div>
+                  <div className="font-mono text-xs text-white/40 mt-0.5 truncate">{k.key}</div>
+                </div>
+                <div className="flex items-center justify-between mt-auto text-xs text-white/50">
+                  <span>{k.rateLimit ? `${k.rateLimit}/min` : "Unlimited"}</span>
+                  <span className="flex items-center gap-1 group-hover:text-white transition-colors">
+                    View <ExternalLink className="w-3 h-3" />
+                  </span>
+                </div>
+              </Link>
+            ))}
           </div>
         </div>
 

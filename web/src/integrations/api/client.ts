@@ -61,6 +61,11 @@ export interface RecentRun {
   created_at: string;
 }
 
+export interface DailyRun {
+  day: string;
+  runs: number;
+}
+
 export interface StatsData {
   tenant_id: string;
   organization: string;
@@ -69,6 +74,7 @@ export interface StatsData {
   avg_execution_ms: number;
   success_runs: number;
   recent_runs: RecentRun[];
+  daily_runs: DailyRun[];
   last_activity: string;
 }
 

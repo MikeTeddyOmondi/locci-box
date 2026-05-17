@@ -75,7 +75,7 @@ export class TenantService {
   async decrementActive(tenantId: string): Promise<void> {
     await db
       .update(tenants)
-      .set({ activeSandboxes: sql`MAX(0, ${tenants.activeSandboxes} - 1)` })
+      .set({ activeSandboxes: sql`GREATEST(0, ${tenants.activeSandboxes} - 1)` })
       .where(eq(tenants.id, tenantId));
   }
 
@@ -148,6 +148,27 @@ export class TenantService {
       duration_ms: r.durationMs,
       created_at: r.createdAt,
     }));
+  }
+
+  async getDailyRuns(tenantId: string, days = 7): Promise<{ day: string; runs: number }[]> {
+    const rows = await db
+      .select()
+      .from(sandboxRuns)
+      .where(eq(sandboxRuns.tenantId, tenantId));
+
+    const now = new Date();
+    const result: { day: string; runs: number }[] = [];
+
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().slice(0, 10);
+      const dayLabel = d.toLocaleDateString("en-US", { weekday: "short" });
+      const count = rows.filter((r) => r.createdAt.startsWith(dateStr)).length;
+      result.push({ day: dayLabel, runs: count });
+    }
+
+    return result;
   }
 
   async getSuccessRuns(tenantId: string): Promise<number> {

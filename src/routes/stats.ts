@@ -11,10 +11,11 @@ const router: Router = Router();
 router.get("/", async (req: Request, res: Response): Promise<void> => {
   try {
     const tenantId = (req as any).tenantId;
-    const [stats, recentRuns, successRuns] = await Promise.all([
+    const [stats, recentRuns, successRuns, dailyRuns] = await Promise.all([
       tenantService.getUsageStats(tenantId),
       tenantService.getRecentRuns(tenantId, 20),
       tenantService.getSuccessRuns(tenantId),
+      tenantService.getDailyRuns(tenantId, 7),
     ]);
 
     if (!stats) {
@@ -28,6 +29,7 @@ router.get("/", async (req: Request, res: Response): Promise<void> => {
         ...stats,
         success_runs: successRuns,
         recent_runs: recentRuns,
+        daily_runs: dailyRuns,
       },
     });
   } catch (error) {

@@ -56,6 +56,9 @@ const EnvSchema = v.object({
 
   // Database (optional for now)
   DATABASE_URL: v.optional(v.string()),
+
+  // PGlite database path
+  DB_PATH: v.optional(v.string(), "./data/locci-box"),
 });
 
 /**
@@ -76,6 +79,7 @@ function parseEnv() {
       MCP_ENABLED: process.env.MCP_ENABLED,
       JWT_SECRET: process.env.JWT_SECRET,
       DATABASE_URL: process.env.DATABASE_URL,
+      DB_PATH: process.env.DB_PATH,
     });
 
     return parsed;

@@ -9,7 +9,7 @@ import * as schema from "./schema.js";
 import { env } from "../config/env.js";
 import { logger } from "../utils/logger.js";
 
-const dbPath = process.env.DB_PATH || "./data/locci-box";
+const dbPath = env.DB_PATH;
 
 const client = new PGlite(dbPath);
 export const db = drizzle({ client, schema });

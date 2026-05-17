@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `e1f4086` - **Comprehensive test suite (48 tests, zero KVM required)**
+  - `tests/setup.ts` — global `beforeAll` that calls `initDb()` with in-memory PGlite (`DB_PATH=""`) per vitest worker
+  - **Unit tests**: `api-key-format` (key format, masking logic), `daily-runs-bucket` (date-bucketing algorithm)
+  - **Integration tests** via supertest (in-process, no server port):
+    - `health` — GET /health shape
+    - `auth` — register (happy path, dupe email, short password), login (demo user, wrong creds), logout
+    - `sandbox` — `vi.mock` of `SandboxService`, all validation cases + mocked execution for all 4 languages
+    - `stats` — unauthenticated rejection, shape assertions, 7-bucket daily_runs, JWT auth via demo login
+    - `keys` — full CRUD: list (masked format), create (returns full key once), revoke, delete, 404 paths
+  - Old E2E fetch test moved to `tests/e2e/` (excluded from vitest include, kept for manual live runs)
+  - `vitest.config.ts` — include pattern now covers `tests/unit/**` and `tests/integration/**`; `LOG_LEVEL: "silent"` now accepted in env schema
+  - CI updated to run full suite (`pnpm vitest run`) instead of just `tests/unit`
+
 - `4ca1d0c` - **Downloads page** — New `/downloads` route with binary download table (Linux x64/arm64, macOS arm64, Windows x64/arm64) and Docker pull instructions. Added to app nav.
 - `4ca1d0c` - **GitHub Actions**:
   - `ci.yml` — runs `pnpm test` on push to main, production, refactors, feat/**, fix/**, test/** branches and PRs

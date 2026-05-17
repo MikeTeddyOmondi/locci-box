@@ -1,10 +1,11 @@
 #!/bin/bash
 set -e
 
-# Start microsandbox daemon (needs /dev/kvm)
+export PATH="/root/.microsandbox/bin:$PATH"
+
+# Grant all processes access to /dev/kvm (child sandbox processes need it)
 if [ -e /dev/kvm ]; then
-  msb start &
-  sleep 3
+  chmod 666 /dev/kvm
 fi
 
 exec node dist/server.js

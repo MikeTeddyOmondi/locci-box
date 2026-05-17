@@ -1,0 +1,55 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: locci-box-api
+    container_name: locci-box-api
+    restart: unless-stopped
+    ports:
+      - "${PORT:-5757}:5757"
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 5757
+      ADMIN_API_KEY: ${ADMIN_API_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      DEFAULT_MAX_CONCURRENT_SANDBOXES: ${DEFAULT_MAX_CONCURRENT_SANDBOXES:-5}
+      DEFAULT_SANDBOX_TIMEOUT_SECONDS: ${DEFAULT_SANDBOX_TIMEOUT_SECONDS:-30}
+      DEFAULT_RATE_LIMIT_PER_MINUTE: ${DEFAULT_RATE_LIMIT_PER_MINUTE:-60}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5757/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:5757}
+    image: locci-box-web
+    container_name: locci-box-web
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-4173}:4173"
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+
+  cli:
+    build:
+      context: .
+      dockerfile: cli/Dockerfile
+    image: locci-box-cli
+    container_name: locci-box-cli
+    profiles:
+      - cli
+    environment:
+      LOCCIBOX_API_URL: ${LOCCIBOX_API_URL:-http://api:5757}
+      LOCCIBOX_API_KEY: ${ADMIN_API_KEY}
+    entrypoint: ["loccibox"]
+    command: ["--help"]

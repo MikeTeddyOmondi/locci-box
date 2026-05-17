@@ -1,0 +1,14 @@
+node_modules
+dist
+.git
+*.log
+.env
+.env.*
+!.env.example
+web/node_modules
+web/dist
+web/.output
+cli/node_modules
+cli/dist
+tests
+docs

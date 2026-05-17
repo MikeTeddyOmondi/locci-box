@@ -19,7 +19,14 @@
     "format:web": "pnpm --filter @locci-box/web format",
     "format:all": "pnpm format && pnpm format:web",
     "lint": "pnpm --filter @locci-box/web lint",
-    "lint:all": "pnpm lint"
+    "lint:all": "pnpm lint",
+    "docker:api": "docker build -t locci-box-api -f Dockerfile .",
+    "docker:web": "docker build -t locci-box-web -f web/Dockerfile .",
+    "docker:cli": "docker build -t locci-box-cli -f cli/Dockerfile .",
+    "docker:build": "pnpm docker:api && pnpm docker:web && pnpm docker:cli",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

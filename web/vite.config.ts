@@ -14,10 +14,10 @@ export default defineConfig({
   },
   vite: {
     server: {
-      allowedHosts: ["box.locci.cloud", "api-box.locci.cloud"],
+      allowedHosts: ["box.locci.cloud", "api-box.locci.cloud", "localhost", "127.0.0.1"],
     },
     preview: {
-      allowedHosts: ["box.locci.cloud", "api-box.locci.cloud"],
+      allowedHosts: ["box.locci.cloud", "api-box.locci.cloud", "localhost", "127.0.0.1"],
     },
   },
 });

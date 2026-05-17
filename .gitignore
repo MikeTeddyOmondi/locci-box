@@ -31,6 +31,6 @@ tmp/
 temp/
 
 # PGlite database files (persisted via Docker volume in production)
-data/
+data/locci-box
 
 # Made with Bob

@@ -1,0 +1,265 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+  --color-cyan: var(--cyan);
+  --color-purple: var(--purple);
+  --color-pink: var(--pink);
+  --color-orange: var(--orange);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Menlo', 'Monaco', ui-monospace, monospace;
+}
+
+:root {
+  --radius: 0.75rem;
+
+  /* Light blue page */
+  --background: oklch(0.97 0.015 230);
+  --foreground: oklch(0.27 0.05 240);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.27 0.05 240);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.27 0.05 240);
+
+  /* Primary = bright accent blue #3b82f6 */
+  --primary: oklch(0.62 0.19 258);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.96 0.02 230);
+  --secondary-foreground: oklch(0.27 0.05 240);
+  --muted: oklch(0.96 0.02 230);
+  --muted-foreground: oklch(0.55 0.03 245);
+  --accent: oklch(0.95 0.03 230);
+  --accent-foreground: oklch(0.27 0.05 240);
+  --destructive: oklch(0.62 0.22 25);
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0.92 0.03 225);
+  --input: oklch(0.92 0.03 225);
+  --ring: oklch(0.62 0.19 258);
+
+  --success: oklch(0.72 0.16 160);
+  --warning: oklch(0.78 0.16 75);
+  --info: oklch(0.62 0.19 258);
+  --cyan: oklch(0.62 0.19 258);
+  --purple: oklch(0.55 0.18 280);
+  --pink: oklch(0.70 0.18 350);
+  --orange: oklch(0.74 0.18 55);
+
+  --chart-1: oklch(0.62 0.19 258);
+  --chart-2: oklch(0.72 0.16 200);
+  --chart-3: oklch(0.55 0.18 280);
+  --chart-4: oklch(0.72 0.16 160);
+  --chart-5: oklch(0.74 0.18 55);
+
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.27 0.05 240);
+  --sidebar-primary: oklch(0.62 0.19 258);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.96 0.02 230);
+  --sidebar-accent-foreground: oklch(0.27 0.05 240);
+  --sidebar-border: oklch(0.92 0.03 225);
+  --sidebar-ring: oklch(0.62 0.19 258);
+
+  /* Brand gradients — blue/indigo/teal family */
+  --gradient-primary: linear-gradient(135deg, #4a5ed8, #6b7fd9);
+  --gradient-cyan-blue: linear-gradient(135deg, #4a5ed8, #6b7fd9);
+  --gradient-purple-pink: linear-gradient(135deg, #5568d3, #6b7fd9);
+  --gradient-teal-green: linear-gradient(135deg, #5568d3, #5a8fbf);
+  --gradient-orange-red: linear-gradient(135deg, #3b82f6, #2563eb);
+  --gradient-amber-orange: linear-gradient(135deg, #5568d3, #5a8fbf);
+  --gradient-cyan-teal: linear-gradient(135deg, #4a5ed8, #5a8fbf);
+  --gradient-slate-blue: linear-gradient(135deg, #2d4a69, #4a5ed8);
+
+  /* Hero "paper" surfaces — now light blue tinted white */
+  --hero-white: #ffffff;
+  --hero-white-soft: #f0f7ff;
+  --hero-text: #1a3a52;
+  --hero-text-muted: #64748b;
+  --hero-border: #e0f2fe;
+  --hero-divider: #e0f2fe;
+
+  /* Page base */
+  --blueprint-base: #e8f4f9;
+  --blueprint-grid: transparent;
+  --blueprint-major: transparent;
+
+  --shadow-glass: 0 2px 8px rgba(15, 42, 75, 0.06);
+  --shadow-glass-hover: 0 4px 16px rgba(15, 42, 75, 0.10);
+  --shadow-hero: 0 4px 16px rgba(15, 42, 75, 0.08);
+  --shadow-primary: 0 4px 12px rgba(59, 130, 246, 0.30);
+}
+
+.dark { /* same — app is dark-first */ }
+
+@layer base {
+  * { border-color: var(--color-border); }
+  html, body {
+    background-color: var(--blueprint-base);
+    color: #1a3a52;
+    font-family: var(--font-sans);
+    letter-spacing: -0.005em;
+    font-feature-settings: "ss01", "cv11";
+  }
+  body {
+    background-image: none;
+    min-height: 100vh;
+  }
+  h1, h2, h3, h4 { letter-spacing: -0.022em; font-weight: 600; }
+  h1 { font-weight: 700; }
+}
+
+@layer utilities {
+  /* Brand gradients — blue family */
+  .bg-gradient-primary {
+    background-color: #6b73e8;
+    background-image:
+      radial-gradient(ellipse 60% 55% at 50% 50%, rgba(132, 196, 140, 0.55), transparent 60%),
+      radial-gradient(ellipse 80% 70% at 20% 30%, rgba(99, 102, 241, 0.45), transparent 65%),
+      radial-gradient(ellipse 70% 60% at 85% 80%, rgba(120, 130, 230, 0.5), transparent 60%),
+      linear-gradient(135deg, #5b6ee0 0%, #7a82e8 100%);
+    color: #ffffff;
+  }
+  .bg-gradient-cyan-blue,
+  .bg-gradient-purple-pink,
+  .bg-gradient-teal-green,
+  .bg-gradient-orange-red,
+  .bg-gradient-amber-orange,
+  .bg-gradient-cyan-teal,
+  .bg-gradient-slate-blue {
+    background-image: var(--gradient-primary);
+    color: #fff;
+  }
+  .bg-gradient-purple-pink { background-image: var(--gradient-purple-pink); }
+  .bg-gradient-teal-green  { background-image: var(--gradient-teal-green); }
+  .bg-gradient-orange-red  { background-image: var(--gradient-orange-red); }
+  .bg-gradient-amber-orange{ background-image: var(--gradient-amber-orange); }
+  .bg-gradient-cyan-teal   { background-image: var(--gradient-cyan-teal); }
+  .bg-gradient-slate-blue  { background-image: var(--gradient-slate-blue); }
+
+  .text-gradient-primary,
+  .text-gradient-cyan {
+    background-image: var(--gradient-primary);
+    -webkit-background-clip: text; background-clip: text;
+    color: transparent;
+  }
+
+  /* "Glass" cards on light background — white panels with soft blue border */
+  .glass {
+    background: #ffffff;
+    border: 1px solid #e0f2fe;
+    box-shadow: var(--shadow-glass);
+  }
+  .glass-hover { transition: background-color 200ms ease, border-color 200ms ease, box-shadow 200ms ease, transform 200ms ease; }
+  .glass-hover:hover {
+    background: #f8fbff;
+    border-color: #d0e8f2;
+    box-shadow: var(--shadow-glass-hover);
+  }
+  .glass-strong {
+    background: #e8f4f9;
+    border: 1px solid #e0f2fe;
+  }
+
+  /* Hero white surfaces (kept) */
+  .hero-white {
+    background: var(--hero-white);
+    color: var(--hero-text);
+    border: 1px solid var(--hero-border);
+    border-radius: 16px;
+    box-shadow: var(--shadow-hero);
+  }
+  .hero-text { color: var(--hero-text); }
+  .hero-text-muted { color: var(--hero-text-muted); }
+  .hero-border { border-color: var(--hero-border); }
+  .hero-divider { border-color: var(--hero-divider); }
+  .hero-soft { background-color: var(--hero-white-soft); }
+
+  /* Locci signature gradient — blue/indigo base with soft green radial blob */
+  .bg-locci-gradient {
+    background-color: #6b73e8;
+    background-image:
+      radial-gradient(ellipse 60% 55% at 50% 50%, rgba(132, 196, 140, 0.55), transparent 60%),
+      radial-gradient(ellipse 80% 70% at 20% 30%, rgba(99, 102, 241, 0.45), transparent 65%),
+      radial-gradient(ellipse 70% 60% at 85% 80%, rgba(120, 130, 230, 0.5), transparent 60%),
+      linear-gradient(135deg, #5b6ee0 0%, #7a82e8 100%);
+    color: #ffffff;
+  }
+
+  .shadow-primary { box-shadow: var(--shadow-primary); }
+  .shadow-hero { box-shadow: var(--shadow-hero); }
+
+  /* On light surfaces, the existing `text-white/70` etc. read poorly.
+     Map them to dark-blue equivalents so existing pages stay legible. */
+  .text-white         { color: #1a3a52 !important; }
+  .text-white\/90     { color: rgba(26, 58, 82, 0.92) !important; }
+  .text-white\/80     { color: rgba(26, 58, 82, 0.85) !important; }
+  .text-white\/70     { color: rgba(26, 58, 82, 0.75) !important; }
+  .text-white\/60     { color: rgba(26, 58, 82, 0.62) !important; }
+  .text-white\/50     { color: rgba(26, 58, 82, 0.50) !important; }
+  .text-white\/40     { color: rgba(26, 58, 82, 0.40) !important; }
+
+  /* But inside gradient surfaces the text really should be white */
+  .bg-gradient-primary .text-white,
+  .bg-gradient-cyan-blue .text-white,
+  .bg-gradient-purple-pink .text-white,
+  .bg-gradient-teal-green .text-white,
+  .bg-gradient-orange-red .text-white,
+  .bg-gradient-amber-orange .text-white,
+  .bg-gradient-cyan-teal .text-white,
+  .bg-gradient-slate-blue .text-white { color: #ffffff !important; }
+}
+
+/* Animations */
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+.animate-fade-up { animation: fade-in-up 0.5s ease-out both; }
+.animate-scale { animation: scale-in 0.3s ease-out both; }

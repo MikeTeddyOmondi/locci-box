@@ -51,6 +51,9 @@ const EnvSchema = v.object({
     "true",
   ),
 
+  // JWT Secret for web app authentication
+  JWT_SECRET: v.optional(v.string(), "locci-box-dev-secret-change-in-production"),
+
   // Database (optional for now)
   DATABASE_URL: v.optional(v.string()),
 });
@@ -71,6 +74,7 @@ function parseEnv() {
       DEFAULT_RATE_LIMIT_PER_MINUTE: process.env.DEFAULT_RATE_LIMIT_PER_MINUTE,
       LOG_LEVEL: process.env.LOG_LEVEL,
       MCP_ENABLED: process.env.MCP_ENABLED,
+      JWT_SECRET: process.env.JWT_SECRET,
       DATABASE_URL: process.env.DATABASE_URL,
     });
 

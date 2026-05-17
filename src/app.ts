@@ -2,6 +2,7 @@ import express, { Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
 import { logger } from "./utils/logger.js";
+import { isDevelopment } from "./config/env.js";
 import { authenticate } from "./middleware/auth.js";
 import { rateLimiter } from "./middleware/rateLimiter.js";
 import { errorHandler } from "./middleware/errorHandler.js";
@@ -9,51 +10,37 @@ import { notFoundHandler } from "./middleware/notFoundHandler.js";
 import healthRoutes from "./routes/health.js";
 import sandboxRoutes from "./routes/sandbox.js";
 import metricsRoutes from "./routes/metrics.js";
+import authRoutes from "./routes/auth.js";
 
-/**
- * Configure application middleware
- */
 function configureMiddleware(app: Express): void {
-  // CORS
-  app.use(cors());
+  app.use(
+    cors({
+      // Allow all origins in dev; restrict to known origins in production
+      origin: isDevelopment ? true : [/\.loccibox\.dev$/, /^https:\/\/loccibox\.dev$/],
+      credentials: true,
+    }),
+  );
 
-  // Body parsing
   app.use(express.json({ limit: "10mb" }));
   app.use(express.urlencoded({ extended: true }));
-
-  // Request logging
   app.use(pinoHttp({ logger }));
 }
 
-/**
- * Configure application routes
- */
 function configureRoutes(app: Express): void {
   // Public routes
   app.use("/health", healthRoutes);
+  app.use("/api/auth", authRoutes);
 
   // Protected API routes
   app.use("/api/sandbox", authenticate, rateLimiter.limit(), sandboxRoutes);
   app.use("/api/metrics", metricsRoutes);
 }
 
-/**
- * Create and configure Express application
- */
 export function createApp(): Express {
   const app = express();
-
-  // Configure middleware
   configureMiddleware(app);
-
-  // Configure routes
   configureRoutes(app);
-
-  // Error handlers (must be last)
   app.use(notFoundHandler);
   app.use(errorHandler);
-
   return app;
 }
-
-// Made with Bob

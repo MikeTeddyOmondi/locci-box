@@ -16,9 +16,12 @@ RUN bun run build
 FROM oven/bun:1-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+RUN apk add --no-cache nginx
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./
-COPY --from=builder /app/vite.config.ts ./
+COPY web/nginx.conf /etc/nginx/http.d/default.conf
+COPY web/web-entrypoint.sh ./web-entrypoint.sh
+RUN chmod +x web-entrypoint.sh
 EXPOSE 4173
-CMD ["bun", "run", "preview", "--host", "0.0.0.0", "--port", "4173"]
+CMD ["./web-entrypoint.sh"]

@@ -17,6 +17,7 @@ services:
       DEFAULT_MAX_CONCURRENT_SANDBOXES: ${DEFAULT_MAX_CONCURRENT_SANDBOXES:-5}
       DEFAULT_SANDBOX_TIMEOUT_SECONDS: ${DEFAULT_SANDBOX_TIMEOUT_SECONDS:-30}
       DEFAULT_RATE_LIMIT_PER_MINUTE: ${DEFAULT_RATE_LIMIT_PER_MINUTE:-60}
+    privileged: true
     devices:
       - /dev/kvm:/dev/kvm
       - /dev/net/tun:/dev/net/tun

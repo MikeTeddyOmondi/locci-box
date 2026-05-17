@@ -17,6 +17,16 @@
   - Requires persistence via **Drizzle ORM + PGlite** (embedded Postgres, no external DB needed)
   - Schema: `users`, `api_keys`, `sandbox_runs`, `tenants`
 
+- [ ] **CLI — API Key Management** (`loccibox keys list/create/revoke`)
+  - The backend `/api/keys` endpoints are fully implemented (GET, POST, PATCH /:id/revoke, DELETE /:id)
+  - The CLI currently prints `⚠ API key management is not yet implemented in the backend.` — needs wiring to the real endpoints
+  - CLI needs JWT from `loccibox login` (or stored token from `loccibox init`) passed as `Authorization: Bearer <jwt>`
+  - Commands to implement in `cli/src/commands/keys.ts`:
+    - `loccibox keys list` — GET /api/keys, display masked keys in a table
+    - `loccibox keys create --name <name>` — POST /api/keys, print full key once
+    - `loccibox keys revoke <key-id>` — PATCH /api/keys/:id/revoke
+    - `loccibox keys delete <key-id>` — DELETE /api/keys/:id
+
 - [x] **Code Page — Inline File Rename**
   - Allow users to rename files directly in the file explorer
   - Click on the filename in place to edit it (inline input, confirm with Enter / cancel with Escape)

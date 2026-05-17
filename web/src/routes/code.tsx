@@ -75,7 +75,6 @@ if __name__ == "__main__":
     content: `def chunk(items, size):
     return [items[i:i + size] for i in range(0, len(items), size)]
 
-# ...other code
 chunks = chunk([1,2,3,4,5,6], 2)
 print(chunks)
 `,

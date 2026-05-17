@@ -1,4 +1,5 @@
 import { createFileRoute, Navigate } from "@tanstack/react-router";
+import { apiClient } from "@/integrations/api/client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Editor from "@monaco-editor/react";
 import { AppLayout } from "@/components/AppLayout";
@@ -123,34 +124,20 @@ function defineLightTheme(monaco: any) {
   });
 }
 
-const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:5757";
+type SandboxOutput = { stdout: string; stderr: string; exit: number; ms: number };
 
-async function runInSandbox(
-  language: string,
-  code: string,
-  token: string | null,
-): Promise<{ stdout: string; stderr: string; exit: number; ms: number }> {
-  const res = await fetch(`${API_URL}/api/sandbox/run`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify({ language, code, timeout: 30 }),
-  });
-  const json = await res.json();
-  if (!res.ok || !json.success) throw new Error(json.error ?? "Execution failed");
-  const d = json.data;
+async function execSandbox(language: Lang, code: string): Promise<SandboxOutput> {
+  const result = await apiClient.runSandbox({ language, code, timeout: 30 });
   return {
-    stdout: d.stdout ?? "",
-    stderr: d.stderr ?? "",
-    exit: d.exit_code ?? 0,
-    ms: d.duration_ms ?? 0,
+    stdout: result.stdout,
+    stderr: result.stderr,
+    exit: result.exit_code,
+    ms: result.duration_ms,
   };
 }
 
 function Page() {
-  const { user, token } = useAuth();
+  const { user } = useAuth();
   const [lang, setLang] = useState<Lang>("python");
   const [code, setCode] = useState(codeStarter.python);
   const [tests, setTests] = useState(testStarter.python);
@@ -199,7 +186,7 @@ function Page() {
     if (!sb || sb.run === "running" || !sb.tests.trim()) return;
     updateSandbox(id, { run: "running", output: null });
     try {
-      const result = await runInSandbox(lang, `${sb.code}\n${sb.tests}`, token);
+      const result = await execSandbox(lang, `${sb.code}\n${sb.tests}`);
       updateSandbox(id, { run: result.exit === 0 ? "passed" : "failed", output: result });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Execution failed";
@@ -232,7 +219,7 @@ function Page() {
     setRun("running");
     setOutput(null);
     try {
-      const result = await runInSandbox(lang, `${code}\n${tests}`, token);
+      const result = await execSandbox(lang, `${code}\n${tests}`);
       const assertCount = Math.max(
         1,
         (tests.match(/assert|console\.assert|raise|\[/g) || []).length,

@@ -30,6 +30,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { apiClient } from "@/integrations/api/client";
 
 export const Route = createFileRoute("/code")({
   head: () => ({ meta: [{ title: "Code Editor — Locci Box" }] }),
@@ -190,16 +191,36 @@ function Page() {
     );
   };
 
+  const apiLang = (l: Lang): "python" | "node" | "bash" | "ruby" => {
+    if (l === "javascript" || l === "typescript") return "node";
+    if (l === "bash") return "bash";
+    if (l === "ruby") return "ruby";
+    return "python";
+  };
+
   const run = async () => {
     if (running) return;
     setRunning(true);
     setOutput(null);
-    const start = performance.now();
-    await new Promise((r) => setTimeout(r, 600 + Math.random() * 600));
-    const ms = Math.round(performance.now() - start);
-    setOutput({ stdout: sampleOutput(active.lang), ms, exit: 0 });
-    setRunning(false);
-    toast.success(`Executed in ${ms}ms`);
+    try {
+      const result = await apiClient.runSandbox({
+        language: apiLang(active.lang),
+        code: active.content,
+      });
+      setOutput({
+        stdout: result.stdout + (result.stderr ? `\n[stderr]\n${result.stderr}` : ""),
+        ms: result.duration_ms,
+        exit: result.exit_code,
+      });
+      if (result.exit_code === 0) toast.success(`Executed in ${result.duration_ms}ms`);
+      else toast.error(`Exited with code ${result.exit_code}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Execution failed";
+      setOutput({ stdout: msg, ms: 0, exit: 1 });
+      toast.error(msg);
+    } finally {
+      setRunning(false);
+    }
   };
 
   const save = () => {

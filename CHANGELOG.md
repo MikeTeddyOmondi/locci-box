@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Code Page — Inline File Rename** — Double-click any filename in the file explorer sidebar to rename it inline. Confirm with Enter or blur, cancel with Escape. Ephemeral (state only, no persistence yet).
+- **BACKLOG.md** — Created backlog tracking three upcoming features: Downloads page, Dashboard persistence, and Code page inline rename.
+
+### Fixed
+
+- `a1475e5` - **KVM access for child sandbox processes** — Added `privileged: true` to API container in compose, made `chmod 666 /dev/kvm` non-fatal (`|| true`) so container starts cleanly even when device permissions are managed by host udev rule.
+- `c0ba3c6` - Added microsandbox binary (`msb`) to `PATH` in `docker-entrypoint.sh` and chmod `/dev/kvm` so child microVM processes can access the device.
+- `952d996` - **Static asset serving** — Switched web container from `vite preview` to nginx + bun SSR dual-process: nginx serves `dist/client/assets/` with cache headers, proxies all other requests to the bun SSR handler on port 3001.
+- `82bd860` / `fbb5790` — Reverted intermediate attempts at vite preview; settled on nginx + bun SSR as the correct production approach.
+- `312a343` / `26486fe` / `308918d` / `c822304` - Added `allowedHosts` for `box.locci.cloud` to both `server` and `preview` in `vite.config.ts` to unblock reverse-proxy / Cloudflare Tunnel access.
+- `0f2fc24` - Added `*.locci.cloud` and `locci.cloud` to CORS allowed origins in `src/app.ts`.
+- `7cd3fb6` - **Proxy network** — Joined `proxy-network` external Docker bridge (shared with cloudflared) so both `locci-box-api` and `locci-box-web` are reachable by the Cloudflare Tunnel.
+- `e599101` - **GLIBC compatibility** — Switched API Dockerfile base from `node:22-slim` (Debian Bookworm, GLIBC 2.36) to `ubuntu:24.04` (GLIBC 2.39) so the microsandbox native `.node` addon loads correctly.
+- `38961f8` - Manually copy microsandbox native `.node` binary to `native/` dir after `--ignore-scripts` install using `find` + `cp`.
+- `3facf31` - Used `--ignore-scripts` in `pnpm install` to bypass pnpm v11 build script approval block for esbuild and microsandbox.
+- `dfa5d89` / `514a046` / `78a51db` - Multiple attempts to unblock pnpm install for esbuild/microsandbox build scripts; settled on `--ignore-scripts` with manual binary copy.
+- `7ad5c24` - Updated share URL to `box.locci.cloud`.
+
+### Added
+
 - **Microsandbox Execution Fix** - Proper language-specific code execution:
   - Implemented `sandbox.exec()` with language-specific interpreters (python3, node, ruby)
   - Added `getExecutionCommand()` method to generate proper command and args for each language

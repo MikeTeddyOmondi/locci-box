@@ -146,9 +146,29 @@ function Page() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [termInput, setTermInput] = useState("");
   const [termHistory, setTermHistory] = useState<string[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState("");
+  const renameInputRef = useRef<HTMLInputElement>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const active = files.find((f) => f.id === activeId) ?? files[0];
+
+  const startRename = (f: FileEntry, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingId(f.id);
+    setEditingName(f.name);
+    setTimeout(() => renameInputRef.current?.select(), 0);
+  };
+
+  const commitRename = () => {
+    const name = editingName.trim();
+    if (name && editingId) {
+      setFiles((fs) => fs.map((f) => (f.id === editingId ? { ...f, name } : f)));
+    }
+    setEditingId(null);
+  };
+
+  const cancelRename = () => setEditingId(null);
 
   const updateContent = (val: string) => {
     setFiles((fs) => fs.map((f) => (f.id === activeId ? { ...f, content: val } : f)));
@@ -292,23 +312,46 @@ function Page() {
                 </div>
                 <div className="pl-4">
                   {files.map((f) => (
-                    <button
+                    <div
                       key={f.id}
                       onClick={() => setActiveId(f.id)}
                       className={cn(
-                        "w-full flex items-center gap-2 px-3 py-1.5 text-xs font-mono group transition-colors",
+                        "w-full flex items-center gap-2 px-3 py-1.5 text-xs font-mono group transition-colors cursor-pointer",
                         activeId === f.id
                           ? "bg-blue-50 text-blue-700 border-r-2 border-blue-500"
                           : "hero-text-muted hover:bg-slate-100 hover:hero-text",
                       )}
                     >
                       <FileText className="w-3.5 h-3.5 shrink-0" />
-                      <span className="truncate flex-1 text-left">{f.name}</span>
+                      {editingId === f.id ? (
+                        <input
+                          ref={renameInputRef}
+                          value={editingName}
+                          onChange={(e) => setEditingName(e.target.value)}
+                          onBlur={commitRename}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") { e.preventDefault(); commitRename(); }
+                            if (e.key === "Escape") { e.preventDefault(); cancelRename(); }
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          aria-label="Rename file"
+                          className="flex-1 min-w-0 bg-white border border-blue-400 rounded px-1 outline-none text-xs font-mono text-slate-800"
+                          autoFocus
+                        />
+                      ) : (
+                        <span
+                          className="truncate flex-1 text-left"
+                          onDoubleClick={(e) => startRename(f, e)}
+                          title="Double-click to rename"
+                        >
+                          {f.name}
+                        </span>
+                      )}
                       <X
                         onClick={(e) => closeFile(f.id, e)}
                         className="w-3 h-3 opacity-0 group-hover:opacity-60 hover:opacity-100 hover:text-red-500 shrink-0"
                       />
-                    </button>
+                    </div>
                   ))}
                 </div>
               </div>

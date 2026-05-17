@@ -41,6 +41,9 @@
     "pino-http": "^11.0.0",
     "valibot": "^1.4.0"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild", "microsandbox", "@superradcompany/microsandbox-linux-x64-gnu", "@superradcompany/microsandbox-linux-arm64-gnu", "@superradcompany/microsandbox-darwin-arm64"]
+  },
   "devDependencies": {
     "@types/bcryptjs": "^3.0.0",
     "@types/cors": "^2.8.17",

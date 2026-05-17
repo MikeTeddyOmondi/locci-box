@@ -2,7 +2,7 @@
 
 ## Features / Updates
 
-- [ ] **Downloads Page** — New web page showing users how to get the CLI. Options:
+- [x] **Downloads Page** — New web page showing users how to get the CLI. Options:
   - Pull the CLI Docker image from Docker Hub: `docker pull locci/box-cli` and run it with `docker run --rm -e LOCCIBOX_API_URL=... -e LOCCIBOX_API_KEY=... locci/box-cli --help`
   - Download prebuilt binaries hosted on GitHub Releases (Linux x64/arm64, macOS arm64)
   - Requires GitHub Actions workflows:

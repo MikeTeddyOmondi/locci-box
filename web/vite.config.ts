@@ -14,7 +14,7 @@ export default defineConfig({
   },
   vite: {
     preview: {
-      allowedHosts: true,
+      allowedHosts: ["box.locci.cloud", "api-box.locci.cloud"],
     },
   },
 });

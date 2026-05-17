@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `99aeb52` - **Code page**: added `chunk()` usage example to `utils.py` default file content
+
 - `dc8f396` - **Dashboard: real 7-day chart + API Keys panel**
   - `GET /api/stats` now returns `daily_runs` — per-day run counts for the last 7 days via `TenantService.getDailyRuns()`
   - Dashboard chart renders real data from the API instead of hardcoded zeros

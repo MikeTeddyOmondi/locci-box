@@ -2,8 +2,6 @@
   "name": "@locci-box/api",
   "version": "1.0.0",
   "type": "module",
-  "description": "B2B API for safe code execution in isolated microVMs",
-  "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "dev:web": "pnpm --filter @locci-box/web dev",
@@ -23,14 +21,6 @@
     "lint": "pnpm --filter @locci-box/web lint",
     "lint:all": "pnpm lint"
   },
-  "keywords": [
-    "sandbox",
-    "microvm",
-    "b2b",
-    "api"
-  ],
-  "author": "",
-  "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "bcryptjs": "^3.0.3",

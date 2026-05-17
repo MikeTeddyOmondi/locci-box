@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `4ca1d0c` - **Downloads page** — New `/downloads` route with binary download table (Linux x64/arm64, macOS arm64, Windows x64/arm64) and Docker pull instructions. Added to app nav.
+- `4ca1d0c` - **GitHub Actions**:
+  - `ci.yml` — runs `pnpm test` on push to main, production, refactors, feat/**, fix/**, test/** branches and PRs
+  - `release.yml` — on `v*` tag: builds CLI standalone binaries for 5 platforms via `bun build --compile`, pushes `locci/box-api`, `locci/box-web`, `locci/box-cli` Docker images to Docker Hub, creates GitHub Release with all assets. Secrets: `DOCKER_USERNAME`, `DOCKER_TOKEN`.
+
 - `99aeb52` - **Code page**: added `chunk()` usage example to `utils.py` default file content
 
 - `dc8f396` - **Dashboard: real 7-day chart + API Keys panel**

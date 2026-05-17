@@ -9,8 +9,8 @@ import { env } from "../config/env.js";
  * Authentication middleware — supports JWT (web) and API key (CLI/user keys).
  *
  * JWT tokens: decoded to get userId + tenantId (attached by /api/auth/login).
- * Admin API key (sk_live_*): looked up in tenants table.
- * User API key (sk_live_*): looked up in api_keys table → maps to tenant_default.
+ * Admin API key (lbk_live_*): looked up in tenants table.
+ * User API key (lbk_live_*): looked up in api_keys table → maps to tenant_default.
  */
 export async function authenticate(
   req: Request,

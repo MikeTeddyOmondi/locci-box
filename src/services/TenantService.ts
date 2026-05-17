@@ -45,7 +45,7 @@ export class TenantService {
       .insert(tenants)
       .values({
         id: `tenant_${nanoid(12)}`,
-        apiKey: `sk_live_${nanoid(32)}`,
+        apiKey: `lbk_live_${nanoid(32)}`,
         organization,
         maxConcurrentSandboxes: env.DEFAULT_MAX_CONCURRENT_SANDBOXES,
         maxExecutionTimeSeconds: env.DEFAULT_SANDBOX_TIMEOUT_SECONDS,

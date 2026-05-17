@@ -134,7 +134,7 @@ jobs:
             docker pull locci/box-cli:${{ github.ref_name }}
             docker run --rm \
               -e LOCCIBOX_API_URL=https://box.locci.cloud \
-              -e LOCCIBOX_API_KEY=sk_live_... \
+              -e LOCCIBOX_API_KEY=lbk_live_... \
               locci/box-cli:${{ github.ref_name }} --help
             ```
 

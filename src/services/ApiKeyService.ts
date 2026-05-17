@@ -63,7 +63,7 @@ class ApiKeyService {
         id: `key_${nanoid(12)}`,
         userId,
         name,
-        key: `sk_live_${nanoid(32)}`,
+        key: `lbk_live_${nanoid(32)}`,
         status: "active",
         rateLimit: opts.rateLimit ?? 100,
         maxConcurrent: opts.maxConcurrent ?? 5,

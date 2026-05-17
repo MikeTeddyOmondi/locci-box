@@ -4,7 +4,15 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "node",
-    include: ["tests/**/*.test.ts"],
+    include: ["tests/unit/**/*.test.ts", "tests/integration/**/*.test.ts"],
+    setupFiles: ["./tests/setup.ts"],
+    env: {
+      ADMIN_API_KEY: "test-admin-key",
+      DB_PATH: "",
+      JWT_SECRET: "test-jwt-secret-for-ci",
+      LOG_LEVEL: "silent",
+      NODE_ENV: "test",
+    },
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],

@@ -219,7 +219,7 @@ Config file format:
     },
     "production": {
       "apiUrl": "https://api.loccibox.com",
-      "apiKey": "sk_live_xxx"
+      "apiKey": "lbk_live_xxx"
     }
   }
 }
@@ -326,7 +326,7 @@ For CI/CD environments where interactive prompts aren't possible:
 
 ```bash
 export LOCCIBOX_API_URL=http://localhost:5757
-export LOCCIBOX_API_KEY=sk_live_your_key_here
+export LOCCIBOX_API_KEY=lbk_live_your_key_here
 
 # Now run without init
 loccibox run --lang bash --code "echo hello"

@@ -27,7 +27,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
 
-      - name: Run unit tests
-        run: pnpm vitest run tests/unit
+      - name: Run tests
+        run: pnpm vitest run
         env:
           ADMIN_API_KEY: ci-test-admin-key

@@ -38,7 +38,7 @@ const EnvSchema = v.object({
 
   // Logging
   LOG_LEVEL: v.optional(
-    v.picklist(["trace", "debug", "info", "warn", "error", "fatal"]),
+    v.picklist(["trace", "debug", "info", "warn", "error", "fatal", "silent"]),
     "info",
   ),
 

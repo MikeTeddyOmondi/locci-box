@@ -54,36 +54,30 @@ export interface MetricsData {
 
 class LocciBoxAPIClient {
   private baseUrl: string;
-  private apiKey: string;
 
   constructor() {
-    // Use import.meta.env for client-side (Vite build-time replacement)
-    // Fall back to process.env for SSR (server-side rendering)
-    this.baseUrl = import.meta.env.VITE_API_URL || process.env.API_URL || "http://localhost:5757";
-
-    // Try to get API key from localStorage (set by auth), fallback to env
-    const storedApiKey =
-      typeof window !== "undefined" ? localStorage.getItem("locci_api_key") : null;
-    this.apiKey = storedApiKey || import.meta.env.VITE_API_KEY || process.env.API_KEY || "";
-
-    if (!this.apiKey) {
-      console.warn(
-        "[API] No API key configured. Please login or set VITE_API_KEY environment variable.",
-      );
-    }
+    this.baseUrl = import.meta.env.VITE_API_URL || "http://localhost:5757";
   }
 
-  // Update API key (called after login)
-  setApiKey(apiKey: string) {
-    this.apiKey = apiKey;
+  // Read the best available credential fresh on every request:
+  // JWT token (web login) takes priority over API key (CLI/legacy)
+  private getToken(): string {
+    if (typeof window === "undefined") return import.meta.env.VITE_API_KEY || "";
+    return (
+      localStorage.getItem("locci_jwt") ||
+      localStorage.getItem("locci_api_key") ||
+      import.meta.env.VITE_API_KEY ||
+      ""
+    );
   }
 
   private async request<T>(path: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
     const url = `${this.baseUrl}${path}`;
+    const token = this.getToken();
 
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
-      ...(this.apiKey && { Authorization: `Bearer ${this.apiKey}` }),
+      ...(token && { Authorization: `Bearer ${token}` }),
       ...(options.headers as Record<string, string>),
     };
 

@@ -14,6 +14,7 @@ import { Route as PlaygroundRouteImport } from './routes/playground'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as KeysRouteImport } from './routes/keys'
 import { Route as FaqRouteImport } from './routes/faq'
+import { Route as DownloadsRouteImport } from './routes/downloads'
 import { Route as DocsRouteImport } from './routes/docs'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CodeRouteImport } from './routes/code'
@@ -45,6 +46,11 @@ const KeysRoute = KeysRouteImport.update({
 const FaqRoute = FaqRouteImport.update({
   id: '/faq',
   path: '/faq',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DownloadsRoute = DownloadsRouteImport.update({
+  id: '/downloads',
+  path: '/downloads',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DocsRoute = DocsRouteImport.update({
@@ -89,6 +95,7 @@ export interface FileRoutesByFullPath {
   '/code': typeof CodeRoute
   '/dashboard': typeof DashboardRoute
   '/docs': typeof DocsRoute
+  '/downloads': typeof DownloadsRoute
   '/faq': typeof FaqRoute
   '/keys': typeof KeysRoute
   '/login': typeof LoginRoute
@@ -103,6 +110,7 @@ export interface FileRoutesByTo {
   '/code': typeof CodeRoute
   '/dashboard': typeof DashboardRoute
   '/docs': typeof DocsRoute
+  '/downloads': typeof DownloadsRoute
   '/faq': typeof FaqRoute
   '/keys': typeof KeysRoute
   '/login': typeof LoginRoute
@@ -118,6 +126,7 @@ export interface FileRoutesById {
   '/code': typeof CodeRoute
   '/dashboard': typeof DashboardRoute
   '/docs': typeof DocsRoute
+  '/downloads': typeof DownloadsRoute
   '/faq': typeof FaqRoute
   '/keys': typeof KeysRoute
   '/login': typeof LoginRoute
@@ -134,6 +143,7 @@ export interface FileRouteTypes {
     | '/code'
     | '/dashboard'
     | '/docs'
+    | '/downloads'
     | '/faq'
     | '/keys'
     | '/login'
@@ -148,6 +158,7 @@ export interface FileRouteTypes {
     | '/code'
     | '/dashboard'
     | '/docs'
+    | '/downloads'
     | '/faq'
     | '/keys'
     | '/login'
@@ -162,6 +173,7 @@ export interface FileRouteTypes {
     | '/code'
     | '/dashboard'
     | '/docs'
+    | '/downloads'
     | '/faq'
     | '/keys'
     | '/login'
@@ -177,6 +189,7 @@ export interface RootRouteChildren {
   CodeRoute: typeof CodeRoute
   DashboardRoute: typeof DashboardRoute
   DocsRoute: typeof DocsRoute
+  DownloadsRoute: typeof DownloadsRoute
   FaqRoute: typeof FaqRoute
   KeysRoute: typeof KeysRoute
   LoginRoute: typeof LoginRoute
@@ -220,6 +233,13 @@ declare module '@tanstack/react-router' {
       path: '/faq'
       fullPath: '/faq'
       preLoaderRoute: typeof FaqRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/downloads': {
+      id: '/downloads'
+      path: '/downloads'
+      fullPath: '/downloads'
+      preLoaderRoute: typeof DownloadsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/docs': {
@@ -290,6 +310,7 @@ const rootRouteChildren: RootRouteChildren = {
   CodeRoute: CodeRoute,
   DashboardRoute: DashboardRoute,
   DocsRoute: DocsRoute,
+  DownloadsRoute: DownloadsRoute,
   FaqRoute: FaqRoute,
   KeysRoute: KeysRoute,
   LoginRoute: LoginRoute,

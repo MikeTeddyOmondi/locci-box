@@ -34,10 +34,13 @@ A B2B platform that lets businesses and AI agents run untrusted code safely insi
 ### Prerequisites
 
 - **Node.js 22+** and **pnpm 9+**
-- **microsandbox CLI** (for production sandbox execution):
+- **microsandbox CLI** — required for sandbox execution (KVM-based microVMs):
   ```bash
   curl -fsSL https://install.microsandbox.dev | sh
+  msb start          # start the microsandbox daemon
+  msb status         # verify it's running
   ```
+  > Requires Linux with KVM support (`/dev/kvm`). The daemon must be running before starting the API.
 
 ### Development
 
@@ -66,6 +69,10 @@ pnpm dev:all
 See [docs/DOCKER.md](./docs/DOCKER.md) for full instructions.
 
 ```bash
+# 1. Install and start microsandbox daemon (on the host)
+curl -fsSL https://install.microsandbox.dev | sh && msb start
+
+# 2. Configure and start
 cp .env.example .env   # fill in ADMIN_API_KEY and JWT_SECRET
 docker compose up -d
 ```

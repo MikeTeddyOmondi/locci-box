@@ -249,7 +249,13 @@
   .bg-gradient-orange-red .text-white,
   .bg-gradient-amber-orange .text-white,
   .bg-gradient-cyan-teal .text-white,
-  .bg-gradient-slate-blue .text-white { color: #ffffff !important; }
+  .bg-gradient-slate-blue .text-white,
+  .bg-locci-gradient .text-white { color: #ffffff !important; }
+
+  .bg-locci-gradient .text-white\/90 { color: rgba(255,255,255,0.92) !important; }
+  .bg-locci-gradient .text-white\/80 { color: rgba(255,255,255,0.85) !important; }
+  .bg-locci-gradient .text-white\/70 { color: rgba(255,255,255,0.75) !important; }
+  .bg-locci-gradient .text-white\/60 { color: rgba(255,255,255,0.62) !important; }
 }
 
 /* Animations */

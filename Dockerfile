@@ -6,7 +6,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends wget \
 RUN corepack enable && corepack prepare pnpm@latest --activate
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 RUN pnpm install --frozen-lockfile --filter @locci-box/api --ignore-scripts && \
-    pnpm rebuild microsandbox "@superradcompany/microsandbox-linux-x64-gnu"
+    src=$(find /app/node_modules -path '*/@superradcompany/microsandbox-linux-x64-gnu/microsandbox.linux-x64-gnu.node' | head -1) && \
+    dst=$(find /app/node_modules -path '*/microsandbox/native' -type d | head -1) && \
+    cp "$src" "$dst/"
 
 FROM node:22-slim AS builder
 WORKDIR /app

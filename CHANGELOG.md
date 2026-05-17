@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `dc8f396` - **Dashboard: real 7-day chart + API Keys panel**
+  - `GET /api/stats` now returns `daily_runs` — per-day run counts for the last 7 days via `TenantService.getDailyRuns()`
+  - Dashboard chart renders real data from the API instead of hardcoded zeros
+  - Replaced mock "Team Workspaces" section with a live API Keys panel fetched from `/api/keys`
+  - `DB_PATH` added to env schema (`src/config/env.ts`); `src/db/index.ts` reads from `env.DB_PATH`
+
+### Fixed
+
+- `dc8f396` - **`GREATEST` vs `MAX` in PGlite** — `decrementActive` used `MAX(0, ...)` (aggregate, invalid in SET clause); replaced with `GREATEST(0, ...)`. Was causing 500 on every sandbox run completion.
+
 - **Dashboard — Real Stats + Persistent API Keys** (Drizzle ORM + PGlite):
   - All data persisted in embedded PGlite (no external DB required)
   - Schema: `tenants`, `users`, `api_keys`, `sandbox_runs` managed by Drizzle ORM

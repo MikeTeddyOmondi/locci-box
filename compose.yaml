@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: locci-box-api
+    image: locci/box-api
     container_name: locci-box-api
     restart: unless-stopped
     ports:
@@ -29,7 +29,7 @@ services:
       dockerfile: web/Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:5757}
-    image: locci-box-web
+    image: locci/box-web
     container_name: locci-box-web
     restart: unless-stopped
     ports:
@@ -44,7 +44,7 @@ services:
     build:
       context: .
       dockerfile: cli/Dockerfile
-    image: locci-box-cli
+    image: locci/box-cli
     container_name: locci-box-cli
     profiles:
       - cli

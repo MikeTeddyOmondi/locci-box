@@ -19,6 +19,10 @@ services:
       DEFAULT_RATE_LIMIT_PER_MINUTE: ${DEFAULT_RATE_LIMIT_PER_MINUTE:-60}
     devices:
       - /dev/kvm:/dev/kvm
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:5757/health"]
       interval: 30s

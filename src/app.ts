@@ -16,7 +16,14 @@ function configureMiddleware(app: Express): void {
   app.use(
     cors({
       // Allow all origins in dev; restrict to known origins in production
-      origin: isDevelopment ? true : [/\.loccibox\.dev$/, /^https:\/\/loccibox\.dev$/],
+      origin: isDevelopment
+        ? true
+        : [
+            /\.loccibox\.dev$/,
+            /^https:\/\/loccibox\.dev$/,
+            /\.locci\.cloud$/,
+            /^https:\/\/locci\.cloud$/,
+          ],
       credentials: true,
     }),
   );

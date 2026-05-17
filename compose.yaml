@@ -17,6 +17,9 @@ services:
       DEFAULT_MAX_CONCURRENT_SANDBOXES: ${DEFAULT_MAX_CONCURRENT_SANDBOXES:-5}
       DEFAULT_SANDBOX_TIMEOUT_SECONDS: ${DEFAULT_SANDBOX_TIMEOUT_SECONDS:-30}
       DEFAULT_RATE_LIMIT_PER_MINUTE: ${DEFAULT_RATE_LIMIT_PER_MINUTE:-60}
+      DB_PATH: /app/data/locci-box
+    volumes:
+      - db-data:/app/data
     privileged: true
     devices:
       - /dev/kvm:/dev/kvm
@@ -66,6 +69,11 @@ services:
       LOCCIBOX_API_KEY: ${ADMIN_API_KEY}
     entrypoint: ["loccibox"]
     command: ["--help"]
+
+volumes:
+  db-data:
+    name: locci-box-db-data
+    driver: local
 
 networks:
   proxy-network:

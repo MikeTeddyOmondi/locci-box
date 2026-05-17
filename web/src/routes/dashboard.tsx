@@ -1,6 +1,8 @@
 import { createFileRoute, Navigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/lib/auth";
+import { apiClient, type StatsData } from "@/integrations/api/client";
 import {
   Activity,
   Server,
@@ -36,63 +38,59 @@ export const Route = createFileRoute("/dashboard")({
   component: Page,
 });
 
-const stats = [
-  {
-    label: "Total Runs (Today)",
-    value: "487",
-    trend: "+12% from yesterday",
-    icon: BarChart3,
-    gradient: "bg-gradient-cyan-blue",
-    up: true,
-  },
-  {
-    label: "Active Sandboxes",
-    value: "12",
-    trend: "Running right now",
-    icon: Server,
-    gradient: "bg-gradient-teal-green",
-    up: true,
-  },
-  {
-    label: "Avg Execution Time",
-    value: "94ms",
-    trend: "Across all runs",
-    icon: Clock,
-    gradient: "bg-gradient-purple-pink",
-    up: true,
-  },
-  {
-    label: "API Calls (Month)",
-    value: "12,847",
-    trend: "Rate limit: 100k",
-    icon: Activity,
-    gradient: "bg-gradient-amber-orange",
-    up: true,
-  },
-];
-
 const chart = [
-  { day: "Mon", runs: 120 },
-  { day: "Tue", runs: 145 },
-  { day: "Wed", runs: 98 },
-  { day: "Thu", runs: 234 },
-  { day: "Fri", runs: 287 },
-  { day: "Sat", runs: 156 },
-  { day: "Sun", runs: 89 },
+  { day: "Mon", runs: 0 },
+  { day: "Tue", runs: 0 },
+  { day: "Wed", runs: 0 },
+  { day: "Thu", runs: 0 },
+  { day: "Fri", runs: 0 },
+  { day: "Sat", runs: 0 },
+  { day: "Sun", runs: 0 },
 ];
 
-const recent = [
-  { time: "2:34 PM", lang: "Python", status: "ok", dur: "87ms", tenant: "sk_live_a3f9..." },
-  { time: "2:32 PM", lang: "Node.js", status: "ok", dur: "112ms", tenant: "sk_live_a3f9..." },
-  { time: "2:28 PM", lang: "Bash", status: "fail", dur: "45ms", tenant: "sk_test_71be..." },
-  { time: "2:21 PM", lang: "Python", status: "running", dur: "—", tenant: "sk_live_a3f9..." },
-  { time: "2:19 PM", lang: "Ruby", status: "ok", dur: "203ms", tenant: "sk_live_c8d2..." },
-  { time: "2:14 PM", lang: "Python", status: "ok", dur: "76ms", tenant: "sk_live_a3f9..." },
-  { time: "2:10 PM", lang: "Node.js", status: "ok", dur: "98ms", tenant: "sk_test_71be..." },
-  { time: "2:05 PM", lang: "Bash", status: "ok", dur: "31ms", tenant: "sk_live_a3f9..." },
-  { time: "1:58 PM", lang: "Python", status: "fail", dur: "1240ms", tenant: "sk_live_c8d2..." },
-  { time: "1:52 PM", lang: "Ruby", status: "ok", dur: "187ms", tenant: "sk_live_a3f9..." },
-];
+function buildStats(data: StatsData | null) {
+  const successRate =
+    data && data.total_runs > 0
+      ? `${Math.round((data.success_runs / data.total_runs) * 100)}%`
+      : "—";
+  return [
+    {
+      label: "Total Runs",
+      value: data ? data.total_runs.toLocaleString() : "—",
+      trend: data && data.total_runs > 0 ? `${data.success_runs} succeeded` : "No runs yet",
+      icon: BarChart3,
+      gradient: "bg-gradient-cyan-blue",
+    },
+    {
+      label: "Active Sandboxes",
+      value: data ? String(data.active_sandboxes) : "—",
+      trend: "Running right now",
+      icon: Server,
+      gradient: "bg-gradient-teal-green",
+    },
+    {
+      label: "Avg Execution Time",
+      value: data ? `${data.avg_execution_ms}ms` : "—",
+      trend: "Across all runs",
+      icon: Clock,
+      gradient: "bg-gradient-purple-pink",
+    },
+    {
+      label: "Success Rate",
+      value: successRate,
+      trend: data ? `${data.total_runs} total runs` : "No runs yet",
+      icon: Activity,
+      gradient: "bg-gradient-amber-orange",
+    },
+  ];
+}
+
+const langLabel: Record<string, string> = {
+  python: "Python",
+  node: "Node.js",
+  bash: "Bash",
+  ruby: "Ruby",
+};
 
 type TeamSandbox = {
   id: string;
@@ -162,9 +160,17 @@ const teamSandboxes: TeamSandbox[] = [
 
 function Page() {
   const { user } = useAuth();
+  const [statsData, setStatsData] = useState<StatsData | null>(null);
+
+  useEffect(() => {
+    apiClient.getStats().then(setStatsData).catch(() => {});
+  }, []);
+
   if (!user) return <Navigate to="/login" />;
 
+  const stats = buildStats(statsData);
   const visibleSandboxes = user.isDemo ? teamSandboxes.slice(0, 2) : teamSandboxes;
+  const recentRuns = statsData?.recent_runs ?? [];
 
   return (
     <AppLayout>
@@ -402,38 +408,53 @@ function Page() {
                 </tr>
               </thead>
               <tbody>
-                {recent.map((r, i) => (
-                  <tr
-                    key={i}
-                    className="border-t border-white/5 hover:bg-white/5 transition-colors"
-                  >
-                    <td className="px-4 sm:px-6 py-3 text-white/70 whitespace-nowrap">
-                      {r.time} Today
-                    </td>
-                    <td className="px-4 sm:px-6 py-3 font-medium">{r.lang}</td>
-                    <td className="px-4 sm:px-6 py-3">
-                      {r.status === "ok" && (
-                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-success/15 text-success text-xs">
-                          <Check className="w-3 h-3" /> Completed
-                        </span>
-                      )}
-                      {r.status === "fail" && (
-                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-destructive/15 text-destructive text-xs">
-                          <X className="w-3 h-3" /> Failed
-                        </span>
-                      )}
-                      {r.status === "running" && (
-                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-info/15 text-info text-xs">
-                          <Loader2 className="w-3 h-3 animate-spin" /> Running
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 sm:px-6 py-3 font-mono text-xs">{r.dur}</td>
-                    <td className="px-4 sm:px-6 py-3 font-mono text-xs text-white/60">
-                      {r.tenant}
+                {recentRuns.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-8 text-center text-white/40 text-sm">
+                      No runs yet — execute some code to see activity here.
                     </td>
                   </tr>
-                ))}
+                )}
+                {recentRuns.map((r) => {
+                  const isOk = r.status === "completed";
+                  const isRunning = r.status === "running";
+                  const time = new Date(r.created_at).toLocaleTimeString("en-US", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  });
+                  return (
+                    <tr
+                      key={r.sandbox_id}
+                      className="border-t border-white/5 hover:bg-white/5 transition-colors"
+                    >
+                      <td className="px-4 sm:px-6 py-3 text-white/70 whitespace-nowrap">{time}</td>
+                      <td className="px-4 sm:px-6 py-3 font-medium">
+                        {langLabel[r.language] ?? r.language}
+                      </td>
+                      <td className="px-4 sm:px-6 py-3">
+                        {isOk && (
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-success/15 text-success text-xs">
+                            <Check className="w-3 h-3" /> Completed
+                          </span>
+                        )}
+                        {!isOk && !isRunning && (
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-destructive/15 text-destructive text-xs">
+                            <X className="w-3 h-3" /> {r.status === "timeout" ? "Timeout" : "Failed"}
+                          </span>
+                        )}
+                        {isRunning && (
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-info/15 text-info text-xs">
+                            <Loader2 className="w-3 h-3 animate-spin" /> Running
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 sm:px-6 py-3 font-mono text-xs">{r.duration_ms}ms</td>
+                      <td className="px-4 sm:px-6 py-3 font-mono text-xs text-white/60">
+                        exit {r.exit_code}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

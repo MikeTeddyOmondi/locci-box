@@ -30,6 +30,7 @@ RUN curl -fsSL https://install.microsandbox.dev | sh
 COPY --from=builder /app/dist ./dist
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json docker-entrypoint.sh ./
+COPY drizzle ./drizzle
 RUN chmod +x docker-entrypoint.sh
 EXPOSE 5757
 ENTRYPOINT ["./docker-entrypoint.sh"]

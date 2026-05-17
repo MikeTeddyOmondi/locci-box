@@ -1,13 +1,16 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { tenantService } from "../services/TenantService.js";
+import { apiKeyService } from "../services/ApiKeyService.js";
 import { logger } from "../utils/logger.js";
 import { env } from "../config/env.js";
 
 /**
- * Authentication middleware - supports both JWT (web) and API key (CLI).
- * JWT tokens (web app) are identified by the "eyJ" prefix and map to the default tenant.
- * API keys (CLI) map directly to tenant records in TenantService.
+ * Authentication middleware — supports JWT (web) and API key (CLI/user keys).
+ *
+ * JWT tokens: decoded to get userId + tenantId (attached by /api/auth/login).
+ * Admin API key (sk_live_*): looked up in tenants table.
+ * User API key (sk_live_*): looked up in api_keys table → maps to tenant_default.
  */
 export async function authenticate(
   req: Request,
@@ -16,22 +19,18 @@ export async function authenticate(
 ): Promise<void> {
   try {
     const authHeader = req.headers.authorization;
-
     if (!authHeader) {
       res.status(401).json({ success: false, error: "No authorization header provided" });
       return;
     }
 
-    const token = authHeader.startsWith("Bearer ")
-      ? authHeader.substring(7)
-      : authHeader;
-
+    const token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
     if (!token) {
       res.status(401).json({ success: false, error: "No credentials provided" });
       return;
     }
 
-    // Try JWT first (web app — JWTs always start with "eyJ")
+    // JWT (web login) — always starts with "eyJ"
     if (token.startsWith("eyJ")) {
       try {
         const payload = jwt.verify(token, env.JWT_SECRET!) as {
@@ -56,18 +55,35 @@ export async function authenticate(
       }
     }
 
-    // Fall back to API key (CLI)
-    const tenant = await tenantService.getByApiKey(token);
-    if (!tenant) {
-      logger.warn({ api_key_prefix: token.substring(0, 10) }, "Invalid API key");
-      res.status(401).json({ success: false, error: "Invalid API key" });
+    // Admin/tenant API key — check tenants table first
+    const tenantByKey = await tenantService.getByApiKey(token);
+    if (tenantByKey) {
+      (req as any).tenant = tenantByKey;
+      (req as any).tenantId = tenantByKey.id;
+      logger.debug({ tenant_id: tenantByKey.id }, "Tenant API key authenticated");
+      next();
       return;
     }
 
-    (req as any).tenant = tenant;
-    (req as any).tenantId = tenant.id;
-    logger.debug({ tenant_id: tenant.id, organization: tenant.organization }, "API key authenticated");
-    next();
+    // User API key — check api_keys table
+    const userKey = await apiKeyService.getByKey(token);
+    if (userKey && userKey.status === "active") {
+      const tenant = await tenantService.getById("tenant_default");
+      if (!tenant) {
+        res.status(500).json({ success: false, error: "Default tenant not found" });
+        return;
+      }
+      (req as any).tenant = tenant;
+      (req as any).tenantId = tenant.id;
+      (req as any).userId = userKey.userId;
+      await apiKeyService.markUsed(userKey.id);
+      logger.debug({ key_id: userKey.id, user_id: userKey.userId }, "User API key authenticated");
+      next();
+      return;
+    }
+
+    logger.warn({ prefix: token.substring(0, 10) }, "Invalid API key");
+    res.status(401).json({ success: false, error: "Invalid API key" });
   } catch (error) {
     logger.error({ error }, "Authentication error");
     res.status(500).json({ success: false, error: "Internal server error" });
@@ -75,7 +91,7 @@ export async function authenticate(
 }
 
 /**
- * Admin authentication middleware - validates admin API key
+ * Admin authentication middleware — validates admin API key only.
  */
 export function authenticateAdmin(
   req: Request,

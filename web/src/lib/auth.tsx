@@ -74,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginDemo = async () => {
     const { token: t, user: u } = await apiAuth("login", {
-      email: "demo@loccibox.dev",
+      email: "box@locci.cloud",
       password: "demo1234",
     });
     persist(t, { ...u, isDemo: true });

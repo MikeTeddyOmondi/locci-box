@@ -1,29 +1,21 @@
+import { initDb } from "./db/index.js";
 import { createApp } from "./app.js";
 import { logger } from "./utils/logger.js";
 import { env, isDevelopment } from "./config/env.js";
 
-/**
- * Start the Express server
- */
 async function startServer() {
   try {
+    await initDb();
+
     const app = createApp();
 
     app.listen(env.PORT, () => {
-      logger.info(
-        {
-          port: env.PORT,
-          env: env.NODE_ENV,
-        },
-        "Locci Box API server started",
-      );
+      logger.info({ port: env.PORT, env: env.NODE_ENV }, "Locci Box API server started");
 
       if (isDevelopment) {
         logger.info(`Default API key for testing: ${env.ADMIN_API_KEY}`);
         logger.info(`Health check: http://localhost:${env.PORT}/health`);
-        logger.info(
-          `API endpoint: http://localhost:${env.PORT}/api/sandbox/run`,
-        );
+        logger.info(`API endpoint: http://localhost:${env.PORT}/api/sandbox/run`);
       }
     });
   } catch (error) {
@@ -32,7 +24,6 @@ async function startServer() {
   }
 }
 
-// Handle graceful shutdown
 process.on("SIGTERM", () => {
   logger.info("SIGTERM received, shutting down gracefully");
   process.exit(0);
@@ -43,7 +34,4 @@ process.on("SIGINT", () => {
   process.exit(0);
 });
 
-// Start the server
 startServer();
-
-// Made with Bob

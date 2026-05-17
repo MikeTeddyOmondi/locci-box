@@ -1,169 +1,126 @@
 import { nanoid } from "nanoid";
+import { eq, sql } from "drizzle-orm";
+import { db } from "../db/index.js";
+import { tenants, sandboxRuns } from "../db/schema.js";
 import { Tenant, UsageStats } from "../types/index.js";
 import { logger } from "../utils/logger.js";
 import { env } from "../config/env.js";
 
-/**
- * TenantService manages multi-tenancy, usage tracking, and quota enforcement.
- * Uses in-memory storage for now with TODO comments for production database.
- */
+export interface RecentRun {
+  sandbox_id: string;
+  language: string;
+  status: string;
+  exit_code: number;
+  duration_ms: number;
+  created_at: string;
+}
+
+function toTenant(row: typeof tenants.$inferSelect): Tenant {
+  return {
+    id: row.id,
+    api_key: row.apiKey,
+    organization: row.organization,
+    max_concurrent_sandboxes: row.maxConcurrentSandboxes,
+    max_execution_time_seconds: row.maxExecutionTimeSeconds,
+    rate_limit_per_minute: row.rateLimitPerMinute,
+    active_sandboxes: row.activeSandboxes,
+    total_executions: row.totalExecutions,
+    created_at: row.createdAt,
+  };
+}
+
 export class TenantService {
-  // TODO: Replace with PostgreSQL/Redis in production
-  private tenants: Map<string, Tenant> = new Map();
-  private apiKeyIndex: Map<string, string> = new Map(); // api_key -> tenant_id
-  private executionMetrics: Map<string, { total_ms: number; count: number }> =
-    new Map();
-
-  constructor() {
-    // Seed with a default tenant for development
-    this.createDefaultTenant();
-  }
-
-  /**
-   * Create a default tenant for local development
-   */
-  private createDefaultTenant(): void {
-    const defaultTenant: Tenant = {
-      id: "tenant_default",
-      api_key: env.ADMIN_API_KEY,
-      organization: "Default Organization",
-      max_concurrent_sandboxes: env.DEFAULT_MAX_CONCURRENT_SANDBOXES,
-      max_execution_time_seconds: env.DEFAULT_SANDBOX_TIMEOUT_SECONDS,
-      rate_limit_per_minute: env.DEFAULT_RATE_LIMIT_PER_MINUTE,
-      active_sandboxes: 0,
-      total_executions: 0,
-      created_at: new Date().toISOString(),
-    };
-
-    this.tenants.set(defaultTenant.id, defaultTenant);
-    this.apiKeyIndex.set(defaultTenant.api_key, defaultTenant.id);
-
-    logger.info(
-      { tenant_id: defaultTenant.id },
-      "Default tenant created for development",
-    );
-  }
-
-  /**
-   * Get tenant by API key
-   */
   async getByApiKey(apiKey: string): Promise<Tenant | null> {
-    const tenantId = this.apiKeyIndex.get(apiKey);
-    if (!tenantId) {
-      return null;
-    }
-    return this.tenants.get(tenantId) || null;
+    const [row] = await db.select().from(tenants).where(eq(tenants.apiKey, apiKey));
+    return row ? toTenant(row) : null;
   }
 
-  /**
-   * Get tenant by ID
-   */
   async getById(tenantId: string): Promise<Tenant | null> {
-    return this.tenants.get(tenantId) || null;
+    const [row] = await db.select().from(tenants).where(eq(tenants.id, tenantId));
+    return row ? toTenant(row) : null;
   }
 
-  /**
-   * Create a new tenant
-   */
   async create(organization: string): Promise<Tenant> {
-    const tenant: Tenant = {
-      id: `tenant_${nanoid(12)}`,
-      api_key: `sk_live_${nanoid(32)}`,
-      organization,
-      max_concurrent_sandboxes: env.DEFAULT_MAX_CONCURRENT_SANDBOXES,
-      max_execution_time_seconds: env.DEFAULT_SANDBOX_TIMEOUT_SECONDS,
-      rate_limit_per_minute: env.DEFAULT_RATE_LIMIT_PER_MINUTE,
-      active_sandboxes: 0,
-      total_executions: 0,
-      created_at: new Date().toISOString(),
-    };
-
-    this.tenants.set(tenant.id, tenant);
-    this.apiKeyIndex.set(tenant.api_key, tenant.id);
-
-    logger.info({ tenant_id: tenant.id, organization }, "New tenant created");
-
-    return tenant;
+    const [row] = await db
+      .insert(tenants)
+      .values({
+        id: `tenant_${nanoid(12)}`,
+        apiKey: `sk_live_${nanoid(32)}`,
+        organization,
+        maxConcurrentSandboxes: env.DEFAULT_MAX_CONCURRENT_SANDBOXES,
+        maxExecutionTimeSeconds: env.DEFAULT_SANDBOX_TIMEOUT_SECONDS,
+        rateLimitPerMinute: env.DEFAULT_RATE_LIMIT_PER_MINUTE,
+        activeSandboxes: 0,
+        totalExecutions: 0,
+        createdAt: new Date().toISOString(),
+      })
+      .returning();
+    logger.info({ tenant_id: row.id, organization }, "New tenant created");
+    return toTenant(row);
   }
 
-  /**
-   * Check if tenant can create a new sandbox
-   */
   async canCreateSandbox(tenantId: string): Promise<boolean> {
     const tenant = await this.getById(tenantId);
-    if (!tenant) {
-      return false;
-    }
+    if (!tenant) return false;
     return tenant.active_sandboxes < tenant.max_concurrent_sandboxes;
   }
 
-  /**
-   * Increment active sandbox count
-   */
   async incrementActive(tenantId: string): Promise<void> {
-    const tenant = await this.getById(tenantId);
-    if (tenant) {
-      tenant.active_sandboxes++;
-      logger.debug(
-        { tenant_id: tenantId, active: tenant.active_sandboxes },
-        "Incremented active sandboxes",
-      );
-    }
+    await db
+      .update(tenants)
+      .set({ activeSandboxes: sql`${tenants.activeSandboxes} + 1` })
+      .where(eq(tenants.id, tenantId));
   }
 
-  /**
-   * Decrement active sandbox count
-   */
   async decrementActive(tenantId: string): Promise<void> {
-    const tenant = await this.getById(tenantId);
-    if (tenant && tenant.active_sandboxes > 0) {
-      tenant.active_sandboxes--;
-      logger.debug(
-        { tenant_id: tenantId, active: tenant.active_sandboxes },
-        "Decremented active sandboxes",
-      );
-    }
+    await db
+      .update(tenants)
+      .set({ activeSandboxes: sql`MAX(0, ${tenants.activeSandboxes} - 1)` })
+      .where(eq(tenants.id, tenantId));
   }
 
-  /**
-   * Record a sandbox execution
-   */
-  async recordExecution(tenantId: string, durationMs: number): Promise<void> {
-    const tenant = await this.getById(tenantId);
-    if (tenant) {
-      tenant.total_executions++;
+  async recordExecution(
+    tenantId: string,
+    durationMs: number,
+    opts?: {
+      sandboxId?: string;
+      language?: string;
+      status?: "completed" | "failed" | "timeout";
+      exitCode?: number;
+    },
+  ): Promise<void> {
+    await db
+      .update(tenants)
+      .set({ totalExecutions: sql`${tenants.totalExecutions} + 1` })
+      .where(eq(tenants.id, tenantId));
 
-      // Track metrics for average calculation
-      const metrics = this.executionMetrics.get(tenantId) || {
-        total_ms: 0,
-        count: 0,
-      };
-      metrics.total_ms += durationMs;
-      metrics.count++;
-      this.executionMetrics.set(tenantId, metrics);
-
-      logger.debug(
-        { tenant_id: tenantId, duration_ms: durationMs },
-        "Recorded execution",
-      );
+    if (opts?.sandboxId) {
+      await db.insert(sandboxRuns).values({
+        id: opts.sandboxId,
+        tenantId,
+        language: opts.language ?? "unknown",
+        status: opts.status ?? "completed",
+        exitCode: opts.exitCode ?? 0,
+        durationMs,
+        createdAt: new Date().toISOString(),
+      });
     }
+
+    logger.debug({ tenant_id: tenantId, duration_ms: durationMs }, "Recorded execution");
   }
 
-  /**
-   * Get usage statistics for a tenant
-   */
   async getUsageStats(tenantId: string): Promise<UsageStats | null> {
     const tenant = await this.getById(tenantId);
-    if (!tenant) {
-      return null;
-    }
+    if (!tenant) return null;
 
-    const metrics = this.executionMetrics.get(tenantId) || {
-      total_ms: 0,
-      count: 0,
-    };
-    const avgExecutionMs =
-      metrics.count > 0 ? Math.round(metrics.total_ms / metrics.count) : 0;
+    const runs = await db
+      .select()
+      .from(sandboxRuns)
+      .where(eq(sandboxRuns.tenantId, tenantId));
+
+    const count = runs.length;
+    const totalMs = runs.reduce((s, r) => s + r.durationMs, 0);
+    const avgExecutionMs = count > 0 ? Math.round(totalMs / count) : 0;
 
     return {
       tenant_id: tenant.id,
@@ -171,33 +128,50 @@ export class TenantService {
       total_runs: tenant.total_executions,
       active_sandboxes: tenant.active_sandboxes,
       avg_execution_ms: avgExecutionMs,
-      last_activity: new Date().toISOString(),
+      last_activity: runs[0]?.createdAt ?? tenant.created_at,
     };
   }
 
-  /**
-   * Get all tenants (for admin metrics)
-   */
-  async getAllTenants(): Promise<Tenant[]> {
-    return Array.from(this.tenants.values());
+  async getRecentRuns(tenantId: string, limit = 20): Promise<RecentRun[]> {
+    const rows = await db
+      .select()
+      .from(sandboxRuns)
+      .where(eq(sandboxRuns.tenantId, tenantId))
+      .orderBy(sql`created_at DESC`)
+      .limit(limit);
+
+    return rows.map((r) => ({
+      sandbox_id: r.id,
+      language: r.language,
+      status: r.status,
+      exit_code: r.exitCode,
+      duration_ms: r.durationMs,
+      created_at: r.createdAt,
+    }));
   }
 
-  /**
-   * Get usage stats for all tenants (for admin metrics)
-   */
+  async getSuccessRuns(tenantId: string): Promise<number> {
+    const rows = await db
+      .select()
+      .from(sandboxRuns)
+      .where(sql`tenant_id = ${tenantId} AND status = 'completed'`);
+    return rows.length;
+  }
+
+  async getAllTenants(): Promise<Tenant[]> {
+    const rows = await db.select().from(tenants);
+    return rows.map(toTenant);
+  }
+
   async getAllUsageStats(): Promise<UsageStats[]> {
+    const all = await this.getAllTenants();
     const stats: UsageStats[] = [];
-    for (const tenant of this.tenants.values()) {
-      const tenantStats = await this.getUsageStats(tenant.id);
-      if (tenantStats) {
-        stats.push(tenantStats);
-      }
+    for (const t of all) {
+      const s = await this.getUsageStats(t.id);
+      if (s) stats.push(s);
     }
     return stats;
   }
 }
 
-// Singleton instance
 export const tenantService = new TenantService();
-
-// Made with Bob

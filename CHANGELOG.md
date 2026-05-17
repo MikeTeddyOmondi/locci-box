@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Dashboard — Real Stats + Persistent API Keys** (Drizzle ORM + PGlite):
+  - All data persisted in embedded PGlite (no external DB required)
+  - Schema: `tenants`, `users`, `api_keys`, `sandbox_runs` managed by Drizzle ORM
+  - `drizzle-kit` added as dev dep; scripts: `db:generate`, `db:migrate`, `db:push`, `db:studio`
+  - Initial migration: `drizzle/0000_glossy_power_pack.sql`
+  - DB initialized via `migrate()` from `drizzle-orm/pglite/migrator` on startup
+  - Docker volume `db-data` mounted at `/app/data` for persistence across restarts
+  - `GET /api/stats` — real per-tenant stats (runs, success rate, avg ms, last 20 runs)
+  - `GET /api/keys`, `POST /api/keys`, `PATCH /api/keys/:id/revoke`, `DELETE /api/keys/:id`
+  - User API keys stored in `api_keys` table and accepted by auth middleware
+  - Dashboard shows real metrics fetched from API; recent activity shows actual runs
+  - Keys page fully backed by API — create, revoke, delete persist across sessions
+  - Demo account updated to `box@locci.cloud` / `demo1234`
+  - `DB_PATH` env var documented in `.env.example`
+
 - **Code Page — Inline File Rename** — Double-click any filename in the file explorer sidebar to rename it inline. Confirm with Enter or blur, cancel with Escape. Ephemeral (state only, no persistence yet).
 - **BACKLOG.md** — Created backlog tracking three upcoming features: Downloads page, Dashboard persistence, and Code page inline rename.
 

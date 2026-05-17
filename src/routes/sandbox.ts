@@ -87,7 +87,12 @@ router.post("/run", async (req: Request, res: Response): Promise<void> => {
       );
 
       // Record execution metrics
-      await tenantService.recordExecution(tenantId, result.duration_ms);
+      await tenantService.recordExecution(tenantId, result.duration_ms, {
+        sandboxId: result.sandbox_id,
+        language,
+        status: result.status as "completed" | "failed" | "timeout",
+        exitCode: result.exit_code,
+      });
 
       // Decrement active sandbox count
       await tenantService.decrementActive(tenantId);

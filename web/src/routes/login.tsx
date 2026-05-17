@@ -206,7 +206,7 @@ function LoginPage() {
               Try Demo Sandbox
             </button>
             <p className="text-[11px] text-center mt-3" style={{ color: "#94a3b8" }}>
-              demo@loccibox.dev / demo1234
+              box@locci.cloud / demo1234
             </p>
           </div>
         </div>

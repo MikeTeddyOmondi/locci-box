@@ -52,6 +52,39 @@ export interface MetricsData {
   >;
 }
 
+export interface RecentRun {
+  sandbox_id: string;
+  language: string;
+  status: string;
+  exit_code: number;
+  duration_ms: number;
+  created_at: string;
+}
+
+export interface StatsData {
+  tenant_id: string;
+  organization: string;
+  total_runs: number;
+  active_sandboxes: number;
+  avg_execution_ms: number;
+  success_runs: number;
+  recent_runs: RecentRun[];
+  last_activity: string;
+}
+
+export interface ApiKeyData {
+  id: string;
+  userId: string;
+  name: string;
+  key: string;
+  status: "active" | "revoked";
+  rateLimit: number | null;
+  maxConcurrent: number;
+  timeoutSeconds: number;
+  createdAt: string;
+  lastUsedAt: string | null;
+}
+
 class LocciBoxAPIClient {
   private baseUrl: string;
 
@@ -142,6 +175,46 @@ class LocciBoxAPIClient {
     }
 
     return response.data;
+  }
+
+  async getStats(): Promise<StatsData> {
+    const response = await this.request<StatsData>("/api/stats");
+    if (!response.success || !response.data) {
+      throw new Error(response.error || "Failed to get stats");
+    }
+    return response.data;
+  }
+
+  async listKeys(): Promise<ApiKeyData[]> {
+    const response = await this.request<ApiKeyData[]>("/api/keys");
+    if (!response.success || !response.data) {
+      throw new Error(response.error || "Failed to list keys");
+    }
+    return response.data;
+  }
+
+  async createKey(
+    name: string,
+    opts: { rateLimit?: number | null; maxConcurrent?: number; timeoutSeconds?: number },
+  ): Promise<ApiKeyData> {
+    const response = await this.request<ApiKeyData>("/api/keys", {
+      method: "POST",
+      body: JSON.stringify({ name, ...opts }),
+    });
+    if (!response.success || !response.data) {
+      throw new Error(response.error || "Failed to create key");
+    }
+    return response.data;
+  }
+
+  async revokeKey(id: string): Promise<void> {
+    const response = await this.request(`/api/keys/${id}/revoke`, { method: "PATCH" });
+    if (!response.success) throw new Error(response.error || "Failed to revoke key");
+  }
+
+  async deleteKey(id: string): Promise<void> {
+    const response = await this.request(`/api/keys/${id}`, { method: "DELETE" });
+    if (!response.success) throw new Error(response.error || "Failed to delete key");
   }
 
   async healthCheck(): Promise<{ status: string; timestamp: string; uptime: number }> {

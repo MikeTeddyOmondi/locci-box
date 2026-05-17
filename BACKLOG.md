@@ -17,6 +17,6 @@
   - Requires persistence via **Drizzle ORM + PGlite** (embedded Postgres, no external DB needed)
   - Schema: `users`, `api_keys`, `sandbox_runs`, `tenants`
 
-- [ ] **Code Page — Inline File Rename**
+- [x] **Code Page — Inline File Rename**
   - Allow users to rename files directly in the file explorer
   - Click on the filename in place to edit it (inline input, confirm with Enter / cancel with Escape)

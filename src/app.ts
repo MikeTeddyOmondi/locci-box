@@ -11,11 +11,12 @@ import healthRoutes from "./routes/health.js";
 import sandboxRoutes from "./routes/sandbox.js";
 import metricsRoutes from "./routes/metrics.js";
 import authRoutes from "./routes/auth.js";
+import statsRoutes from "./routes/stats.js";
+import apiKeysRoutes from "./routes/apikeys.js";
 
 function configureMiddleware(app: Express): void {
   app.use(
     cors({
-      // Allow all origins in dev; restrict to known origins in production
       origin: isDevelopment
         ? true
         : [
@@ -40,6 +41,8 @@ function configureRoutes(app: Express): void {
 
   // Protected API routes
   app.use("/api/sandbox", authenticate, rateLimiter.limit(), sandboxRoutes);
+  app.use("/api/stats", authenticate, statsRoutes);
+  app.use("/api/keys", authenticate, apiKeysRoutes);
   app.use("/api/metrics", metricsRoutes);
 }
 

@@ -30,4 +30,7 @@ coverage/
 tmp/
 temp/
 
+# PGlite database files (persisted via Docker volume in production)
+data/
+
 # Made with Bob

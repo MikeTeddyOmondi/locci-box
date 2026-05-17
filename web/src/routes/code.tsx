@@ -228,7 +228,7 @@ function Page() {
     toast.success(`${active.name} saved`);
   };
   const share = () => {
-    navigator.clipboard.writeText(`https://sandboxapi.dev/s/${active.id}`);
+    navigator.clipboard.writeText(`https://box.locci.cloud/s/${active.id}`);
     toast.success("Share link copied");
   };
   const download = () => {

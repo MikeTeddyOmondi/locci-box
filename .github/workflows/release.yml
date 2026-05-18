@@ -100,6 +100,8 @@ jobs:
           tags: |
             locci/box-web:latest
             locci/box-web:${{ steps.tag.outputs.version }}
+          build-args: |
+            VITE_API_URL=${{ secrets.VITE_API_URL }}
 
       - name: Build and push CLI image
         uses: docker/build-push-action@v6

@@ -126,9 +126,29 @@ jobs:
       - name: Generate SHA256 checksums
         run: |
           cd dist
-          sha256sum * > checksums.sha256
+          sha256sum loccibox-* > checksums.sha256
           echo "--- checksums ---"
           cat checksums.sha256
+
+      - name: Import GPG signing key
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.RELEASE_GPG_KEY }}
+        run: |
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --import
+          echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
+          gpgconf --kill gpg-agent
+
+      - name: Sign all binaries with GPG
+        env:
+          GPG_PASSPHRASE: ${{ secrets.RELEASE_GPG_PASSPHRASE }}
+        run: |
+          cd dist
+          for f in loccibox-*; do
+            echo "$GPG_PASSPHRASE" | gpg --batch --yes \
+              --passphrase-fd 0 \
+              --pinentry-mode loopback \
+              --detach-sign --armor "$f"
+          done
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -166,3 +186,15 @@ jobs:
             | macOS | arm64 | [loccibox-macos-arm64](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/loccibox-macos-arm64) |
             | Windows | x64 | [loccibox-windows-x64.exe](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/loccibox-windows-x64.exe) |
             | Windows | arm64 | [loccibox-windows-arm64.exe](https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/loccibox-windows-arm64.exe) |
+
+            ### Verify integrity
+
+            Each binary has a GPG detached signature (`.asc`) and a SHA256 checksum.
+
+            ```bash
+            # Verify checksum
+            sha256sum -c checksums.sha256
+
+            # Verify GPG signature (import public key first)
+            gpg --verify loccibox-linux-x64.asc loccibox-linux-x64
+            ```

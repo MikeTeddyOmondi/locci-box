@@ -111,6 +111,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: dist
+          pattern: loccibox-*
           merge-multiple: true
 
       - name: Create GitHub Release

@@ -24,7 +24,7 @@ const binaries = [
 const dockerSnippet = `docker pull locci/box-cli:latest
 docker run --rm \\
   -e LOCCIBOX_API_URL=https://box.locci.cloud \\
-  -e LOCCIBOX_API_KEY=sk_live_... \\
+  -e LOCCIBOX_API_KEY=lbk_live_... \\
   locci/box-cli:latest --help`;
 
 const quickStart = `# Run Python code in an isolated sandbox
@@ -35,7 +35,7 @@ loccibox run --lang python --file script.py
 
 # Set your API endpoint and key
 loccibox config set api-url https://box.locci.cloud
-loccibox config set api-key sk_live_...`;
+loccibox config set api-key lbk_live_...`;
 
 function copy(text: string, label: string) {
   navigator.clipboard.writeText(text);

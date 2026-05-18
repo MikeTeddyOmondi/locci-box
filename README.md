@@ -9,6 +9,7 @@ A B2B platform that lets businesses and AI agents run untrusted code safely insi
 | `src/` | Express API — sandbox execution, JWT + API-key auth, multi-tenancy, MCP |
 | `web/` | TanStack Start web app — playground, code editor, auth UI |
 | `cli/` | `loccibox` CLI — compiled binary, API-key authenticated |
+| `.bob_sessions/` | Contains all the IBM Bob chat sessions |
 
 ## Features
 

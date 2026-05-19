@@ -106,8 +106,8 @@ function Page() {
             </div>
           </div>
 
-          <div className="glass rounded-2xl overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="glass rounded-2xl overflow-x-auto">
+            <table className="w-full text-sm min-w-[480px]">
               <thead className="bg-white/5">
                 <tr className="text-left text-xs uppercase tracking-wider text-white/50">
                   <th className="px-6 py-3 font-medium">Platform</th>

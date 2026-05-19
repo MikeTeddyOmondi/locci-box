@@ -1,8 +1,25 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
-import { Boxes, ArrowRight, BookOpen, Layers, Shield, Server, Github, Twitter } from "lucide-react";
+import { Boxes, ArrowRight, BookOpen, Layers, Shield, Server, Github, Twitter, Terminal, Download, Copy } from "lucide-react";
 import { toast } from "sonner";
+
+const REPO = "MikeTeddyOmondi/locci-box";
+const LATEST = `https://github.com/${REPO}/releases/latest/download`;
+
+const binaries = [
+  { platform: "Linux", arch: "x64", file: "loccibox-linux-x64", icon: "🐧" },
+  { platform: "Linux", arch: "arm64", file: "loccibox-linux-arm64", icon: "🐧" },
+  { platform: "macOS", arch: "arm64", file: "loccibox-macos-arm64", icon: "🍎" },
+  { platform: "Windows", arch: "x64", file: "loccibox-windows-x64.exe", icon: "🪟" },
+  { platform: "Windows", arch: "arm64", file: "loccibox-windows-arm64.exe", icon: "🪟" },
+];
+
+const dockerSnippet = `docker pull locci/box-cli:latest
+docker run --rm \\
+  -e LOCCIBOX_API_URL=https://box.locci.cloud \\
+  -e LOCCIBOX_API_KEY=lbk_live_... \\
+  locci/box-cli:latest --help`;
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -223,6 +240,100 @@ function Landing() {
             </p>
           </div>
         ))}
+      </section>
+
+      {/* CLI Downloads */}
+      <section className="mx-auto max-w-[1400px] mt-8 px-2">
+        <div
+          className="rounded-2xl p-6 sm:p-8"
+          style={{
+            background:
+              "radial-gradient(ellipse 60% 55% at 55% 50%, rgba(120,170,140,0.45), rgba(120,170,140,0) 65%), linear-gradient(135deg,#4a5ed8,#6b7fd9)",
+            boxShadow: "0 8px 24px rgba(15,42,75,0.12)",
+          }}
+        >
+          <div className="flex items-center gap-3 mb-6">
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+              style={{ background: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.25)" }}
+            >
+              <Terminal className="w-5 h-5" style={{ color: "#fff" }} />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold" style={{ color: "#fff" }}>
+                Get the CLI
+              </h2>
+              <p className="text-sm" style={{ color: "rgba(255,255,255,0.75)" }}>
+                Run code in isolated sandboxes from your terminal
+              </p>
+            </div>
+          </div>
+
+          {/* Docker */}
+          <div className="relative mb-6">
+            <pre
+              className="rounded-xl p-4 text-sm font-mono overflow-x-auto whitespace-pre"
+              style={{ background: "rgba(0,0,0,0.3)", color: "rgba(255,255,255,0.9)" }}
+            >
+              {dockerSnippet}
+            </pre>
+            <button
+              type="button"
+              onClick={() => { navigator.clipboard.writeText(dockerSnippet); toast.success("Docker command copied"); }}
+              className="absolute top-2 right-2 w-7 h-7 rounded-md flex items-center justify-center transition-colors"
+              style={{ background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}
+              title="Copy"
+            >
+              <Copy className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {/* Binary table */}
+          <div className="rounded-xl overflow-x-auto" style={{ background: "rgba(255,255,255,0.1)" }}>
+            <table className="w-full text-sm min-w-[480px]">
+              <thead>
+                <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.12)" }}>
+                  <th className="px-5 py-2.5 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.55)" }}>Platform</th>
+                  <th className="px-5 py-2.5 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.55)" }}>Arch</th>
+                  <th className="px-5 py-2.5 text-right text-xs font-semibold uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.55)" }}>Download</th>
+                </tr>
+              </thead>
+              <tbody>
+                {binaries.map((b, i) => (
+                  <tr
+                    key={b.file}
+                    style={{ borderTop: i === 0 ? "none" : "1px solid rgba(255,255,255,0.08)" }}
+                  >
+                    <td className="px-5 py-3 font-medium" style={{ color: "#fff" }}>
+                      <span className="mr-2">{b.icon}</span>{b.platform}
+                    </td>
+                    <td className="px-5 py-3 text-sm" style={{ color: "rgba(255,255,255,0.7)" }}>{b.arch}</td>
+                    <td className="px-5 py-3 text-right">
+                      <a
+                        href={`${LATEST}/${b.file}`}
+                        download
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:opacity-90"
+                        style={{ background: "rgba(255,255,255,0.18)", color: "#fff", border: "1px solid rgba(255,255,255,0.25)" }}
+                      >
+                        <Download className="w-3 h-3" /> Download
+                      </a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-4 text-right">
+            <Link
+              to="/downloads"
+              className="text-sm underline underline-offset-2 hover:opacity-100 transition-opacity"
+              style={{ color: "rgba(255,255,255,0.7)" }}
+            >
+              Full download options &amp; GPG verification →
+            </Link>
+          </div>
+        </div>
       </section>
 
       {/* Footer */}

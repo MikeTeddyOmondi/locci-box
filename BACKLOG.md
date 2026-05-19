@@ -19,10 +19,11 @@
 
 - [ ] **Downloads content on Landing Page** — Move/mirror the CLI download options (Docker pull + binary table) onto the main landing page so users can get the CLI without navigating away. The `/downloads` page can remain as the full detailed reference.
 
-- [ ] **Code Page — Mobile responsiveness**
+- [x] **Code Page — Mobile responsiveness**
   - Output section disappears on mobile after clicking Run — it should persist and render below the editor on small screens
   - File explorer should be collapsible/toggleable on mobile (hidden by default, toggled via a button) so the editor has full width
   - Layout: on mobile, file list toggle → full-width editor → output section stacked vertically
+  - ~~File rename (double-click) doesn't work on touch screens~~ — fixed with pencil icon button
 
 - [ ] **Downloads Page — Binary table scrollable on mobile** — The releases/binary table overflows on small screens without horizontal scroll. Wrap the table in a horizontally scrollable container (`overflow-x: auto`) and ensure touch-scroll works.
 

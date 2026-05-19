@@ -71,6 +71,17 @@ export const tools = [
       required: ["sandbox_id"],
     },
   },
+  {
+    name: "list_sandboxes",
+    description: "List all currently running sandboxes for the tenant. Use this to recover sandbox IDs when a previous run_sandbox response was lost.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        api_key: { type: "string", description: "API key (falls back to LOCCIBOX_API_KEY env var)" },
+      },
+      required: [],
+    },
+  },
 ];
 
 export function createMCPServer(): Server {
@@ -131,6 +142,15 @@ export function createMCPServer(): Server {
               text: JSON.stringify({ sandbox_id, status: "stopped", message: "Sandbox terminated successfully" }, null, 2),
             }],
           };
+        }
+        case "list_sandboxes": {
+          const { api_key } = args as any;
+          const tenant = await resolveTenant(resolveKey(api_key));
+          const sandboxes = await sandboxService.listActive(tenant.id);
+          if (sandboxes.length === 0) {
+            return { content: [{ type: "text" as const, text: "No active sandboxes." }] };
+          }
+          return { content: [{ type: "text" as const, text: JSON.stringify(sandboxes, null, 2) }] };
         }
         default:
           throw new Error(`Unknown tool: ${name}`);

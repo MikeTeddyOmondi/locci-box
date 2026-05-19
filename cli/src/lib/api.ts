@@ -43,6 +43,13 @@ export class LocciBoxAPI {
   }
 
   /**
+   * List all active sandboxes for the current tenant
+   */
+  async listSandboxes(): Promise<SandboxInfo[]> {
+    return await this.request<SandboxInfo[]>("/api/sandbox");
+  }
+
+  /**
    * Stop a sandbox
    */
   async stopSandbox(sandboxId: string): Promise<void> {

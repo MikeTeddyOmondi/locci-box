@@ -116,6 +116,21 @@ router.post("/run", async (req: Request, res: Response): Promise<void> => {
 });
 
 /**
+ * GET /sandbox
+ * List all active sandboxes for the authenticated tenant
+ */
+router.get("/", async (req: Request, res: Response): Promise<void> => {
+  try {
+    const tenant = (req as any).tenant;
+    const sandboxes = await sandboxService.listActive(tenant.id);
+    res.json({ success: true, data: sandboxes });
+  } catch (error) {
+    logger.error({ error }, "Error listing sandboxes");
+    res.status(500).json({ success: false, error: "Internal server error" });
+  }
+});
+
+/**
  * GET /sandbox/:id/status
  * Check sandbox execution status
  */

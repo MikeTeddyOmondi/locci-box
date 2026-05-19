@@ -9,6 +9,7 @@ import { createStopCommand } from "./commands/stop.js";
 import { createMetricsCommand } from "./commands/metrics.js";
 import { createKeysCommand } from "./commands/keys.js";
 import { createMcpCommand } from "./commands/mcp.js";
+import { createSandboxesCommand } from "./commands/sandboxes.js";
 import { configExists } from "./lib/config.js";
 import { printWarning } from "./lib/output.js";
 
@@ -33,6 +34,7 @@ program.addCommand(createStopCommand());
 program.addCommand(createMetricsCommand());
 program.addCommand(createKeysCommand());
 program.addCommand(createMcpCommand());
+program.addCommand(createSandboxesCommand());
 
 // Show warning if config doesn't exist and command is not init
 const args = process.argv.slice(2);

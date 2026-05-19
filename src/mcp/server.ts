@@ -6,15 +6,33 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { sandboxService } from "../services/SandboxService.js";
-import { tenantService } from "../services/TenantService.js";
 import { logger } from "../utils/logger.js";
 import { env } from "../config/env.js";
 
 /**
  * MCP Server for Locci Box
- * Exposes sandbox execution tools to AI agents
+ * Thin HTTP client over the Locci Box REST API — no DB dependency.
  */
+
+const API_BASE = (process.env.LOCCIBOX_API_URL ?? "http://localhost:5757").replace(/\/$/, "");
+
+async function apiRequest<T>(
+  path: string,
+  apiKey: string,
+  options: RequestInit = {},
+): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+      ...(options.headers as Record<string, string>),
+    },
+  });
+  const data = (await res.json()) as { success: boolean; data?: T; error?: string };
+  if (!data.success) throw new Error(data.error ?? `Request failed (${res.status})`);
+  return data.data as T;
+}
 
 // Tool definitions
 const tools = [
@@ -41,10 +59,10 @@ const tools = [
         },
         api_key: {
           type: "string",
-          description: "API key for authentication",
+          description: "API key for authentication (falls back to LOCCIBOX_API_KEY env var)",
         },
       },
-      required: ["language", "code", "api_key"],
+      required: ["language", "code"],
     },
   },
   {
@@ -59,10 +77,10 @@ const tools = [
         },
         api_key: {
           type: "string",
-          description: "API key for authentication",
+          description: "API key for authentication (falls back to LOCCIBOX_API_KEY env var)",
         },
       },
-      required: ["sandbox_id", "api_key"],
+      required: ["sandbox_id"],
     },
   },
   {
@@ -77,172 +95,63 @@ const tools = [
         },
         api_key: {
           type: "string",
-          description: "API key for authentication",
+          description: "API key for authentication (falls back to LOCCIBOX_API_KEY env var)",
         },
       },
-      required: ["sandbox_id", "api_key"],
+      required: ["sandbox_id"],
     },
   },
 ];
 
-/**
- * Handle run_sandbox tool call
- */
+function resolveKey(argsKey?: string): string {
+  const key = argsKey ?? process.env.LOCCIBOX_API_KEY ?? env.ADMIN_API_KEY;
+  if (!key) throw new Error("No API key provided. Pass api_key in args or set LOCCIBOX_API_KEY.");
+  return key;
+}
+
 async function handleRunSandbox(args: any) {
   const { language, code, timeout, api_key } = args;
-
-  // Authenticate
-  const tenant = await tenantService.getByApiKey(api_key);
-  if (!tenant) {
-    throw new Error("Invalid API key");
-  }
-
-  // Check if tenant can create sandbox
-  const canCreate = await tenantService.canCreateSandbox(tenant.id);
-  if (!canCreate) {
-    throw new Error("Maximum concurrent sandboxes reached");
-  }
-
-  // Increment active count
-  await tenantService.incrementActive(tenant.id);
-
-  try {
-    // Execute sandbox
-    const result = await sandboxService.execute(
-      { language, code, timeout: timeout || 30 },
-      tenant.id,
-    );
-
-    // Record execution
-    await tenantService.recordExecution(tenant.id, result.duration_ms);
-
-    return {
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify(result, null, 2),
-        },
-      ],
-    };
-  } finally {
-    // Always decrement
-    await tenantService.decrementActive(tenant.id);
-  }
+  const result = await apiRequest("/api/sandbox/run", resolveKey(api_key), {
+    method: "POST",
+    body: JSON.stringify({ language, code, timeout: timeout ?? 30 }),
+  });
+  return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
 }
 
-/**
- * Handle get_sandbox_status tool call
- */
 async function handleGetStatus(args: any) {
   const { sandbox_id, api_key } = args;
-
-  // Authenticate
-  const tenant = await tenantService.getByApiKey(api_key);
-  if (!tenant) {
-    throw new Error("Invalid API key");
-  }
-
-  const status = await sandboxService.getStatus(sandbox_id);
-  if (!status) {
-    throw new Error("Sandbox not found or already completed");
-  }
-
-  // Verify ownership
-  if (status.tenant_id !== tenant.id) {
-    throw new Error("Forbidden: You do not own this sandbox");
-  }
-
-  return {
-    content: [
-      {
-        type: "text",
-        text: JSON.stringify(status, null, 2),
-      },
-    ],
-  };
+  const result = await apiRequest(`/api/sandbox/${sandbox_id}/status`, resolveKey(api_key));
+  return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
 }
 
-/**
- * Handle stop_sandbox tool call
- */
 async function handleStopSandbox(args: any) {
   const { sandbox_id, api_key } = args;
-
-  // Authenticate
-  const tenant = await tenantService.getByApiKey(api_key);
-  if (!tenant) {
-    throw new Error("Invalid API key");
-  }
-
-  // Get status to verify ownership
-  const status = await sandboxService.getStatus(sandbox_id);
-  if (!status) {
-    throw new Error("Sandbox not found or already stopped");
-  }
-
-  if (status.tenant_id !== tenant.id) {
-    throw new Error("Forbidden: You do not own this sandbox");
-  }
-
-  // Stop sandbox
-  await sandboxService.stop(sandbox_id);
-  await tenantService.decrementActive(tenant.id);
-
+  await apiRequest(`/api/sandbox/${sandbox_id}`, resolveKey(api_key), { method: "DELETE" });
   return {
-    content: [
-      {
-        type: "text",
-        text: JSON.stringify(
-          {
-            sandbox_id,
-            status: "stopped",
-            message: "Sandbox terminated successfully",
-          },
-          null,
-          2,
-        ),
-      },
-    ],
+    content: [{
+      type: "text",
+      text: JSON.stringify({ sandbox_id, status: "stopped", message: "Sandbox terminated successfully" }, null, 2),
+    }],
   };
 }
 
-/**
- * Start MCP server
- */
 async function startMCPServer() {
   const server = new Server(
-    {
-      name: "locci-box-mcp",
-      version: "1.0.0",
-    },
-    {
-      capabilities: {
-        tools: {},
-      },
-    },
+    { name: "locci-box-mcp", version: "1.1.0" },
+    { capabilities: { tools: {} } },
   );
 
-  // Register tool list handler
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools,
-  }));
+  server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools }));
 
-  // Register tool call handler
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
-
-    logger.info({ tool: name, args }, "MCP tool called");
-
+    logger.info({ tool: name }, "MCP tool called");
     try {
       switch (name) {
-        case "run_sandbox":
-          return await handleRunSandbox(args);
-        case "get_sandbox_status":
-          return await handleGetStatus(args);
-        case "stop_sandbox":
-          return await handleStopSandbox(args);
-        default:
-          throw new Error(`Unknown tool: ${name}`);
+        case "run_sandbox": return await handleRunSandbox(args);
+        case "get_sandbox_status": return await handleGetStatus(args);
+        case "stop_sandbox": return await handleStopSandbox(args);
+        default: throw new Error(`Unknown tool: ${name}`);
       }
     } catch (error) {
       logger.error({ error, tool: name }, "MCP tool error");
@@ -250,14 +159,11 @@ async function startMCPServer() {
     }
   });
 
-  // Start server with stdio transport
   const transport = new StdioServerTransport();
   await server.connect(transport);
-
-  logger.info("Locci Box MCP server started");
+  logger.info({ api: API_BASE }, "Locci Box MCP server started");
 }
 
-// Start the MCP server
 if (env.MCP_ENABLED) {
   startMCPServer().catch((error) => {
     logger.error({ error }, "Failed to start MCP server");

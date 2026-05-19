@@ -39,6 +39,30 @@
 
 - [x] **Code Page — Inline File Rename**
 
+- [ ] **MCP Server — Setup & Verification**
+  - Server code exists at `src/mcp/server.ts` — tools: `run_sandbox`, `get_sandbox_status`, `stop_sandbox`
+  - Bug fixed: `initDb()` was missing, first tool call would crash; now patched
+  - Scripts added: `pnpm mcp:dev` (tsx dev run), `pnpm mcp:inspect` (MCP Inspector UI)
+  - Requires `MCP_ENABLED=true` in env to start
+  - **To connect to Claude Desktop** (`~/Library/Application Support/Claude/claude_desktop_config.json`):
+    ```json
+    {
+      "mcpServers": {
+        "locci-box": {
+          "command": "node",
+          "args": ["/absolute/path/to/locci-box/dist/mcp/server.js"],
+          "env": {
+            "MCP_ENABLED": "true",
+            "ADMIN_API_KEY": "...",
+            "JWT_SECRET": "...",
+            "DB_PATH": "/absolute/path/to/locci-box/data/locci-box"
+          }
+        }
+      }
+    }
+    ```
+  - TODO: end-to-end test via `pnpm mcp:inspect`, verify all 3 tools work with a live sandbox
+
 ## Production Hardening
 
 - [x] Integrate real microsandbox SDK (was simulated in early build)

@@ -78,8 +78,9 @@ export function formatDuration(ms: number): string {
 /**
  * Format ISO timestamp to relative time
  */
-export function formatTimestamp(iso: string): string {
-  const date = new Date(iso);
+export function formatTimestamp(iso: string | number): string {
+  const date = typeof iso === "number" ? new Date(iso) : new Date(iso);
+  if (isNaN(date.getTime())) return String(iso);
   const now = new Date();
   const diff = now.getTime() - date.getTime();
 

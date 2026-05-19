@@ -8,6 +8,7 @@ import { createStatusCommand } from "./commands/status.js";
 import { createStopCommand } from "./commands/stop.js";
 import { createMetricsCommand } from "./commands/metrics.js";
 import { createKeysCommand } from "./commands/keys.js";
+import { createMcpCommand } from "./commands/mcp.js";
 import { configExists } from "./lib/config.js";
 import { printWarning } from "./lib/output.js";
 
@@ -31,10 +32,11 @@ program.addCommand(createStatusCommand());
 program.addCommand(createStopCommand());
 program.addCommand(createMetricsCommand());
 program.addCommand(createKeysCommand());
+program.addCommand(createMcpCommand());
 
 // Show warning if config doesn't exist and command is not init
 const args = process.argv.slice(2);
-if (args.length > 0 && args[0] !== "init" && args[0] !== "login" && !configExists()) {
+if (args.length > 0 && args[0] !== "init" && args[0] !== "login" && args[0] !== "mcp" && !configExists()) {
   const hasEnvVars =
     process.env.LOCCIBOX_API_URL && process.env.LOCCIBOX_API_KEY;
 

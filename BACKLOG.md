@@ -39,11 +39,13 @@
 
 - [x] **Code Page — Inline File Rename**
 
-- [ ] **MCP Server — Setup & Verification**
+- [x] **MCP Server — Setup & Verification**
   - Server code exists at `src/mcp/server.ts` — tools: `run_sandbox`, `get_sandbox_status`, `stop_sandbox`
-  - Bug fixed: `initDb()` was missing, first tool call would crash; now patched
+  - Rewrote as pure HTTP client over the REST API (no DB/service imports, no `initDb()`)
   - Scripts added: `pnpm mcp:dev` (tsx dev run), `pnpm mcp:inspect` (MCP Inspector UI)
-  - Requires `MCP_ENABLED=true` in env to start
+  - Requires `MCP_ENABLED=true` in env; uses `LOCCIBOX_API_URL` + `LOCCIBOX_API_KEY`
+  - **CLI command added**: `loccibox mcp start` — starts the MCP server using profile API URL/key
+  - **CLI command added**: `loccibox mcp config` — prints the JSON config snippet for any MCP client
   - **To connect to Claude Desktop** (`~/Library/Application Support/Claude/claude_desktop_config.json`):
     ```json
     {
@@ -53,14 +55,14 @@
           "args": ["/absolute/path/to/locci-box/dist/mcp/server.js"],
           "env": {
             "MCP_ENABLED": "true",
-            "ADMIN_API_KEY": "...",
-            "JWT_SECRET": "...",
-            "DB_PATH": "/absolute/path/to/locci-box/data/locci-box"
+            "LOCCIBOX_API_URL": "https://your-api-url",
+            "LOCCIBOX_API_KEY": "lbk_live_..."
           }
         }
       }
     }
     ```
+  - Or run `loccibox mcp config` to auto-generate the above from your active profile
   - TODO: end-to-end test via `pnpm mcp:inspect`, verify all 3 tools work with a live sandbox
 
 ## Production Hardening

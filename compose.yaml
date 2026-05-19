@@ -18,6 +18,7 @@ services:
       DEFAULT_SANDBOX_TIMEOUT_SECONDS: ${DEFAULT_SANDBOX_TIMEOUT_SECONDS:-30}
       DEFAULT_RATE_LIMIT_PER_MINUTE: ${DEFAULT_RATE_LIMIT_PER_MINUTE:-60}
       DB_PATH: /app/data/locci-box
+      MCP_HTTP_ENABLED: ${MCP_HTTP_ENABLED:-false}
     volumes:
       - db-data:/app/data
     privileged: true

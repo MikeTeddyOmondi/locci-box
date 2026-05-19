@@ -2,7 +2,7 @@ import express, { Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
 import { logger } from "./utils/logger.js";
-import { isDevelopment } from "./config/env.js";
+import { isDevelopment, env } from "./config/env.js";
 import { authenticate } from "./middleware/auth.js";
 import { rateLimiter } from "./middleware/rateLimiter.js";
 import { errorHandler } from "./middleware/errorHandler.js";
@@ -13,6 +13,7 @@ import metricsRoutes from "./routes/metrics.js";
 import authRoutes from "./routes/auth.js";
 import statsRoutes from "./routes/stats.js";
 import apiKeysRoutes from "./routes/apikeys.js";
+import mcpHttpRouter from "./mcp/http.js";
 
 function configureMiddleware(app: Express): void {
   app.use(
@@ -44,6 +45,12 @@ function configureRoutes(app: Express): void {
   app.use("/api/stats", authenticate, statsRoutes);
   app.use("/api/keys", authenticate, apiKeysRoutes);
   app.use("/api/metrics", metricsRoutes);
+
+  // MCP HTTP transport (optional — enable with MCP_HTTP_ENABLED=true)
+  if (env.MCP_HTTP_ENABLED) {
+    app.use("/mcp", mcpHttpRouter);
+    logger.info("MCP HTTP transport mounted at POST /mcp");
+  }
 }
 
 export function createApp(): Express {

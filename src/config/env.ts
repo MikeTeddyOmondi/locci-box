@@ -57,6 +57,7 @@ const EnvSchema = v.object({
     ),
     "false",
   ),
+  // Port for the standalone mcp:dev server only — production uses the main API port
   MCP_HTTP_PORT: v.optional(v.pipe(v.string(), v.transform(Number)), "3001"),
 
   // JWT Secret for web app authentication

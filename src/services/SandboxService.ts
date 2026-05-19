@@ -241,40 +241,31 @@ export class SandboxService {
 
     logger.info({ sandbox_id: sandboxId }, "Stopping microsandbox");
 
-    try {
-      // Stop the microsandbox instance gracefully
-      await sandboxData.instance.stop();
-      logger.debug(
-        { sandbox_id: sandboxId },
-        "Microsandbox stopped successfully",
-      );
-    } catch (error) {
-      logger.warn(
-        {
-          sandbox_id: sandboxId,
-          error: error instanceof Error ? error.message : "Unknown error",
-        },
-        "Error stopping microsandbox, attempting to kill",
+    const timeout = (ms: number) =>
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("timeout")), ms),
       );
 
-      // If stop fails, try to kill it
+    try {
+      await Promise.race([sandboxData.instance.stop(), timeout(5000)]);
+      logger.debug({ sandbox_id: sandboxId }, "Microsandbox stopped successfully");
+    } catch (stopErr) {
+      logger.warn(
+        { sandbox_id: sandboxId, error: stopErr instanceof Error ? stopErr.message : stopErr },
+        "Stop timed out or failed, attempting kill",
+      );
       try {
-        await sandboxData.instance.kill();
-      } catch (killError) {
+        await Promise.race([sandboxData.instance.kill(), timeout(5000)]);
+      } catch (killErr) {
         logger.error(
-          {
-            sandbox_id: sandboxId,
-            error:
-              killError instanceof Error ? killError.message : "Unknown error",
-          },
-          "Error killing microsandbox",
+          { sandbox_id: sandboxId, error: killErr instanceof Error ? killErr.message : killErr },
+          "Kill also timed out — forcing removal from tracking",
         );
       }
     }
 
-    // Remove from tracking
+    // Always remove from tracking regardless of stop/kill outcome
     this.activeSandboxes.delete(sandboxId);
-
     logger.info({ sandbox_id: sandboxId }, "Microsandbox stopped");
   }
 

@@ -26,6 +26,7 @@ import {
   Clock,
   Cpu,
   Command,
+  PanelLeft,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -149,6 +150,7 @@ function Page() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [termInput, setTermInput] = useState("");
   const [termHistory, setTermHistory] = useState<string[]>([]);
+  const [explorerOpen, setExplorerOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
   const renameInputRef = useRef<HTMLInputElement>(null);
@@ -291,9 +293,12 @@ function Page() {
       <div className="bg-locci-gradient">
         <div className="p-3 sm:p-4 lg:p-6 max-w-[1600px] mx-auto w-full">
           {/* IDE shell */}
-          <div className="hero-white overflow-hidden flex flex-col lg:flex-row h-[calc(100vh-9rem)] min-h-[640px] rounded-xl border border-slate-200 shadow-sm animate-fade-up">
+          <div className="hero-white overflow-hidden flex flex-col lg:flex-row lg:h-[calc(100vh-9rem)] rounded-xl border border-slate-200 shadow-sm animate-fade-up">
             {/* File tree */}
-            <aside className="w-full lg:w-60 hero-soft border-b lg:border-b-0 lg:border-r hero-divider flex flex-col">
+            <aside className={cn(
+              "lg:flex lg:w-60 hero-soft border-b lg:border-b-0 lg:border-r hero-divider flex-col",
+              explorerOpen ? "flex w-full" : "hidden lg:flex",
+            )}>
               <div className="px-4 py-3 border-b hero-divider flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <FolderOpen className="w-4 h-4 text-blue-500" />
@@ -372,6 +377,15 @@ function Page() {
             <div className="flex-1 min-w-0 flex flex-col">
               {/* Tab strip */}
               <div className="border-b hero-divider hero-soft flex items-center overflow-x-auto">
+                <button
+                  type="button"
+                  onClick={() => setExplorerOpen((v) => !v)}
+                  className="lg:hidden w-8 h-8 rounded-md hero-text hover:bg-slate-100 flex items-center justify-center shrink-0 ml-1"
+                  title="Toggle file explorer"
+                  aria-label="Toggle file explorer"
+                >
+                  <PanelLeft className="w-3.5 h-3.5" />
+                </button>
                 {files.map((f) => (
                   <button
                     key={f.id}
@@ -455,8 +469,8 @@ function Page() {
               </div>
 
               {/* Editor */}
-              <div className="flex-1 min-h-0 grid grid-rows-[1.6fr_1fr]">
-                <div className="min-h-0">
+              <div className="flex-1 min-h-0 flex flex-col lg:grid lg:grid-rows-[1.6fr_1fr]">
+                <div className="h-[45vh] lg:h-auto lg:min-h-0">
                   <Editor
                     height="100%"
                     language={active.lang}
@@ -479,7 +493,7 @@ function Page() {
                 </div>
 
                 {/* Terminal output */}
-                <div className="border-t hero-divider hero-soft flex flex-col min-h-0">
+                <div className="border-t hero-divider hero-soft flex flex-col h-[38vh] lg:h-auto lg:min-h-0">
                   <div className="px-4 py-2 border-b hero-divider flex items-center gap-3 text-xs">
                     <div className="flex items-center gap-1.5 hero-text font-semibold">
                       <Terminal className="w-3.5 h-3.5" /> Terminal

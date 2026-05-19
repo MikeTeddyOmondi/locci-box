@@ -17,7 +17,7 @@
   - Requires persistence via **Drizzle ORM + PGlite** (embedded Postgres, no external DB needed)
   - Schema: `users`, `api_keys`, `sandbox_runs`, `tenants`
 
-- [ ] **Downloads content on Landing Page** — Move/mirror the CLI download options (Docker pull + binary table) onto the main landing page so users can get the CLI without navigating away. The `/downloads` page can remain as the full detailed reference.
+- [x] **Downloads content on Landing Page** — Move/mirror the CLI download options (Docker pull + binary table) onto the main landing page so users can get the CLI without navigating away. The `/downloads` page can remain as the full detailed reference.
 
 - [x] **Code Page — Mobile responsiveness**
   - Output section disappears on mobile after clicking Run — it should persist and render below the editor on small screens
@@ -25,7 +25,7 @@
   - Layout: on mobile, file list toggle → full-width editor → output section stacked vertically
   - ~~File rename (double-click) doesn't work on touch screens~~ — fixed with pencil icon button
 
-- [ ] **Downloads Page — Binary table scrollable on mobile** — The releases/binary table overflows on small screens without horizontal scroll. Wrap the table in a horizontally scrollable container (`overflow-x: auto`) and ensure touch-scroll works.
+- [x] **Downloads Page — Binary table scrollable on mobile** — The releases/binary table overflows on small screens without horizontal scroll. Wrap the table in a horizontally scrollable container (`overflow-x: auto`) and ensure touch-scroll works.
 
 - [ ] **CLI — API Key Management** (`loccibox keys list/create/revoke`)
   - The backend `/api/keys` endpoints are fully implemented (GET, POST, PATCH /:id/revoke, DELETE /:id)

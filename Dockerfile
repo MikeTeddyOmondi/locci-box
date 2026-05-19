@@ -11,9 +11,9 @@ FROM node-base AS deps
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 RUN pnpm install --frozen-lockfile --filter @locci/box-api --ignore-scripts && \
-    src=$(find /app/node_modules -path '*/@superradcompany/microsandbox-linux-x64-gnu/microsandbox.linux-x64-gnu.node' | head -1) && \
+    src=$(find /app/node_modules -path '*/microsandbox*.node' | head -1) && \
     dst=$(find /app/node_modules -path '*/microsandbox/native' -type d | head -1) && \
-    cp "$src" "$dst/"
+    { [ -n "$src" ] && [ -n "$dst" ] && cp "$src" "$dst/" || true; }
 
 FROM node-base AS builder
 WORKDIR /app

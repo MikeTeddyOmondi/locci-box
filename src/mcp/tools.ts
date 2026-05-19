@@ -5,31 +5,31 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { logger } from "../utils/logger.js";
 import { env } from "../config/env.js";
+import { sandboxService } from "../services/SandboxService.js";
+import { apiKeyService } from "../services/ApiKeyService.js";
+import { tenantService } from "../services/TenantService.js";
 
-const API_BASE = (process.env.LOCCIBOX_API_URL ?? "http://localhost:5757").replace(/\/$/, "");
-
-async function apiRequest<T>(
-  path: string,
-  apiKey: string,
-  options: RequestInit = {},
-): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-      ...(options.headers as Record<string, string>),
-    },
-  });
-  const data = (await res.json()) as { success: boolean; data?: T; error?: string };
-  if (!data.success) throw new Error(data.error ?? `Request failed (${res.status})`);
-  return data.data as T;
-}
+const err = (text: string) => ({ isError: true, content: [{ type: "text" as const, text }] });
 
 function resolveKey(argsKey?: string): string {
   const key = argsKey ?? process.env.LOCCIBOX_API_KEY ?? env.ADMIN_API_KEY;
   if (!key) throw new Error("No API key provided. Pass api_key in args or set LOCCIBOX_API_KEY.");
   return key;
+}
+
+async function resolveTenant(apiKey: string) {
+  // Try admin key first
+  const adminTenant = await tenantService.getByApiKey(apiKey);
+  if (adminTenant) return adminTenant;
+
+  // Try user API key
+  const userKey = await apiKeyService.getByKey(apiKey);
+  if (!userKey) throw new Error("Invalid API key");
+  await apiKeyService.markUsed(userKey.id);
+
+  const tenant = await tenantService.getById("tenant_default");
+  if (!tenant) throw new Error("Default tenant not found");
+  return tenant;
 }
 
 export const tools = [
@@ -89,23 +89,45 @@ export function createMCPServer(): Server {
       switch (name) {
         case "run_sandbox": {
           const { language, code, timeout, api_key } = args as any;
-          const result = await apiRequest("/api/sandbox/run", resolveKey(api_key), {
-            method: "POST",
-            body: JSON.stringify({ language, code, timeout: timeout ?? 30 }),
-          });
-          return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+          const tenant = await resolveTenant(resolveKey(api_key));
+          const canCreate = await tenantService.canCreateSandbox(tenant.id);
+          if (!canCreate) return err("Sandbox limit reached for this tenant");
+          await tenantService.incrementActive(tenant.id);
+          try {
+            const result = await sandboxService.execute(
+              { language, code, timeout: timeout ?? 30 },
+              tenant.id,
+            );
+            await tenantService.recordExecution(tenant.id, result.duration_ms, {
+              sandboxId: result.sandbox_id,
+              language,
+              status: result.status as "completed" | "failed" | "timeout",
+              exitCode: result.exit_code,
+            });
+            return { content: [{ type: "text" as const, text: JSON.stringify(result, null, 2) }] };
+          } finally {
+            await tenantService.decrementActive(tenant.id);
+          }
         }
         case "get_sandbox_status": {
           const { sandbox_id, api_key } = args as any;
-          const result = await apiRequest(`/api/sandbox/${sandbox_id}/status`, resolveKey(api_key));
-          return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+          const tenant = await resolveTenant(resolveKey(api_key));
+          const status = await sandboxService.getStatus(sandbox_id);
+          if (!status) return err(`Sandbox ${sandbox_id} not found`);
+          if (status.tenant_id !== tenant.id) return err("Access denied");
+          return { content: [{ type: "text" as const, text: JSON.stringify(status, null, 2) }] };
         }
         case "stop_sandbox": {
           const { sandbox_id, api_key } = args as any;
-          await apiRequest(`/api/sandbox/${sandbox_id}`, resolveKey(api_key), { method: "DELETE" });
+          const tenant = await resolveTenant(resolveKey(api_key));
+          const status = await sandboxService.getStatus(sandbox_id);
+          if (!status) return err(`Sandbox ${sandbox_id} not found`);
+          if (status.tenant_id !== tenant.id) return err("Access denied");
+          await sandboxService.stop(sandbox_id);
+          await tenantService.decrementActive(tenant.id);
           return {
             content: [{
-              type: "text",
+              type: "text" as const,
               text: JSON.stringify({ sandbox_id, status: "stopped", message: "Sandbox terminated successfully" }, null, 2),
             }],
           };

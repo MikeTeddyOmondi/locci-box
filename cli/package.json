@@ -1,6 +1,6 @@
 {
   "name": "@loccibox/cli",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "CLI for Locci Box - Execute code in isolated sandboxes",
   "type": "module",
   "bin": {

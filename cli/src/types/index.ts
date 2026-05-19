@@ -9,6 +9,7 @@ export interface Config {
 export interface Profile {
   apiUrl: string;
   apiKey: string;
+  jwtToken?: string;
 }
 
 /**

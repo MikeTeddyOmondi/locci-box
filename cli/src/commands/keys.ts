@@ -1,41 +1,124 @@
 import { Command } from "commander";
-import { printWarning } from "../lib/output.js";
+import pc from "picocolors";
+import { getProfile } from "../lib/config.js";
+import { createAPIClient } from "../lib/api.js";
+import {
+  printError,
+  printSuccess,
+  printInfo,
+  printTable,
+  printBox,
+  formatTimestamp,
+} from "../lib/output.js";
 
-/**
- * Keys command - Manage API keys (future implementation)
- */
+function authOrExit() {
+  const profile = getProfile();
+  if (!profile) {
+    printError("No configuration found. Run 'loccibox init' to set up the CLI.");
+    return null;
+  }
+  if (!profile.jwtToken) {
+    printError("Not logged in. Run 'loccibox login' to authenticate.");
+    return null;
+  }
+  return { api: createAPIClient(profile.apiUrl, profile.apiKey), jwt: profile.jwtToken };
+}
+
+function handleAuthError(err: unknown): void {
+  const msg = err instanceof Error ? err.message : "Request failed";
+  if (msg.toLowerCase().includes("authentication") || msg.toLowerCase().includes("forbidden")) {
+    printError("Session expired or invalid. Run 'loccibox login' to re-authenticate.");
+  } else {
+    printError(msg);
+  }
+}
+
 export function createKeysCommand(): Command {
   const command = new Command("keys");
+  command.description("Manage your API keys");
 
-  command.description("Manage API keys (coming soon)");
-
-  // List keys
+  // list
   command
     .command("list")
-    .description("List all API keys")
-    .action(() => {
-      printWarning("API key management is not yet implemented in the backend.");
-      printWarning("This feature will be available in a future release.");
+    .description("List all your API keys")
+    .action(async () => {
+      const auth = authOrExit();
+      if (!auth) return;
+      try {
+        const keys = await auth.api.listKeys(auth.jwt);
+        if (keys.length === 0) {
+          printInfo("No API keys yet. Create one with: loccibox keys create --name <name>");
+          return;
+        }
+        printTable(
+          keys.map((k) => ({
+            id: k.id,
+            name: k.name,
+            key: k.key,
+            status: k.status === "active" ? pc.green("active") : pc.dim("revoked"),
+            created: formatTimestamp(k.created_at),
+          })),
+          [
+            { key: "id", label: "ID", width: 38 },
+            { key: "name", label: "Name", width: 20 },
+            { key: "key", label: "Key (masked)", width: 32 },
+            { key: "status", label: "Status", width: 10 },
+            { key: "created", label: "Created", width: 16 },
+          ],
+        );
+      } catch (err) {
+        handleAuthError(err);
+      }
     });
 
-  // Create key
+  // create
   command
     .command("create")
     .description("Create a new API key")
-    .option("-n, --name <name>", "Name for the API key")
-    .action(() => {
-      printWarning("API key management is not yet implemented in the backend.");
-      printWarning("This feature will be available in a future release.");
+    .requiredOption("-n, --name <name>", "Name for the new key")
+    .action(async (opts) => {
+      const auth = authOrExit();
+      if (!auth) return;
+      try {
+        const key = await auth.api.createKey(opts.name, auth.jwt);
+        printSuccess(`Created key: ${pc.bold(opts.name)}`);
+        printBox("API Key — copy it now, it won't be shown again", key.key, "green");
+        printInfo(`Key ID: ${key.id}`);
+      } catch (err) {
+        handleAuthError(err);
+      }
     });
 
-  // Revoke key
+  // revoke
   command
     .command("revoke")
-    .description("Revoke an API key")
-    .argument("<key-id>", "API key ID to revoke")
-    .action(() => {
-      printWarning("API key management is not yet implemented in the backend.");
-      printWarning("This feature will be available in a future release.");
+    .description("Revoke an API key (marks it inactive, keeps history)")
+    .argument("<key-id>", "ID of the key to revoke")
+    .action(async (keyId) => {
+      const auth = authOrExit();
+      if (!auth) return;
+      try {
+        await auth.api.revokeKey(keyId, auth.jwt);
+        printSuccess(`Key ${pc.bold(keyId)} revoked.`);
+      } catch (err) {
+        handleAuthError(err);
+      }
+    });
+
+  // delete
+  command
+    .command("delete")
+    .description("Permanently delete an API key")
+    .argument("<key-id>", "ID of the key to delete")
+    .action(async (keyId) => {
+      const auth = authOrExit();
+      if (!auth) return;
+      try {
+        await auth.api.deleteKey(keyId, auth.jwt);
+        printSuccess(`Key ${pc.bold(keyId)} deleted.`);
+      } catch (err) {
+        handleAuthError(err);
+      }
     });
 
   return command;

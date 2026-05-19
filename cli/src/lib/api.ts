@@ -4,6 +4,7 @@ import type {
   SandboxInfo,
   MetricsData,
   ApiResponse,
+  ApiKey,
 } from "../types/index.js";
 
 /**
@@ -58,6 +59,49 @@ export class LocciBoxAPI {
   }
 
   /**
+   * Log in with email + password, returns JWT token
+   */
+  async login(
+    email: string,
+    password: string,
+  ): Promise<{ token: string; user: { id: string; email: string; role: string } }> {
+    const url = `${this.baseUrl}/api/auth/login`;
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = (await response.json()) as ApiResponse<{
+      token: string;
+      user: { id: string; email: string; role: string };
+    }>;
+    if (!response.ok || !data.success || !data.data) {
+      throw new Error(data.error || "Login failed");
+    }
+    return data.data;
+  }
+
+  /** List API keys (requires JWT) */
+  async listKeys(jwtToken: string): Promise<ApiKey[]> {
+    return this.request<ApiKey[]>("/api/keys", {}, jwtToken);
+  }
+
+  /** Create a new API key (requires JWT) — returns the full key once */
+  async createKey(name: string, jwtToken: string): Promise<ApiKey> {
+    return this.request<ApiKey>("/api/keys", { method: "POST", body: JSON.stringify({ name }) }, jwtToken);
+  }
+
+  /** Revoke an API key (requires JWT) */
+  async revokeKey(id: string, jwtToken: string): Promise<void> {
+    await this.request<void>(`/api/keys/${id}/revoke`, { method: "PATCH" }, jwtToken);
+  }
+
+  /** Delete an API key permanently (requires JWT) */
+  async deleteKey(id: string, jwtToken: string): Promise<void> {
+    await this.request<void>(`/api/keys/${id}`, { method: "DELETE" }, jwtToken);
+  }
+
+  /**
    * Test connection to the API
    */
   async testConnection(): Promise<boolean> {
@@ -70,17 +114,19 @@ export class LocciBoxAPI {
   }
 
   /**
-   * Make an HTTP request to the API
+   * Make an HTTP request to the API.
+   * Pass `overrideAuth` to use a JWT token instead of the configured API key.
    */
   private async request<T>(
     path: string,
     options: RequestInit = {},
+    overrideAuth?: string,
   ): Promise<T> {
     const url = `${this.baseUrl}${path}`;
 
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${this.apiKey}`,
+      Authorization: `Bearer ${overrideAuth ?? this.apiKey}`,
       ...(options.headers as Record<string, string>),
     };
 
@@ -96,11 +142,11 @@ export class LocciBoxAPI {
         this.handleError(response.status, data);
       }
 
-      if (!data.success || !data.data) {
+      if (!data.success) {
         throw new Error(data.error || "Unknown error occurred");
       }
 
-      return data.data;
+      return data.data as T;
     } catch (error) {
       if (error instanceof Error) {
         throw error;

@@ -2,6 +2,7 @@
 
 import { Command } from "commander";
 import { initCommand } from "./commands/init.js";
+import { createLoginCommand } from "./commands/login.js";
 import { createRunCommand } from "./commands/run.js";
 import { createStatusCommand } from "./commands/status.js";
 import { createStopCommand } from "./commands/stop.js";
@@ -15,7 +16,7 @@ const program = new Command();
 program
   .name("loccibox")
   .description("CLI for Locci Box - Execute code in isolated sandboxes")
-  .version("1.0.0");
+  .version("1.1.0");
 
 // Init command (special - doesn't require config)
 program
@@ -24,6 +25,7 @@ program
   .action(initCommand);
 
 // Add other commands
+program.addCommand(createLoginCommand());
 program.addCommand(createRunCommand());
 program.addCommand(createStatusCommand());
 program.addCommand(createStopCommand());
@@ -32,7 +34,7 @@ program.addCommand(createKeysCommand());
 
 // Show warning if config doesn't exist and command is not init
 const args = process.argv.slice(2);
-if (args.length > 0 && args[0] !== "init" && !configExists()) {
+if (args.length > 0 && args[0] !== "init" && args[0] !== "login" && !configExists()) {
   const hasEnvVars =
     process.env.LOCCIBOX_API_URL && process.env.LOCCIBOX_API_KEY;
 

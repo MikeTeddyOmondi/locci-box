@@ -27,7 +27,7 @@
 
 - [x] **Downloads Page — Binary table scrollable on mobile** — The releases/binary table overflows on small screens without horizontal scroll. Wrap the table in a horizontally scrollable container (`overflow-x: auto`) and ensure touch-scroll works.
 
-- [ ] **CLI — API Key Management** (`loccibox keys list/create/revoke`)
+- [x] **CLI — API Key Management** (`loccibox keys list/create/revoke`)
   - The backend `/api/keys` endpoints are fully implemented (GET, POST, PATCH /:id/revoke, DELETE /:id)
   - The CLI currently prints `⚠ API key management is not yet implemented in the backend.` — needs wiring to the real endpoints
   - CLI needs JWT from `loccibox login` (or stored token from `loccibox init`) passed as `Authorization: Bearer <jwt>`

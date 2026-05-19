@@ -3,28 +3,46 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { createMCPServer } from "./tools.js";
 import { logger } from "../utils/logger.js";
 
+const jsonRpcError = (code: number, message: string) => ({
+  jsonrpc: "2.0",
+  error: { code, message },
+  id: null,
+});
+
 const router = Router();
 
-// Stateless streamable HTTP transport — new Server + transport per request
+// Stateless streamable HTTP — new McpServer + transport per request
 router.post("/", async (req: Request, res: Response) => {
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
   const server = createMCPServer();
-  res.on("finish", () => server.close().catch(() => {}));
+
+  // Use 'close' (fires on both normal and abrupt closes) not 'finish'
+  res.on("close", () => {
+    transport.close().catch(() => {});
+    server.close().catch(() => {});
+  });
+
   try {
     await server.connect(transport);
     await transport.handleRequest(req, res, req.body);
   } catch (error) {
     logger.error({ error }, "MCP HTTP request error");
-    if (!res.headersSent) res.status(500).json({ error: "Internal MCP error" });
+    if (!res.headersSent) {
+      res.status(500).json(jsonRpcError(-32603, "Internal server error"));
+    }
   }
 });
 
 router.get("/", (_req: Request, res: Response) => {
-  res.status(405).json({ error: "SSE not supported in stateless mode. Use POST /mcp." });
+  res.writeHead(405).end(
+    JSON.stringify(jsonRpcError(-32000, "Method not allowed. Use POST /mcp.")),
+  );
 });
 
 router.delete("/", (_req: Request, res: Response) => {
-  res.status(200).json({ message: "Session closed" });
+  res.writeHead(405).end(
+    JSON.stringify(jsonRpcError(-32000, "Session management not supported in stateless mode.")),
+  );
 });
 
 export default router;

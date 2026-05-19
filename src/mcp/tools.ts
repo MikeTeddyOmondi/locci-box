@@ -26,6 +26,12 @@ async function apiRequest<T>(
   return data.data as T;
 }
 
+function resolveKey(argsKey?: string): string {
+  const key = argsKey ?? process.env.LOCCIBOX_API_KEY ?? env.ADMIN_API_KEY;
+  if (!key) throw new Error("No API key provided. Pass api_key in args or set LOCCIBOX_API_KEY.");
+  return key;
+}
+
 export const tools = [
   {
     name: "run_sandbox",
@@ -35,7 +41,7 @@ export const tools = [
       properties: {
         language: { type: "string", enum: ["python", "node", "bash", "ruby"], description: "Programming language" },
         code: { type: "string", description: "Code to execute in the sandbox" },
-        timeout: { type: "number", description: "Maximum execution time in seconds (default: 30)", default: 30 },
+        timeout: { type: "number", description: "Maximum execution time in seconds (default: 30)" },
         api_key: { type: "string", description: "API key (falls back to LOCCIBOX_API_KEY env var)" },
       },
       required: ["language", "code"],
@@ -67,63 +73,52 @@ export const tools = [
   },
 ];
 
-function resolveKey(argsKey?: string): string {
-  const key = argsKey ?? process.env.LOCCIBOX_API_KEY ?? env.ADMIN_API_KEY;
-  if (!key) throw new Error("No API key provided. Pass api_key in args or set LOCCIBOX_API_KEY.");
-  return key;
-}
+export function createMCPServer(): Server {
+  // Server is the low-level API; McpServer.registerTool requires Zod which is not a project dep.
+  const server = new Server(
+    { name: "locci-box-mcp", version: "1.1.0" },
+    { capabilities: { tools: {} } },
+  );
 
-async function handleRunSandbox(args: any) {
-  const { language, code, timeout, api_key } = args;
-  const result = await apiRequest("/api/sandbox/run", resolveKey(api_key), {
-    method: "POST",
-    body: JSON.stringify({ language, code, timeout: timeout ?? 30 }),
-  });
-  return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
-}
-
-async function handleGetStatus(args: any) {
-  const { sandbox_id, api_key } = args;
-  const result = await apiRequest(`/api/sandbox/${sandbox_id}/status`, resolveKey(api_key));
-  return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
-}
-
-async function handleStopSandbox(args: any) {
-  const { sandbox_id, api_key } = args;
-  await apiRequest(`/api/sandbox/${sandbox_id}`, resolveKey(api_key), { method: "DELETE" });
-  return {
-    content: [{
-      type: "text",
-      text: JSON.stringify({ sandbox_id, status: "stopped", message: "Sandbox terminated successfully" }, null, 2),
-    }],
-  };
-}
-
-export function registerHandlers(server: Server): void {
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools }));
+
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
     logger.info({ tool: name }, "MCP tool called");
     try {
       switch (name) {
-        case "run_sandbox": return await handleRunSandbox(args);
-        case "get_sandbox_status": return await handleGetStatus(args);
-        case "stop_sandbox": return await handleStopSandbox(args);
-        default: throw new Error(`Unknown tool: ${name}`);
+        case "run_sandbox": {
+          const { language, code, timeout, api_key } = args as any;
+          const result = await apiRequest("/api/sandbox/run", resolveKey(api_key), {
+            method: "POST",
+            body: JSON.stringify({ language, code, timeout: timeout ?? 30 }),
+          });
+          return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+        }
+        case "get_sandbox_status": {
+          const { sandbox_id, api_key } = args as any;
+          const result = await apiRequest(`/api/sandbox/${sandbox_id}/status`, resolveKey(api_key));
+          return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+        }
+        case "stop_sandbox": {
+          const { sandbox_id, api_key } = args as any;
+          await apiRequest(`/api/sandbox/${sandbox_id}`, resolveKey(api_key), { method: "DELETE" });
+          return {
+            content: [{
+              type: "text",
+              text: JSON.stringify({ sandbox_id, status: "stopped", message: "Sandbox terminated successfully" }, null, 2),
+            }],
+          };
+        }
+        default:
+          throw new Error(`Unknown tool: ${name}`);
       }
     } catch (error) {
       logger.error({ error, tool: name }, "MCP tool error");
       throw error;
     }
   });
-}
 
-export function createMCPServer(): Server {
-  const server = new Server(
-    { name: "locci-box-mcp", version: "1.1.0" },
-    { capabilities: { tools: {} } },
-  );
-  registerHandlers(server);
   return server;
 }
 

@@ -22,13 +22,18 @@ async function startHttpServer(): Promise<void> {
   app.post("/mcp", async (req, res) => {
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
     const server = createMCPServer();
-    res.on("finish", () => server.close().catch(() => {}));
+    res.on("close", () => {
+      transport.close().catch(() => {});
+      server.close().catch(() => {});
+    });
     try {
       await server.connect(transport);
       await transport.handleRequest(req, res, req.body);
     } catch (error) {
       logger.error({ error }, "MCP request error");
-      if (!res.headersSent) res.status(500).json({ error: "Internal MCP error" });
+      if (!res.headersSent) {
+        res.status(500).json({ jsonrpc: "2.0", error: { code: -32603, message: "Internal server error" }, id: null });
+      }
     }
   });
 

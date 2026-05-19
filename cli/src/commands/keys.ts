@@ -56,14 +56,16 @@ export function createKeysCommand(): Command {
             name: k.name,
             key: k.key,
             status: k.status === "active" ? pc.green("active") : pc.dim("revoked"),
-            created: formatTimestamp(k.created_at),
+            created: formatTimestamp(k.createdAt),
+            lastUsed: k.lastUsedAt ? formatTimestamp(k.lastUsedAt) : pc.dim("never"),
           })),
           [
-            { key: "id", label: "ID", width: 38 },
+            { key: "id", label: "ID", width: 18 },
             { key: "name", label: "Name", width: 20 },
-            { key: "key", label: "Key (masked)", width: 32 },
+            { key: "key", label: "Key (masked)", width: 22 },
             { key: "status", label: "Status", width: 10 },
             { key: "created", label: "Created", width: 16 },
+            { key: "lastUsed", label: "Last Used", width: 16 },
           ],
         );
       } catch (err) {

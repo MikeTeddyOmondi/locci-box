@@ -50,6 +50,14 @@ const EnvSchema = v.object({
     ),
     "true",
   ),
+  MCP_HTTP_ENABLED: v.optional(
+    v.pipe(
+      v.string(),
+      v.transform((val) => val === "true"),
+    ),
+    "false",
+  ),
+  MCP_HTTP_PORT: v.optional(v.pipe(v.string(), v.transform(Number)), "3001"),
 
   // JWT Secret for web app authentication
   JWT_SECRET: v.optional(v.string(), "locci-box-dev-secret-change-in-production"),
@@ -77,6 +85,8 @@ function parseEnv() {
       DEFAULT_RATE_LIMIT_PER_MINUTE: process.env.DEFAULT_RATE_LIMIT_PER_MINUTE,
       LOG_LEVEL: process.env.LOG_LEVEL,
       MCP_ENABLED: process.env.MCP_ENABLED,
+      MCP_HTTP_ENABLED: process.env.MCP_HTTP_ENABLED,
+      MCP_HTTP_PORT: process.env.MCP_HTTP_PORT,
       JWT_SECRET: process.env.JWT_SECRET,
       DATABASE_URL: process.env.DATABASE_URL,
       DB_PATH: process.env.DB_PATH,

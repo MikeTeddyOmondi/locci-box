@@ -63,6 +63,8 @@
     }
     ```
   - Or run `loccibox mcp config` to auto-generate the above from your active profile
+  - **Streamable HTTP transport added**: set `MCP_HTTP_ENABLED=true` + `MCP_HTTP_PORT=3001` to expose `POST /mcp` endpoint (stateless, one Server+transport per request)
+  - Both transports can run simultaneously (stdio for Claude Desktop, HTTP for API clients / Cursor remote)
   - TODO: end-to-end test via `pnpm mcp:inspect`, verify all 3 tools work with a live sandbox
 
 ## Production Hardening

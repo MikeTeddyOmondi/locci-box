@@ -1,5 +1,5 @@
 {
-  "name": "@loccibox/cli",
+  "name": "@locci/box",
   "version": "1.1.0",
   "description": "CLI for Locci Box - Execute code in isolated sandboxes",
   "type": "module",
@@ -21,8 +21,9 @@
   "author": "MikeTeddyOmondi",
   "license": "MIT",
   "dependencies": {
-    "commander": "^12.0.0",
     "@clack/prompts": "^0.7.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "commander": "^12.0.0",
     "picocolors": "^1.0.0"
   },
   "devDependencies": {

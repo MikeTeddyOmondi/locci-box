@@ -1,5 +1,5 @@
 {
-  "name": "@locci-box/web",
+  "name": "@locci/box-web",
   "version": "1.1.0",
   "private": true,
   "sideEffects": false,

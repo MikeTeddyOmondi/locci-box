@@ -2,7 +2,6 @@ import "@tanstack/react-start";
 import { createFileRoute } from "@tanstack/react-router";
 import { convertToModelMessages, streamText, type UIMessage } from "ai";
 import { createGroq } from "@ai-sdk/groq";
-import { jwtVerify } from "jose";
 
 const SYSTEM_PROMPT = `You are BOB — Locci Box's senior code-review assistant.
 You help engineers find bugs, security holes, performance issues, and style problems in code they paste.
@@ -24,16 +23,11 @@ export const Route = createFileRoute("/api/bob")({
         if (!auth?.startsWith("Bearer ")) {
           return new Response("Unauthorized", { status: 401 });
         }
-        const token = auth.slice(7);
-
-        const jwtSecret = process.env.JWT_SECRET;
-        if (!jwtSecret) return new Response("Server misconfigured", { status: 500 });
-
-        try {
-          await jwtVerify(token, new TextEncoder().encode(jwtSecret));
-        } catch {
-          return new Response("Unauthorized", { status: 401 });
-        }
+        const apiUrl = process.env.VITE_API_URL ?? "http://localhost:5757";
+        const verifyRes = await fetch(`${apiUrl}/api/auth/verify`, {
+          headers: { Authorization: auth },
+        });
+        if (!verifyRes.ok) return new Response("Unauthorized", { status: 401 });
 
         const body = (await request.json()) as { messages?: UIMessage[]; threadId?: string };
         const messages = body.messages ?? [];

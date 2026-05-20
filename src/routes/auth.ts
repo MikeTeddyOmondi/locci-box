@@ -4,6 +4,7 @@ import { nanoid } from "nanoid";
 import { userService } from "../services/UserService.js";
 import { tenantService } from "../services/TenantService.js";
 import { tokenRevocationService } from "../services/TokenRevocationService.js";
+import { authenticate } from "../middleware/auth.js";
 import { env } from "../config/env.js";
 import { logger } from "../utils/logger.js";
 
@@ -110,6 +111,15 @@ router.post("/login", async (req: Request, res: Response): Promise<void> => {
     logger.error({ error }, "Login error");
     res.status(500).json({ success: false, error: "Internal server error" });
   }
+});
+
+/**
+ * GET /api/auth/verify
+ * Returns 200 if the Bearer JWT is valid, 401 otherwise.
+ * Used by the web server's Bob route to avoid duplicating JWT_SECRET.
+ */
+router.get("/verify", authenticate, (_req: Request, res: Response): void => {
+  res.json({ success: true });
 });
 
 /**

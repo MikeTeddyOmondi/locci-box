@@ -53,8 +53,8 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
-      JWT_SECRET: ${JWT_SECRET}
       GROQ_API_KEY: ${GROQ_API_KEY}
+      VITE_API_URL: http://api:5757
     networks:
       - proxy-network
       - default

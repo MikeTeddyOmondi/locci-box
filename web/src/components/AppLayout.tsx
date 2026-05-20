@@ -1,13 +1,36 @@
 import { ReactNode, useState } from "react";
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, Code2, KeyRound, BookOpen, LogOut, Boxes, Bell, Github, Twitter, FileCode2, Sparkles, Building2, Split, Bug, Menu, X, Download } from "lucide-react";
+import {
+  LayoutDashboard,
+  Code2,
+  KeyRound,
+  BookOpen,
+  LogOut,
+  Boxes,
+  Bell,
+  Github,
+  Twitter,
+  FileCode2,
+  Sparkles,
+  Building2,
+  Split,
+  Bug,
+  Menu,
+  X,
+  Download,
+} from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { FloatingHelp } from "@/components/FloatingHelp";
 
 const nav = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, gradient: "bg-gradient-cyan-blue" },
+  {
+    to: "/dashboard",
+    label: "Dashboard",
+    icon: LayoutDashboard,
+    gradient: "bg-gradient-cyan-blue",
+  },
   { to: "/code", label: "Code", icon: FileCode2, gradient: "bg-gradient-cyan-teal" },
   { to: "/bob", label: "BOB", icon: Bug, gradient: "bg-gradient-primary" },
   { to: "/playground", label: "Playground", icon: Split, gradient: "bg-gradient-purple-pink" },
@@ -22,22 +45,31 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const handleLogout = async () => { setMenuOpen(false); await logout(); navigate({ to: "/" }); };
+  const handleLogout = async () => {
+    setMenuOpen(false);
+    await logout();
+    navigate({ to: "/" });
+  };
 
   return (
     <div className="min-h-screen flex flex-col w-full">
       {/* Demo / Enterprise mode banner */}
       {(user?.isDemo || user?.isEnterprise) && (
-        <div className={cn(
-          "px-4 sm:px-6 lg:px-10 py-2 flex items-center justify-center gap-2 text-xs font-medium",
-          user?.isDemo
-            ? "bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-amber-500/20 text-white border-b border-white/10"
-            : "bg-gradient-to-r from-blue-500/20 via-indigo-500/20 to-cyan-500/20 text-white border-b border-white/10"
-        )}>
+        <div
+          className={cn(
+            "px-4 sm:px-6 lg:px-10 py-2 flex items-center justify-center gap-2 text-xs font-medium",
+            user?.isDemo
+              ? "bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-amber-500/20 text-white border-b border-white/10"
+              : "bg-gradient-to-r from-blue-500/20 via-indigo-500/20 to-cyan-500/20 text-white border-b border-white/10",
+          )}
+        >
           {user?.isDemo ? (
             <>
               <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-              <span><span className="font-bold">Demo Mode</span> — every feature unlocked, sample data, no signup needed.</span>
+              <span>
+                <span className="font-bold">Demo Mode</span> — every feature unlocked, sample data,
+                no signup needed.
+              </span>
               <button
                 onClick={handleLogout}
                 className="ml-2 inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white text-[11px] font-semibold transition-colors"
@@ -49,7 +81,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
           ) : (
             <>
               <Building2 className="w-3.5 h-3.5 text-cyan" />
-              <span>Signed in via <span className="font-bold uppercase">{user?.org}</span> SSO · audit logs enabled</span>
+              <span>
+                Signed in via <span className="font-bold uppercase">{user?.org}</span> SSO · audit
+                logs enabled
+              </span>
             </>
           )}
         </div>
@@ -66,7 +101,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
           boxShadow: "0 1px 0 rgba(255,255,255,0.5) inset, 0 2px 12px rgba(15,42,75,0.04)",
         }}
       >
-        <Link to={user?.isDemo ? "/" : "/dashboard"} className="flex items-center gap-2 sm:gap-3 group min-w-0">
+        <Link
+          to={user?.isDemo ? "/" : "/dashboard"}
+          className="flex items-center gap-2 sm:gap-3 group min-w-0"
+        >
           <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-primary flex items-center justify-center shadow-primary transition-transform group-hover:scale-105 shrink-0">
             <Boxes className="w-5 h-5 text-white" />
           </div>
@@ -84,7 +122,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   "px-4 py-2 rounded-lg text-sm font-medium transition-all",
                   active
                     ? "bg-white/10 text-white border border-white/15"
-                    : "text-white/70 hover:text-white hover:bg-white/5"
+                    : "text-white/70 hover:text-white hover:bg-white/5",
                 )}
               >
                 {n.label}
@@ -100,7 +138,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
             aria-label="Toggle navigation"
             aria-expanded={menuOpen}
           >
-            {menuOpen ? <X className="w-4 h-4 text-cyan" /> : <Menu className="w-4 h-4 text-cyan" />}
+            {menuOpen ? (
+              <X className="w-4 h-4 text-cyan" />
+            ) : (
+              <Menu className="w-4 h-4 text-cyan" />
+            )}
           </button>
           <button className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-full glass glass-hover flex items-center justify-center">
             <Bell className="w-4 h-4 text-cyan" />
@@ -146,10 +188,15 @@ export function AppLayout({ children }: { children: ReactNode }) {
                   onClick={() => setMenuOpen(false)}
                   className={cn(
                     "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all",
-                    active ? "bg-primary/10 text-primary" : "text-foreground/80 hover:bg-muted"
+                    active ? "bg-primary/10 text-primary" : "text-foreground/80 hover:bg-muted",
                   )}
                 >
-                  <span className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0", n.gradient)}>
+                  <span
+                    className={cn(
+                      "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
+                      n.gradient,
+                    )}
+                  >
                     <Icon className="w-4 h-4 text-white" />
                   </span>
                   {n.label}
@@ -181,10 +228,24 @@ export function AppLayout({ children }: { children: ReactNode }) {
           All systems operational
         </div>
         <div className="flex items-center gap-3">
-          <a href="#" className="w-8 h-8 rounded-lg glass glass-hover flex items-center justify-center"><Github className="w-3.5 h-3.5 text-cyan" /></a>
-          <a href="#" className="w-8 h-8 rounded-lg glass glass-hover flex items-center justify-center"><Twitter className="w-3.5 h-3.5 text-cyan" /></a>
-          <Link to="/docs" className="text-white/60 hover:text-white">Docs</Link>
-          <Link to="/faq" className="text-white/60 hover:text-white">FAQ</Link>
+          <a
+            href="#"
+            className="w-8 h-8 rounded-lg glass glass-hover flex items-center justify-center"
+          >
+            <Github className="w-3.5 h-3.5 text-cyan" />
+          </a>
+          <a
+            href="#"
+            className="w-8 h-8 rounded-lg glass glass-hover flex items-center justify-center"
+          >
+            <Twitter className="w-3.5 h-3.5 text-cyan" />
+          </a>
+          <Link to="/docs" className="text-white/60 hover:text-white">
+            Docs
+          </Link>
+          <Link to="/faq" className="text-white/60 hover:text-white">
+            FAQ
+          </Link>
         </div>
       </footer>
       <FloatingHelp />

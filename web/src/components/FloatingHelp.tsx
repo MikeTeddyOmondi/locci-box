@@ -37,7 +37,7 @@ export function FloatingHelp() {
           "absolute bottom-16 right-0 w-64 rounded-2xl p-2 origin-bottom-right transition-all duration-200",
           open
             ? "opacity-100 scale-100 translate-y-0 pointer-events-auto"
-            : "opacity-0 scale-95 translate-y-2 pointer-events-none"
+            : "opacity-0 scale-95 translate-y-2 pointer-events-none",
         )}
         style={{
           background: "rgba(255,255,255,0.96)",
@@ -48,7 +48,10 @@ export function FloatingHelp() {
         }}
       >
         <div className="px-3 py-2 flex items-center justify-between">
-          <span className="text-xs font-semibold tracking-wide uppercase" style={{ color: "#1a3a52" }}>
+          <span
+            className="text-xs font-semibold tracking-wide uppercase"
+            style={{ color: "#1a3a52" }}
+          >
             Need help?
           </span>
           <button
@@ -67,7 +70,9 @@ export function FloatingHelp() {
           <span className="w-8 h-8 rounded-lg bg-gradient-cyan-blue flex items-center justify-center">
             <BookOpen className="w-4 h-4 text-white" />
           </span>
-          <span className="text-sm font-medium" style={{ color: "#1a3a52" }}>Documentation</span>
+          <span className="text-sm font-medium" style={{ color: "#1a3a52" }}>
+            Documentation
+          </span>
         </Link>
         <Link
           to="/bob"
@@ -77,7 +82,9 @@ export function FloatingHelp() {
           <span className="w-8 h-8 rounded-lg bg-gradient-primary flex items-center justify-center">
             <MessageSquare className="w-4 h-4 text-white" />
           </span>
-          <span className="text-sm font-medium" style={{ color: "#1a3a52" }}>Ask BOB</span>
+          <span className="text-sm font-medium" style={{ color: "#1a3a52" }}>
+            Ask BOB
+          </span>
         </Link>
         <a
           href="mailto:support@loccibox.dev"
@@ -87,7 +94,9 @@ export function FloatingHelp() {
           <span className="w-8 h-8 rounded-lg bg-gradient-purple-pink flex items-center justify-center">
             <Mail className="w-4 h-4 text-white" />
           </span>
-          <span className="text-sm font-medium" style={{ color: "#1a3a52" }}>Contact Support</span>
+          <span className="text-sm font-medium" style={{ color: "#1a3a52" }}>
+            Contact Support
+          </span>
         </a>
       </div>
 
@@ -106,7 +115,7 @@ export function FloatingHelp() {
         <span
           className={cn(
             "absolute inset-0 rounded-full transition-opacity",
-            open ? "opacity-0" : "opacity-100 animate-ping"
+            open ? "opacity-0" : "opacity-100 animate-ping",
           )}
           style={{ background: "rgba(74,94,216,0.35)", animationDuration: "2.4s" }}
           aria-hidden
@@ -114,7 +123,7 @@ export function FloatingHelp() {
         <span
           className={cn(
             "relative transition-transform duration-300",
-            open ? "rotate-180 scale-90" : "rotate-0 group-hover:rotate-12"
+            open ? "rotate-180 scale-90" : "rotate-0 group-hover:rotate-12",
           )}
         >
           {open ? (

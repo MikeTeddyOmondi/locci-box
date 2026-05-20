@@ -117,7 +117,7 @@ Example output:
       "command": "loccibox",
       "args": ["mcp", "start"],
       "env": {
-        "LOCCIBOX_API_URL": "https://box.locci.cloud",
+        "LOCCIBOX_API_URL": "https://api-box.locci.cloud",
         "LOCCIBOX_API_KEY": "lbk_live_..."
       }
     }
@@ -145,7 +145,7 @@ Config is stored at `~/.loccibox/config.json`:
   "defaultProfile": "default",
   "profiles": {
     "default": {
-      "apiUrl": "https://box.locci.cloud",
+      "apiUrl": "https://api-box.locci.cloud",
       "apiKey": "lbk_live_..."
     }
   }
@@ -155,7 +155,7 @@ Config is stored at `~/.loccibox/config.json`:
 Environment variables override the config file:
 
 ```bash
-export LOCCIBOX_API_URL="https://box.locci.cloud"
+export LOCCIBOX_API_URL="https://api-box.locci.cloud"
 export LOCCIBOX_API_KEY="lbk_live_..."
 ```
 

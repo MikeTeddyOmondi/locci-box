@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.2] - 2026-05-20
+
+### Added
+
+- `4c97b12` - **BOB AI code reviewer** — replaces Lovable AI Gateway with Groq (`llama-3.3-70b-versatile`) via `@ai-sdk/groq`. Thread list and message history stored in `localStorage` (no Supabase). Copy-to-clipboard and retry icons on assistant messages. Auto-renames thread from first user message.
+- `4c97b12` - **Token revocation on logout** — JWT now includes a `jti` (nanoid). `POST /api/auth/logout` inserts the jti into a new `revoked_tokens` PGlite table; middleware rejects revoked tokens. Expired entries pruned hourly.
+- `4c97b12` - **Auth brute-force protection** — IP-based rate limiter (10 attempts/min) on `POST /api/auth/login` and `POST /api/auth/register`.
+- `4c97b12` - **Security headers** — `helmet` applied globally to all API responses (CSP, HSTS, X-Frame-Options, etc.).
+- `4c97b12` - **Sandbox IDs in Recent Activity** — dashboard table now shows a truncated sandbox ID with copy-to-clipboard. "Tenant" column corrected to "Exit Code". Running sandboxes show `—` for null exit code and duration.
+- `4c97b12` - **`GROQ_API_KEY`** placeholder added to `.env.example`.
+
+### Fixed
+
+- `4c97b12` - **Web logout now invalidates the JWT** — `auth.tsx` calls `POST /api/auth/logout` before clearing `localStorage`, so the token is blacklisted server-side even if the client is compromised.
+
+---
+
 ## [1.2.0] - 2026-05-20
 
 ### Added

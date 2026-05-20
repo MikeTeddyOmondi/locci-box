@@ -57,6 +57,10 @@
   - **Env flags:** `MCP_HTTP_ENABLED=true/false` (default false), `MCP_HTTP_PORT=3001` (dev only)
   - TODO: end-to-end test via `pnpm mcp:inspect`, verify all 3 tools work with a live sandbox
 
+## Dev / DX
+
+- [ ] **PGlite auto-reset on corruption (dev only)** — add `DB_AUTO_RESET=true` env flag; on startup, if the initial schema migration throws, wipe `data/locci-box` and reinitialize automatically. Guard must be env-gated so it never fires in production.
+
 ## Production Hardening
 
 - [x] Integrate real microsandbox SDK (was simulated in early build)

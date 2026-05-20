@@ -5,7 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [Unreleased] → v1.2.0
+
+### Added
+
+- `4c6321a` - **Streamable HTTP MCP transport** — MCP server now serves on `POST /mcp` on the main API port (no extra container or port). Toggle via `MCP_HTTP_ENABLED=true`. Standalone dev server (`pnpm mcp:dev`) and inspector (`pnpm mcp:inspect`) still available.
+- `ad367f6` - **`loccibox mcp start`** — embeds a full stdio MCP server in-process; connects any MCP client (Claude Desktop, Cursor, etc.) directly to Locci Box
+- `ad367f6` - **`loccibox mcp config`** — prints ready-to-paste MCP config for both installed CLI and `npx @locci/box` variants
+- `04a0ea2` - **`GET /api/sandbox`** — list all active sandboxes for the tenant; recovers IDs when a `run_sandbox` response was lost
+- `04a0ea2` - **`loccibox sandboxes`** — CLI table showing sandbox ID, language, status, uptime, and start time for all running sandboxes
+- `04a0ea2` - **`list_sandboxes` MCP tool** — AI agent tool to discover all running sandboxes; description hints to use it when a prior `run_sandbox` response was lost
+- `04a0ea2` - **Live sandboxes in stats** — `GET /api/stats` `recent_runs` now merges still-running sandboxes (with `status: "running"`) so the web UI activity feed shows them before completion
+
+### Changed
+
+- `4c6321a` - **Package namespace** — renamed to `@locci/box-api` (API), `@locci/box-web` (web), `@locci/box` (CLI). CLI published to NPM as `@locci/box`.
+- `cb7fc11` - **Unified MCP architecture** — HTTP transport on main API, stdio transport in CLI, standalone process for `pnpm mcp:dev`. Single `createMCPServer()` factory shared across all transports.
+- `a119b19` - **MCP tools call services directly** — `run_sandbox`, `get_sandbox_status`, `stop_sandbox`, `list_sandboxes` now use `sandboxService`/`tenantService`/`apiKeyService` in-process instead of HTTP round-trips. User-facing errors return `{ isError: true }` per MCP spec.
+
+### Fixed
+
+- `60db20d` - **`loccibox stop` hang on dead sandboxes** — `instance.stop()` and `instance.kill()` now race against a 5-second timeout; sandbox always removed from tracking regardless of outcome
+- `c001142` - **MCP HTTP error format** — error responses now correctly use `{ jsonrpc: "2.0", error: { code, message }, id: null }` JSON-RPC shape; cleanup uses `res.on("close")` not `res.on("finish")`
+- `ad367f6` - **`loccibox keys list` showing "NaN seconds ago"** — `ApiKey` type corrected to camelCase fields (`createdAt`, `lastUsedAt`) matching the API response; `formatTimestamp` guards against `null`/`undefined`
+- `46f4200` - **Docker cross-platform build** — microsandbox native binary copy is now non-fatal; build succeeds on Linux arm64 where the darwin binary is absent
+- `52d8bee` - **CI lockfile mismatch** — pinned pnpm to v10 in `ci.yml`; `latest` resolved to v11 which rejected the v10 lockfile format
+- `1639afb` - **CI missing lockfile entry** — committed `pnpm-lock.yaml` with `@modelcontextprotocol/sdk` entry for the CLI package
+
+---
+
+## [1.1.0] - 2026-05-19
 
 ### Added
 

@@ -107,7 +107,17 @@ function Page() {
     setStoppingId(sandboxId);
     try {
       await apiClient.stopSandbox(sandboxId);
-      await apiClient.getStats().then(setStatsData).catch(() => {});
+      // Optimistically mark the row as stopped and decrement active count
+      setStatsData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          active_sandboxes: Math.max(0, (prev.active_sandboxes ?? 1) - 1),
+          recent_runs: prev.recent_runs.map((r) =>
+            r.sandbox_id === sandboxId ? { ...r, status: "stopped" } : r,
+          ),
+        };
+      });
     } catch {
       // ignore
     } finally {
@@ -116,8 +126,14 @@ function Page() {
   }
 
   useEffect(() => {
-    apiClient.getStats().then(setStatsData).catch(() => {});
-    apiClient.listKeys().then(setKeys).catch(() => {});
+    apiClient
+      .getStats()
+      .then(setStatsData)
+      .catch(() => {});
+    apiClient
+      .listKeys()
+      .then(setKeys)
+      .catch(() => {});
   }, []);
 
   if (!user) return <Navigate to="/login" />;
@@ -359,9 +375,11 @@ function Page() {
                           className="inline-flex items-center gap-1.5 font-mono text-xs text-white/60 hover:text-white transition-colors group"
                         >
                           <span>{r.sandbox_id.slice(0, 14)}…</span>
-                          {copiedId === r.sandbox_id
-                            ? <Check className="w-3 h-3 text-success shrink-0" />
-                            : <Copy className="w-3 h-3 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />}
+                          {copiedId === r.sandbox_id ? (
+                            <Check className="w-3 h-3 text-success shrink-0" />
+                          ) : (
+                            <Copy className="w-3 h-3 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          )}
                         </button>
                       </td>
                       <td className="px-4 sm:px-6 py-3 font-medium">
@@ -373,9 +391,15 @@ function Page() {
                             <Check className="w-3 h-3" /> Completed
                           </span>
                         )}
-                        {!isOk && !isRunning && (
+                        {!isOk && !isRunning && r.status === "stopped" && (
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-white/10 text-white/50 text-xs">
+                            <StopCircle className="w-3 h-3" /> Stopped
+                          </span>
+                        )}
+                        {!isOk && !isRunning && r.status !== "stopped" && (
                           <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-destructive/15 text-destructive text-xs">
-                            <X className="w-3 h-3" /> {r.status === "timeout" ? "Timeout" : "Failed"}
+                            <X className="w-3 h-3" />{" "}
+                            {r.status === "timeout" ? "Timeout" : "Failed"}
                           </span>
                         )}
                         {isRunning && (
@@ -390,9 +414,11 @@ function Page() {
                               onClick={() => stopSandbox(r.sandbox_id)}
                               className="w-5 h-5 flex items-center justify-center rounded hover:bg-red-500/20 text-red-400 hover:text-red-500 transition-colors disabled:opacity-40"
                             >
-                              {stoppingId === r.sandbox_id
-                                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                : <StopCircle className="w-3.5 h-3.5" />}
+                              {stoppingId === r.sandbox_id ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <StopCircle className="w-3.5 h-3.5" />
+                              )}
                             </button>
                           </span>
                         )}

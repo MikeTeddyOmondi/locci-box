@@ -34,3 +34,4 @@ temp/
 data/locci-box
 
 # Made with Bob
+node-compile-cache/

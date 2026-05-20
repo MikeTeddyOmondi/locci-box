@@ -1,395 +1,194 @@
-# Locci Box CLI
+# @locci/box
 
-A command-line interface for interacting with the Locci Box API - execute code in isolated microVM sandboxes.
+CLI for [Locci Box](https://box.locci.cloud) — execute code in isolated microVM sandboxes, manage API keys, and connect AI agents via MCP.
 
 ## Installation
 
-### From Source
-
 ```bash
-# Clone the repository
-git clone <repository-url>
-cd locci-box/cli
+# NPM (recommended)
+npm install -g @locci/box
 
-# Install dependencies
-pnpm install
+# or via pnpm
+pnpm add -g @locci/box
 
-# Build the CLI
-pnpm build
-
-# Link globally (optional)
-pnpm link --global
-```
-
-### Using npm/pnpm (when published)
-
-```bash
-npm install -g loccibox
-# or
-pnpm add -g loccibox
+# or without installing
+npx @locci/box --help
 ```
 
 ## Quick Start
 
-1. **Initialize the CLI**
-
 ```bash
+# 1. Configure
 loccibox init
-```
 
-This will guide you through setting up your API configuration with an interactive wizard.
-
-2. **Run your first sandbox**
-
-```bash
-# Run inline code
+# 2. Run code
 loccibox run -l python -c "print('Hello from Locci Box!')"
 
-# Run code from a file
-loccibox run -l python -f script.py
-
-# Interactive mode
-loccibox run -l python -i
-```
-
-## Configuration
-
-### Config File
-
-The CLI stores configuration in `~/.loccibox/config.json`:
-
-```json
-{
-  "defaultProfile": "production",
-  "profiles": {
-    "production": {
-      "apiUrl": "https://api.loccibox.com",
-      "apiKey": "your-api-key"
-    },
-    "staging": {
-      "apiUrl": "https://staging.loccibox.com",
-      "apiKey": "your-staging-key"
-    }
-  }
-}
-```
-
-### Environment Variables
-
-You can also use environment variables (they take precedence over config file):
-
-```bash
-export LOCCIBOX_API_URL="https://api.loccibox.com"
-export LOCCIBOX_API_KEY="your-api-key"
-```
-
-### Multiple Profiles
-
-Switch between different environments:
-
-```bash
-# Use a specific profile
-loccibox run -p staging -l python -c "print('Hello')"
-
-# Set default profile
-loccibox init  # Select profile during setup
+# 3. Run from a file
+loccibox run -l node -f script.js
 ```
 
 ## Commands
 
 ### `init`
-
-Initialize or reconfigure the CLI.
-
+Interactive setup wizard — sets API URL, API key, and profile name.
 ```bash
 loccibox init
 ```
 
-**Interactive prompts:**
-
-- Profile name
-- API URL
-- API Key
-- Set as default profile
-
-### `run`
-
-Execute code in a sandbox.
-
+### `login`
+Authenticate with email and password to get a JWT for key management.
 ```bash
-loccibox run [options]
+loccibox login
 ```
 
-**Options:**
+### `run`
+Execute code in an isolated sandbox.
+```bash
+loccibox run [options]
 
-- `-l, --language <lang>` - Programming language (required)
-- `-c, --code <code>` - Inline code to execute
-- `-f, --file <path>` - Path to code file
-- `-i, --interactive` - Interactive mode (enter code in editor)
-- `-t, --timeout <ms>` - Execution timeout in milliseconds (default: 30000)
-- `-m, --memory <mb>` - Memory limit in MB (default: 128)
-- `-p, --profile <name>` - Use specific profile
-
-**Supported Languages:**
-
-- `python` - Python 3.x
-- `node` - Node.js
-- `bash` - Bash shell
-- `ruby` - Ruby
-
-**Examples:**
+Options:
+  -l, --lang <language>    python | node | bash | ruby  (required)
+  -c, --code <code>        Inline code to execute
+  -f, --file <path>        Path to a code file
+  -t, --timeout <seconds>  Execution timeout in seconds (default: 30)
+  --profile <name>         Use a specific profile
+```
 
 ```bash
-# Inline code
-loccibox run -l python -c "print('Hello World')"
+loccibox run -l python -c "print('hello')"
+loccibox run -l bash -c "echo \$HOSTNAME"
+loccibox run -l node -f index.js -t 60
+```
 
-# From file
-loccibox run -l node -f script.js
-
-# Interactive mode
-loccibox run -l python -i
-
-# With custom limits
-loccibox run -l python -c "print('test')" -t 60000 -m 256
-
-# Using specific profile
-loccibox run -p staging -l python -c "print('test')"
+### `sandboxes`
+List all currently running sandboxes — recover IDs when a response was lost.
+```bash
+loccibox sandboxes [--profile <name>]
 ```
 
 ### `status`
-
-Check the status of a running sandbox.
-
+Check the status of a specific sandbox by ID.
 ```bash
-loccibox status <sandbox-id> [options]
-```
-
-**Options:**
-
-- `-p, --profile <name>` - Use specific profile
-
-**Example:**
-
-```bash
-loccibox status abc123def456
+loccibox status <sandbox-id> [--profile <name>]
 ```
 
 ### `stop`
-
-Stop a running sandbox.
-
+Stop and destroy a running sandbox.
 ```bash
-loccibox stop <sandbox-id> [options]
+loccibox stop <sandbox-id> [-y] [--profile <name>]
+
+Flags:
+  -y, --yes    Skip confirmation prompt
 ```
 
-**Options:**
-
-- `-y, --yes` - Skip confirmation prompt
-- `-p, --profile <name>` - Use specific profile
-
-**Examples:**
-
+### `keys`
+Manage API keys (requires `loccibox login` first).
 ```bash
-# With confirmation
-loccibox stop abc123def456
-
-# Skip confirmation
-loccibox stop abc123def456 -y
+loccibox keys list
+loccibox keys create --name "my-key"
+loccibox keys revoke <key-id>
+loccibox keys delete <key-id>
 ```
 
 ### `metrics`
+View system and tenant usage statistics (requires admin key).
+```bash
+loccibox metrics [--profile <name>]
+```
 
-View usage statistics and metrics.
+### `mcp start`
+Start a stdio MCP server — connect Claude Desktop, Cursor, or any MCP client directly to Locci Box.
+```bash
+loccibox mcp start
+```
+
+### `mcp config`
+Print ready-to-paste MCP config for your client.
+```bash
+loccibox mcp config
+```
+
+Example output:
+```json
+{
+  "mcpServers": {
+    "locci-box": {
+      "command": "loccibox",
+      "args": ["mcp", "start"],
+      "env": {
+        "LOCCIBOX_API_URL": "https://box.locci.cloud",
+        "LOCCIBOX_API_KEY": "lbk_live_..."
+      }
+    }
+  }
+}
+```
+
+## MCP Tools
+
+When connected via `loccibox mcp start` or the HTTP transport, the following tools are available to AI agents:
+
+| Tool | Description |
+|------|-------------|
+| `run_sandbox` | Execute code in an isolated microVM |
+| `get_sandbox_status` | Check the status of a running sandbox |
+| `stop_sandbox` | Stop and destroy a sandbox |
+| `list_sandboxes` | List all active sandboxes (use when a prior `run_sandbox` response was lost) |
+
+## Configuration
+
+Config is stored at `~/.loccibox/config.json`:
+
+```json
+{
+  "defaultProfile": "default",
+  "profiles": {
+    "default": {
+      "apiUrl": "https://box.locci.cloud",
+      "apiKey": "lbk_live_..."
+    }
+  }
+}
+```
+
+Environment variables override the config file:
 
 ```bash
-loccibox metrics [options]
+export LOCCIBOX_API_URL="https://box.locci.cloud"
+export LOCCIBOX_API_KEY="lbk_live_..."
 ```
 
-**Options:**
+## HTTP MCP Transport
 
-- `-p, --profile <name>` - Use specific profile
+If the API server has `MCP_HTTP_ENABLED=true`, it also accepts MCP over HTTP at `POST /mcp`:
 
-**Example:**
-
-```bash
-loccibox metrics
+```json
+{
+  "mcpServers": {
+    "locci-box": {
+      "type": "http",
+      "url": "https://box.locci.cloud/mcp",
+      "headers": { "Authorization": "Bearer lbk_live_..." }
+    }
+  }
+}
 ```
 
-**Output includes:**
-
-- Total sandboxes created
-- Active sandboxes
-- Average execution time
-- Total execution time
-- Memory usage statistics
-
-### `keys`
-
-Manage API keys (coming soon).
-
-```bash
-loccibox keys [options]
-```
-
-**Planned features:**
-
-- List API keys
-- Create new keys
-- Revoke keys
-- View key permissions
-
-## Output Formats
-
-### Success Messages
-
-```
-✔ Sandbox created successfully
-  ID: abc123def456
-  Status: completed
-  Duration: 1.23s
-```
-
-### Error Messages
-
-```
-✖ Failed to create sandbox
-  Error: Invalid API key
-```
-
-### Tables
-
-```
-┌─────────────┬──────────┐
-│ Metric      │ Value    │
-├─────────────┼──────────┤
-│ Total       │ 1,234    │
-│ Active      │ 5        │
-│ Avg Time    │ 2.5s     │
-└─────────────┴──────────┘
-```
-
-## Development
-
-### Project Structure
+## Project Structure
 
 ```
 cli/
 ├── src/
-│   ├── commands/       # Command implementations
-│   │   ├── init.ts
-│   │   ├── run.ts
-│   │   ├── status.ts
-│   │   ├── stop.ts
-│   │   ├── metrics.ts
-│   │   └── keys.ts
-│   ├── lib/           # Shared utilities
-│   │   ├── api.ts     # API client
-│   │   ├── config.ts  # Config management
-│   │   └── output.ts  # Terminal formatting
-│   ├── types/         # TypeScript types
-│   │   └── index.ts
-│   └── index.ts       # CLI entry point
+│   ├── commands/   init · login · run · sandboxes · status · stop · metrics · keys · mcp
+│   ├── lib/        api.ts · config.ts · output.ts
+│   ├── types/      index.ts
+│   └── index.ts
+├── dist/           compiled output (published to NPM)
 ├── package.json
-├── tsconfig.json
-└── README.md
+└── tsconfig.json
 ```
-
-### Build Commands
-
-```bash
-# Install dependencies
-pnpm install
-
-# Development mode (watch)
-pnpm dev
-
-# Build for production
-pnpm build
-
-# Run tests
-pnpm test
-
-# Lint code
-pnpm lint
-```
-
-### Testing
-
-```bash
-# Run all tests
-pnpm test
-
-# Run specific test
-pnpm test -- run.test.ts
-
-# Watch mode
-pnpm test -- --watch
-```
-
-## Troubleshooting
-
-### "No configuration found"
-
-Run `loccibox init` to set up your configuration, or set environment variables:
-
-```bash
-export LOCCIBOX_API_URL="https://api.loccibox.com"
-export LOCCIBOX_API_KEY="your-api-key"
-```
-
-### "Invalid API key"
-
-Verify your API key is correct:
-
-1. Check `~/.loccibox/config.json`
-2. Or verify environment variables
-3. Contact support for a new key
-
-### "Connection refused"
-
-Check that:
-
-1. The API URL is correct
-2. The API server is running
-3. You have network connectivity
-
-### TypeScript Errors
-
-If you see TypeScript errors during development:
-
-```bash
-# Clean and rebuild
-rm -rf dist
-pnpm build
-```
-
-## API Reference
-
-The CLI interacts with the Locci Box API. For full API documentation, see:
-
-- [API Documentation](../docs/API_COLLECTION.md)
-- [Quickstart Guide](../docs/QUICKSTART.md)
-
-## Contributing
-
-Contributions are welcome! Please:
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request
 
 ## License
 
-MIT License - see [LICENSE](../LICENSE) for details.
-
-## Support
-
-- GitHub Issues: [Report a bug](https://github.com/your-org/locci-box/issues)
-- Documentation: [Full docs](../docs/README.md)
-- Email: support@loccibox.com
-
----
-
-Made with ❤️ by the Locci Box team
+MIT — see [LICENSE](./LICENSE)

@@ -15,6 +15,7 @@ import metricsRoutes from "./routes/metrics.js";
 import authRoutes from "./routes/auth.js";
 import statsRoutes from "./routes/stats.js";
 import apiKeysRoutes from "./routes/apikeys.js";
+import bobRoutes from "./routes/bob.js";
 import mcpHttpRouter from "./mcp/http.js";
 
 function configureMiddleware(app: Express): void {
@@ -50,6 +51,7 @@ function configureRoutes(app: Express): void {
   app.use("/api/stats", authenticate, statsRoutes);
   app.use("/api/keys", authenticate, apiKeysRoutes);
   app.use("/api/metrics", metricsRoutes);
+  app.use("/api/bob", bobRoutes);
 
   // MCP HTTP transport (optional — enable with MCP_HTTP_ENABLED=true)
   if (env.MCP_HTTP_ENABLED) {

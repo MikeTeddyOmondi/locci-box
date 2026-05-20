@@ -30,7 +30,6 @@ function BobLayout() {
     queryKey: ["bob-threads"],
     queryFn: () => listThreads(),
     enabled: !!user,
-    initialData: [],
   });
 
   const newThread = useMutation({
@@ -43,17 +42,17 @@ function BobLayout() {
   });
 
   const del = useMutation({
-    mutationFn: async (id: string) => { deleteThread(id); },
+    mutationFn: (id: string) => deleteThread(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["bob-threads"] }),
   });
 
-  // Auto-create / select first thread when landing on /bob
+  // Auto-create one empty thread on first visit, then navigate into the most recent
   useEffect(() => {
-    if (!user || !threads) return;
+    if (!user || threads === undefined) return;
     if (path !== "/bob") return;
     if (threads.length > 0) {
       navigate({ to: "/bob/$threadId", params: { threadId: threads[0].id }, replace: true });
-    } else if (!newThread.isPending) {
+    } else if (!newThread.isPending && !newThread.isSuccess) {
       newThread.mutate();
     }
   }, [user, threads, path]); // eslint-disable-line react-hooks/exhaustive-deps

@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@ai-sdk/groq':
+        specifier: ^3.0.39
+        version: 3.0.39(zod@4.4.3)
       '@electric-sql/pglite':
         specifier: 0.4.5
         version: 0.4.5
@@ -17,6 +20,9 @@ importers:
       '@types/helmet':
         specifier: ^4.0.0
         version: 4.0.0
+      ai:
+        specifier: ^6.0.184
+        version: 6.0.184(zod@4.4.3)
       bcryptjs:
         specifier: ^3.0.3
         version: 3.0.3

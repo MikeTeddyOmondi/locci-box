@@ -3,18 +3,19 @@ import { useEffect, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  getThreadMessages,
-  saveThreadMessages,
-  renameThread,
-} from "@/lib/bob.functions";
+import { getThreadMessages, renameThread } from "@/lib/bob.functions";
 import { useAuth } from "@/lib/auth";
 import {
-  Conversation, ConversationContent, ConversationScrollButton,
+  Conversation,
+  ConversationContent,
+  ConversationScrollButton,
 } from "@/components/ai-elements/conversation";
 import { Message, MessageContent, MessageResponse } from "@/components/ai-elements/message";
 import {
-  PromptInput, PromptInputTextarea, PromptInputFooter, PromptInputSubmit,
+  PromptInput,
+  PromptInputTextarea,
+  PromptInputFooter,
+  PromptInputSubmit,
 } from "@/components/ai-elements/prompt-input";
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import { Bug, Check, Code2, Copy, FileSearch, RotateCcw } from "lucide-react";
@@ -43,12 +44,7 @@ function ThreadPage() {
   if (!user) return <Navigate to="/" />;
 
   return (
-    <ChatBody
-      key={threadId}
-      threadId={threadId}
-      initialMessages={initialMessages}
-      token={token}
-    />
+    <ChatBody key={threadId} threadId={threadId} initialMessages={initialMessages} token={token} />
   );
 }
 
@@ -67,8 +63,9 @@ function ChatBody({
   const hasRenamed = useRef(false);
   const qc = useQueryClient();
 
+  const apiUrl = import.meta.env.VITE_API_URL ?? "http://localhost:5757";
   const transport = new DefaultChatTransport({
-    api: "/api/bob",
+    api: `${apiUrl}/api/bob`,
     body: { threadId },
     fetch: async (input, init) => {
       const headers = new Headers(init?.headers);
@@ -82,11 +79,6 @@ function ChatBody({
     messages: initialMessages,
     transport,
   });
-
-  // Persist messages to localStorage after each change
-  useEffect(() => {
-    if (messages.length > 0) saveThreadMessages(threadId, messages);
-  }, [messages, threadId]);
 
   // Auto-rename thread on first user message
   useEffect(() => {
@@ -105,8 +97,12 @@ function ChatBody({
     }
   }, [messages, threadId, qc]);
 
-  useEffect(() => { taRef.current?.focus(); }, [threadId]);
-  useEffect(() => { if (status === "ready") taRef.current?.focus(); }, [status]);
+  useEffect(() => {
+    taRef.current?.focus();
+  }, [threadId]);
+  useEffect(() => {
+    if (status === "ready") taRef.current?.focus();
+  }, [status]);
 
   function retryLast() {
     const lastUser = [...messages].reverse().find((m) => m.role === "user");
@@ -163,7 +159,10 @@ function ChatBody({
                   <button
                     key={s.label}
                     type="button"
-                    onClick={() => { setDraft(s.label); taRef.current?.focus(); }}
+                    onClick={() => {
+                      setDraft(s.label);
+                      taRef.current?.focus();
+                    }}
                     className="text-left p-3 rounded-xl border border-[#e0f2fe] bg-white hover:bg-[#f0f7ff] transition-colors group"
                   >
                     <s.icon className="w-4 h-4 text-[#3b82f6] mb-2" />
@@ -179,7 +178,9 @@ function ChatBody({
             if (m.role === "user") {
               return (
                 <Message from="user" key={m.id}>
-                  <MessageContent style={{ background: "linear-gradient(135deg,#4a5ed8,#6b7fd9)", color: "#fff" }}>
+                  <MessageContent
+                    style={{ background: "linear-gradient(135deg,#4a5ed8,#6b7fd9)", color: "#fff" }}
+                  >
                     <div className="whitespace-pre-wrap">{text}</div>
                   </MessageContent>
                 </Message>
@@ -197,9 +198,11 @@ function ChatBody({
                     title="Copy response"
                     className="p-1 rounded hover:bg-[#f0f7ff] text-[#94a3b8] hover:text-[#3b82f6] transition-colors"
                   >
-                    {copied === m.id
-                      ? <Check className="w-3.5 h-3.5 text-green-500" />
-                      : <Copy className="w-3.5 h-3.5" />}
+                    {copied === m.id ? (
+                      <Check className="w-3.5 h-3.5 text-green-500" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
+                    )}
                   </button>
                   {m.id === lastAssistantId && !isLoading && (
                     <button
@@ -253,7 +256,10 @@ function ChatBody({
               autoFocus
             />
             <PromptInputFooter className="justify-end">
-              <PromptInputSubmit status={status} disabled={isLoading || draft.trim().length === 0} />
+              <PromptInputSubmit
+                status={status}
+                disabled={isLoading || draft.trim().length === 0}
+              />
             </PromptInputFooter>
           </PromptInput>
         </div>

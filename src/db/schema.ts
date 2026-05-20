@@ -22,7 +22,9 @@ export const users = pgTable("users", {
 
 export const apiKeys = pgTable("api_keys", {
   id: text("id").primaryKey(),
-  userId: text("user_id").notNull().references(() => users.id),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id),
   name: text("name").notNull(),
   key: text("key").notNull().unique(),
   status: text("status").notNull().default("active"),
@@ -42,6 +44,30 @@ export const sandboxRuns = pgTable("sandbox_runs", {
   durationMs: integer("duration_ms").notNull(),
   createdAt: text("created_at").notNull(),
 });
+
+export const bobThreads = pgTable(
+  "bob_threads",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id").notNull(),
+    title: text("title").notNull().default("New review"),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (t) => [index("bob_threads_user_id_idx").on(t.userId)],
+);
+
+export const bobMessages = pgTable(
+  "bob_messages",
+  {
+    id: text("id").primaryKey(),
+    threadId: text("thread_id").notNull(),
+    role: text("role").notNull(),
+    parts: text("parts").notNull(), // JSON-encoded UIMessage parts array
+    createdAt: text("created_at").notNull(),
+  },
+  (t) => [index("bob_messages_thread_id_idx").on(t.threadId)],
+);
 
 export const revokedTokens = pgTable(
   "revoked_tokens",

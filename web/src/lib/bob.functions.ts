@@ -2,54 +2,49 @@ import type { UIMessage } from "ai";
 
 export type BobThread = { id: string; title: string; updatedAt: string };
 
-const THREADS_KEY = "bob_threads";
-const threadKey = (id: string) => `bob_msg_${id}`;
+const apiBase = () => import.meta.env.VITE_API_URL ?? "http://localhost:5757";
 
-function load<T>(key: string, fallback: T): T {
-  if (typeof window === "undefined") return fallback;
+function authHeader(): Record<string, string> {
   try {
-    const v = localStorage.getItem(key);
-    return v ? (JSON.parse(v) as T) : fallback;
+    const token = localStorage.getItem("locci_jwt");
+    return token ? { Authorization: `Bearer ${token}` } : {};
   } catch {
-    return fallback;
+    return {};
   }
 }
 
-export function listThreads(): BobThread[] {
-  return load<BobThread[]>(THREADS_KEY, []);
+async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${apiBase()}/api/bob${path}`, {
+    ...init,
+    headers: { "Content-Type": "application/json", ...authHeader(), ...(init?.headers ?? {}) },
+  });
+  if (!res.ok) throw new Error(`BOB API error: ${res.status}`);
+  const json = await res.json();
+  return json.data as T;
 }
 
-export function createThread(title = "New review"): BobThread {
-  const thread: BobThread = {
-    id: `t_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-    title,
-    updatedAt: new Date().toISOString(),
-  };
-  localStorage.setItem(THREADS_KEY, JSON.stringify([thread, ...listThreads()]));
-  return thread;
+export async function listThreads(): Promise<BobThread[]> {
+  return apiFetch<BobThread[]>("/threads");
 }
 
-export function renameThread(id: string, title: string): void {
-  const threads = listThreads().map((t) =>
-    t.id === id ? { ...t, title, updatedAt: new Date().toISOString() } : t,
-  );
-  localStorage.setItem(THREADS_KEY, JSON.stringify(threads));
+export async function createThread(title = "New review"): Promise<BobThread> {
+  return apiFetch<BobThread>("/threads", {
+    method: "POST",
+    body: JSON.stringify({ title }),
+  });
 }
 
-export function deleteThread(id: string): void {
-  localStorage.setItem(
-    THREADS_KEY,
-    JSON.stringify(listThreads().filter((t) => t.id !== id)),
-  );
-  localStorage.removeItem(threadKey(id));
+export async function renameThread(id: string, title: string): Promise<void> {
+  await apiFetch(`/threads/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ title }),
+  });
 }
 
-export function getThreadMessages(threadId: string): UIMessage[] {
-  return load<UIMessage[]>(threadKey(threadId), []);
+export async function deleteThread(id: string): Promise<void> {
+  await apiFetch(`/threads/${id}`, { method: "DELETE" });
 }
 
-export function saveThreadMessages(threadId: string, messages: UIMessage[]): void {
-  if (typeof window !== "undefined") {
-    localStorage.setItem(threadKey(threadId), JSON.stringify(messages));
-  }
+export async function getThreadMessages(threadId: string): Promise<UIMessage[]> {
+  return apiFetch<UIMessage[]>(`/threads/${threadId}/messages`);
 }

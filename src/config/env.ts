@@ -11,16 +11,10 @@ dotenv.config();
 const EnvSchema = v.object({
   // Server Configuration
   PORT: v.optional(v.pipe(v.string(), v.transform(Number)), "3000"),
-  NODE_ENV: v.optional(
-    v.picklist(["development", "production", "test"]),
-    "development",
-  ),
+  NODE_ENV: v.optional(v.picklist(["development", "production", "test"]), "development"),
 
   // Admin Configuration
-  ADMIN_API_KEY: v.pipe(
-    v.string(),
-    v.minLength(1, "ADMIN_API_KEY is required"),
-  ),
+  ADMIN_API_KEY: v.pipe(v.string(), v.minLength(1, "ADMIN_API_KEY is required")),
 
   // Sandbox Defaults
   DEFAULT_MAX_CONCURRENT_SANDBOXES: v.optional(
@@ -63,6 +57,9 @@ const EnvSchema = v.object({
   // JWT Secret for web app authentication
   JWT_SECRET: v.optional(v.string(), "locci-box-dev-secret-change-in-production"),
 
+  // Groq API key for BOB code-review assistant
+  GROQ_API_KEY: v.optional(v.string()),
+
   // Database (optional for now)
   DATABASE_URL: v.optional(v.string()),
 
@@ -79,16 +76,15 @@ function parseEnv() {
       PORT: process.env.PORT,
       NODE_ENV: process.env.NODE_ENV,
       ADMIN_API_KEY: process.env.ADMIN_API_KEY,
-      DEFAULT_MAX_CONCURRENT_SANDBOXES:
-        process.env.DEFAULT_MAX_CONCURRENT_SANDBOXES,
-      DEFAULT_SANDBOX_TIMEOUT_SECONDS:
-        process.env.DEFAULT_SANDBOX_TIMEOUT_SECONDS,
+      DEFAULT_MAX_CONCURRENT_SANDBOXES: process.env.DEFAULT_MAX_CONCURRENT_SANDBOXES,
+      DEFAULT_SANDBOX_TIMEOUT_SECONDS: process.env.DEFAULT_SANDBOX_TIMEOUT_SECONDS,
       DEFAULT_RATE_LIMIT_PER_MINUTE: process.env.DEFAULT_RATE_LIMIT_PER_MINUTE,
       LOG_LEVEL: process.env.LOG_LEVEL,
       MCP_ENABLED: process.env.MCP_ENABLED,
       MCP_HTTP_ENABLED: process.env.MCP_HTTP_ENABLED,
       MCP_HTTP_PORT: process.env.MCP_HTTP_PORT,
       JWT_SECRET: process.env.JWT_SECRET,
+      GROQ_API_KEY: process.env.GROQ_API_KEY,
       DATABASE_URL: process.env.DATABASE_URL,
       DB_PATH: process.env.DB_PATH,
     });

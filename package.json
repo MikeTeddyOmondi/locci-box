@@ -35,9 +35,11 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@ai-sdk/groq": "^3.0.39",
     "@electric-sql/pglite": "0.4.5",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@types/helmet": "^4.0.0",
+    "ai": "^6.0.184",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^17.4.2",

@@ -246,6 +246,7 @@ function ChatBody({
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               placeholder="Paste code, a stack trace, or ask BOB to review something…"
+              className="text-[#1a3a52] placeholder:text-[#94a3b8]"
               autoFocus
             />
             <PromptInputFooter className="justify-end">

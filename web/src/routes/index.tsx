@@ -1,7 +1,19 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
-import { Boxes, ArrowRight, BookOpen, Layers, Shield, Server, Github, Twitter, Terminal, Download, Copy } from "lucide-react";
+import {
+  Boxes,
+  ArrowRight,
+  BookOpen,
+  Layers,
+  Shield,
+  Server,
+  Github,
+  Twitter,
+  Terminal,
+  Download,
+  Copy,
+} from "lucide-react";
 import { toast } from "sonner";
 
 const REPO = "MikeTeddyOmondi/locci-box";
@@ -255,7 +267,10 @@ function Landing() {
           <div className="flex items-center gap-3 mb-6">
             <div
               className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-              style={{ background: "rgba(255,255,255,0.18)", border: "1px solid rgba(255,255,255,0.25)" }}
+              style={{
+                background: "rgba(255,255,255,0.18)",
+                border: "1px solid rgba(255,255,255,0.25)",
+              }}
             >
               <Terminal className="w-5 h-5" style={{ color: "#fff" }} />
             </div>
@@ -279,7 +294,10 @@ function Landing() {
             </pre>
             <button
               type="button"
-              onClick={() => { navigator.clipboard.writeText(dockerSnippet); toast.success("Docker command copied"); }}
+              onClick={() => {
+                navigator.clipboard.writeText(dockerSnippet);
+                toast.success("Docker command copied");
+              }}
               className="absolute top-2 right-2 w-7 h-7 rounded-md flex items-center justify-center transition-colors"
               style={{ background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)" }}
               title="Copy"
@@ -289,13 +307,31 @@ function Landing() {
           </div>
 
           {/* Binary table */}
-          <div className="rounded-xl overflow-x-auto" style={{ background: "rgba(255,255,255,0.1)" }}>
+          <div
+            className="rounded-xl overflow-x-auto"
+            style={{ background: "rgba(255,255,255,0.1)" }}
+          >
             <table className="w-full text-sm min-w-[480px]">
               <thead>
                 <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.12)" }}>
-                  <th className="px-5 py-2.5 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.55)" }}>Platform</th>
-                  <th className="px-5 py-2.5 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.55)" }}>Arch</th>
-                  <th className="px-5 py-2.5 text-right text-xs font-semibold uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.55)" }}>Download</th>
+                  <th
+                    className="px-5 py-2.5 text-left text-xs font-semibold uppercase tracking-wider"
+                    style={{ color: "rgba(255,255,255,0.55)" }}
+                  >
+                    Platform
+                  </th>
+                  <th
+                    className="px-5 py-2.5 text-left text-xs font-semibold uppercase tracking-wider"
+                    style={{ color: "rgba(255,255,255,0.55)" }}
+                  >
+                    Arch
+                  </th>
+                  <th
+                    className="px-5 py-2.5 text-right text-xs font-semibold uppercase tracking-wider"
+                    style={{ color: "rgba(255,255,255,0.55)" }}
+                  >
+                    Download
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -305,15 +341,22 @@ function Landing() {
                     style={{ borderTop: i === 0 ? "none" : "1px solid rgba(255,255,255,0.08)" }}
                   >
                     <td className="px-5 py-3 font-medium" style={{ color: "#fff" }}>
-                      <span className="mr-2">{b.icon}</span>{b.platform}
+                      <span className="mr-2">{b.icon}</span>
+                      {b.platform}
                     </td>
-                    <td className="px-5 py-3 text-sm" style={{ color: "rgba(255,255,255,0.7)" }}>{b.arch}</td>
+                    <td className="px-5 py-3 text-sm" style={{ color: "rgba(255,255,255,0.7)" }}>
+                      {b.arch}
+                    </td>
                     <td className="px-5 py-3 text-right">
                       <a
                         href={`${LATEST}/${b.file}`}
                         download
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:opacity-90"
-                        style={{ background: "rgba(255,255,255,0.18)", color: "#fff", border: "1px solid rgba(255,255,255,0.25)" }}
+                        style={{
+                          background: "rgba(255,255,255,0.18)",
+                          color: "#fff",
+                          border: "1px solid rgba(255,255,255,0.25)",
+                        }}
                       >
                         <Download className="w-3 h-3" /> Download
                       </a>

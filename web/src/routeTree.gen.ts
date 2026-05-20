@@ -21,7 +21,6 @@ import { Route as CodeRouteImport } from './routes/code'
 import { Route as BobRouteImport } from './routes/bob'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as BobThreadIdRouteImport } from './routes/bob.$threadId'
-import { Route as ApiBobRouteImport } from './routes/api/bob'
 
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
@@ -83,11 +82,6 @@ const BobThreadIdRoute = BobThreadIdRouteImport.update({
   path: '/$threadId',
   getParentRoute: () => BobRoute,
 } as any)
-const ApiBobRoute = ApiBobRouteImport.update({
-  id: '/api/bob',
-  path: '/api/bob',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -101,7 +95,6 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/playground': typeof PlaygroundRoute
   '/settings': typeof SettingsRoute
-  '/api/bob': typeof ApiBobRoute
   '/bob/$threadId': typeof BobThreadIdRoute
 }
 export interface FileRoutesByTo {
@@ -116,7 +109,6 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/playground': typeof PlaygroundRoute
   '/settings': typeof SettingsRoute
-  '/api/bob': typeof ApiBobRoute
   '/bob/$threadId': typeof BobThreadIdRoute
 }
 export interface FileRoutesById {
@@ -132,7 +124,6 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/playground': typeof PlaygroundRoute
   '/settings': typeof SettingsRoute
-  '/api/bob': typeof ApiBobRoute
   '/bob/$threadId': typeof BobThreadIdRoute
 }
 export interface FileRouteTypes {
@@ -149,7 +140,6 @@ export interface FileRouteTypes {
     | '/login'
     | '/playground'
     | '/settings'
-    | '/api/bob'
     | '/bob/$threadId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -164,7 +154,6 @@ export interface FileRouteTypes {
     | '/login'
     | '/playground'
     | '/settings'
-    | '/api/bob'
     | '/bob/$threadId'
   id:
     | '__root__'
@@ -179,7 +168,6 @@ export interface FileRouteTypes {
     | '/login'
     | '/playground'
     | '/settings'
-    | '/api/bob'
     | '/bob/$threadId'
   fileRoutesById: FileRoutesById
 }
@@ -195,7 +183,6 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   PlaygroundRoute: typeof PlaygroundRoute
   SettingsRoute: typeof SettingsRoute
-  ApiBobRoute: typeof ApiBobRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -284,13 +271,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BobThreadIdRouteImport
       parentRoute: typeof BobRoute
     }
-    '/api/bob': {
-      id: '/api/bob'
-      path: '/api/bob'
-      fullPath: '/api/bob'
-      preLoaderRoute: typeof ApiBobRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
@@ -316,7 +296,6 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   PlaygroundRoute: PlaygroundRoute,
   SettingsRoute: SettingsRoute,
-  ApiBobRoute: ApiBobRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

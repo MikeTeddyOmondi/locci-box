@@ -27,11 +27,15 @@ function Page() {
         <div className="hero-white p-6 sm:p-8 space-y-6">
           <section className="space-y-2">
             <h2 className="text-lg font-semibold hero-text">Account</h2>
-            <p className="text-sm hero-text-muted">Signed in as <span className="font-medium hero-text">{user.email}</span></p>
+            <p className="text-sm hero-text-muted">
+              Signed in as <span className="font-medium hero-text">{user.email}</span>
+            </p>
           </section>
           <section className="space-y-2">
             <h2 className="text-lg font-semibold hero-text">Preferences</h2>
-            <p className="text-sm hero-text-muted">Display, notifications, and workspace defaults will appear here.</p>
+            <p className="text-sm hero-text-muted">
+              Display, notifications, and workspace defaults will appear here.
+            </p>
           </section>
         </div>
       </div>

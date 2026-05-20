@@ -155,7 +155,8 @@ function Page() {
             </code>
           </p>
           <p className="text-xs text-white/40 px-1">
-            <span className="text-white/60">🍎 macOS only:</span> remove the quarantine flag before running:{" "}
+            <span className="text-white/60">🍎 macOS only:</span> remove the quarantine flag before
+            running:{" "}
             <code className="font-mono bg-white/5 px-1.5 py-0.5 rounded">
               xattr -d com.apple.quarantine loccibox-macos-arm64
             </code>

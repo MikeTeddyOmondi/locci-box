@@ -267,7 +267,9 @@ function Page() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="kn" className="hero-text">Key Name</Label>
+              <Label htmlFor="kn" className="hero-text">
+                Key Name
+              </Label>
               <Input
                 id="kn"
                 value={name}
@@ -278,7 +280,9 @@ function Page() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="mc" className="hero-text">Max Concurrent</Label>
+                <Label htmlFor="mc" className="hero-text">
+                  Max Concurrent
+                </Label>
                 <Input
                   id="mc"
                   type="number"
@@ -290,7 +294,9 @@ function Page() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="to" className="hero-text">Timeout (s)</Label>
+                <Label htmlFor="to" className="hero-text">
+                  Timeout (s)
+                </Label>
                 <Input
                   id="to"
                   type="number"
@@ -304,14 +310,18 @@ function Page() {
             </div>
             <div className="flex items-center justify-between rounded-lg border border-slate-200 p-3 bg-slate-50">
               <div>
-                <Label htmlFor="rl" className="hero-text">Rate Limited</Label>
+                <Label htmlFor="rl" className="hero-text">
+                  Rate Limited
+                </Label>
                 <p className="text-xs hero-text-muted">Limit requests per minute</p>
               </div>
               <Switch id="rl" checked={rateLimited} onCheckedChange={setRateLimited} />
             </div>
             {rateLimited && (
               <div className="space-y-2">
-                <Label htmlFor="r" className="hero-text">Max requests / minute</Label>
+                <Label htmlFor="r" className="hero-text">
+                  Max requests / minute
+                </Label>
                 <Input
                   id="r"
                   type="number"

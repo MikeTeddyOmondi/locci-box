@@ -75,17 +75,34 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Locci Box" },
-      { name: "description", content: "Locci Box provides a secure, isolated environment for executing untrusted code." },
+      {
+        name: "description",
+        content: "Locci Box provides a secure, isolated environment for executing untrusted code.",
+      },
       { name: "author", content: "Lovable" },
       { property: "og:title", content: "Locci Box" },
-      { property: "og:description", content: "Locci Box provides a secure, isolated environment for executing untrusted code." },
+      {
+        property: "og:description",
+        content: "Locci Box provides a secure, isolated environment for executing untrusted code.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
       { name: "twitter:title", content: "Locci Box" },
-      { name: "twitter:description", content: "Locci Box provides a secure, isolated environment for executing untrusted code." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/f2ee1a82-531c-4067-8987-64761fb75743/id-preview-fac40852--5ffb16ba-4de8-452f-a3e9-ed02d16f1936.lovable.app-1778962454892.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/f2ee1a82-531c-4067-8987-64761fb75743/id-preview-fac40852--5ffb16ba-4de8-452f-a3e9-ed02d16f1936.lovable.app-1778962454892.png" },
+      {
+        name: "twitter:description",
+        content: "Locci Box provides a secure, isolated environment for executing untrusted code.",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/f2ee1a82-531c-4067-8987-64761fb75743/id-preview-fac40852--5ffb16ba-4de8-452f-a3e9-ed02d16f1936.lovable.app-1778962454892.png",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/f2ee1a82-531c-4067-8987-64761fb75743/id-preview-fac40852--5ffb16ba-4de8-452f-a3e9-ed02d16f1936.lovable.app-1778962454892.png",
+      },
     ],
     links: [
       {

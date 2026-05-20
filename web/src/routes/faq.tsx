@@ -6,9 +6,15 @@ export const Route = createFileRoute("/faq")({
   head: () => ({
     meta: [
       { title: "FAQ — Locci Box" },
-      { name: "description", content: "Answers to common questions about Locci Box enterprise microVM sandboxes." },
+      {
+        name: "description",
+        content: "Answers to common questions about Locci Box enterprise microVM sandboxes.",
+      },
       { property: "og:title", content: "FAQ — Locci Box" },
-      { property: "og:description", content: "Answers to common questions about Locci Box enterprise microVM sandboxes." },
+      {
+        property: "og:description",
+        content: "Answers to common questions about Locci Box enterprise microVM sandboxes.",
+      },
     ],
   }),
   component: FaqPage,
@@ -67,23 +73,42 @@ function FaqPage() {
         style={{ background: "#ffffff", boxShadow: "0 2px 8px rgba(15,42,75,0.06)" }}
       >
         <Link to="/" className="flex items-center gap-2 sm:gap-3 min-w-0">
-          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: "linear-gradient(135deg,#4a5ed8,#6b7fd9)" }}>
+          <div
+            className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center shrink-0"
+            style={{ background: "linear-gradient(135deg,#4a5ed8,#6b7fd9)" }}
+          >
             <Boxes className="w-5 h-5" style={{ color: "#fff" }} />
           </div>
-          <span className="font-bold tracking-tight text-base sm:text-lg truncate" style={{ color: "#1a3a52" }}>Locci Box</span>
+          <span
+            className="font-bold tracking-tight text-base sm:text-lg truncate"
+            style={{ color: "#1a3a52" }}
+          >
+            Locci Box
+          </span>
         </Link>
-        <Link to="/" className="inline-flex items-center gap-2 text-sm font-medium hover:opacity-70" style={{ color: "#1a3a52" }}>
+        <Link
+          to="/"
+          className="inline-flex items-center gap-2 text-sm font-medium hover:opacity-70"
+          style={{ color: "#1a3a52" }}
+        >
           <ArrowLeft className="w-4 h-4" /> Back to home
         </Link>
       </header>
 
       <section
         className="mx-auto max-w-[1400px] mt-6 sm:mt-8 rounded-2xl sm:rounded-[28px] px-6 sm:px-10 lg:px-14 py-10 sm:py-14"
-        style={{ background: "radial-gradient(ellipse 60% 55% at 55% 50%, rgba(120,170,140,0.55), rgba(120,170,140,0) 65%), linear-gradient(135deg,#4a5ed8,#6b7fd9)" }}
+        style={{
+          background:
+            "radial-gradient(ellipse 60% 55% at 55% 50%, rgba(120,170,140,0.55), rgba(120,170,140,0) 65%), linear-gradient(135deg,#4a5ed8,#6b7fd9)",
+        }}
       >
         <div
           className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-semibold tracking-[0.14em] mb-5"
-          style={{ background: "rgba(255,255,255,0.15)", color: "#fff", border: "1px solid rgba(255,255,255,0.25)" }}
+          style={{
+            background: "rgba(255,255,255,0.15)",
+            color: "#fff",
+            border: "1px solid rgba(255,255,255,0.25)",
+          }}
         >
           <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#fff" }} />
           FREQUENTLY ASKED
@@ -91,8 +116,12 @@ function FaqPage() {
         <h1 className="text-3xl sm:text-5xl font-bold tracking-tight" style={{ color: "#fff" }}>
           Questions, answered.
         </h1>
-        <p className="text-sm sm:text-base mt-4 max-w-2xl" style={{ color: "rgba(255,255,255,0.88)" }}>
-          Everything teams typically ask before rolling Locci Box into production. Need something we missed? Reach your account contact.
+        <p
+          className="text-sm sm:text-base mt-4 max-w-2xl"
+          style={{ color: "rgba(255,255,255,0.88)" }}
+        >
+          Everything teams typically ask before rolling Locci Box into production. Need something we
+          missed? Reach your account contact.
         </p>
       </section>
 
@@ -103,21 +132,33 @@ function FaqPage() {
             <div
               key={item.q}
               className="rounded-2xl overflow-hidden transition-all"
-              style={{ background: "#ffffff", boxShadow: "0 4px 14px rgba(15,42,75,0.06)", border: "1px solid rgba(15,42,75,0.06)" }}
+              style={{
+                background: "#ffffff",
+                boxShadow: "0 4px 14px rgba(15,42,75,0.06)",
+                border: "1px solid rgba(15,42,75,0.06)",
+              }}
             >
               <button
                 onClick={() => setOpen(isOpen ? null : i)}
                 aria-expanded={isOpen}
                 className="w-full flex items-center justify-between gap-4 px-5 sm:px-7 py-5 text-left"
               >
-                <span className="text-sm sm:text-base font-semibold" style={{ color: "#1a3a52" }}>{item.q}</span>
+                <span className="text-sm sm:text-base font-semibold" style={{ color: "#1a3a52" }}>
+                  {item.q}
+                </span>
                 <ChevronDown
                   className="w-4 h-4 shrink-0 transition-transform"
-                  style={{ color: "#4a5ed8", transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }}
+                  style={{
+                    color: "#4a5ed8",
+                    transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
+                  }}
                 />
               </button>
               {isOpen && (
-                <div className="px-5 sm:px-7 pb-5 -mt-1 text-sm leading-relaxed" style={{ color: "#3a5470" }}>
+                <div
+                  className="px-5 sm:px-7 pb-5 -mt-1 text-sm leading-relaxed"
+                  style={{ color: "#3a5470" }}
+                >
                   {item.a}
                 </div>
               )}
@@ -128,11 +169,19 @@ function FaqPage() {
 
       <footer
         className="mx-auto max-w-[1400px] mt-10 mb-6 rounded-2xl px-10 py-8"
-        style={{ background: "radial-gradient(ellipse 55% 80% at 50% 50%, rgba(120,170,140,0.5), rgba(120,170,140,0) 70%), linear-gradient(135deg,#4a5ed8,#6b7fd9)" }}
+        style={{
+          background:
+            "radial-gradient(ellipse 55% 80% at 50% 50%, rgba(120,170,140,0.5), rgba(120,170,140,0) 70%), linear-gradient(135deg,#4a5ed8,#6b7fd9)",
+        }}
       >
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs" style={{ color: "rgba(255,255,255,0.85)" }}>
+        <div
+          className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs"
+          style={{ color: "rgba(255,255,255,0.85)" }}
+        >
           <span>© 2026 Locci Box. All rights reserved.</span>
-          <Link to="/" className="hover:text-white">Back to home</Link>
+          <Link to="/" className="hover:text-white">
+            Back to home
+          </Link>
         </div>
       </footer>
     </div>

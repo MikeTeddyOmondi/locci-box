@@ -16,6 +16,7 @@ import {
   Plus,
   ExternalLink,
   Copy,
+  StopCircle,
 } from "lucide-react";
 import {
   XAxis,
@@ -94,11 +95,24 @@ function Page() {
   const [statsData, setStatsData] = useState<StatsData | null>(null);
   const [keys, setKeys] = useState<ApiKeyData[]>([]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [stoppingId, setStoppingId] = useState<string | null>(null);
 
   function copyId(id: string) {
     navigator.clipboard.writeText(id).catch(() => {});
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
+  }
+
+  async function stopSandbox(sandboxId: string) {
+    setStoppingId(sandboxId);
+    try {
+      await apiClient.stopSandbox(sandboxId);
+      await apiClient.getStats().then(setStatsData).catch(() => {});
+    } catch {
+      // ignore
+    } finally {
+      setStoppingId(null);
+    }
   }
 
   useEffect(() => {
@@ -365,8 +379,21 @@ function Page() {
                           </span>
                         )}
                         {isRunning && (
-                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-info/15 text-info text-xs">
-                            <Loader2 className="w-3 h-3 animate-spin" /> Running
+                          <span className="inline-flex items-center gap-2">
+                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-info/15 text-info text-xs">
+                              <Loader2 className="w-3 h-3 animate-spin" /> Running
+                            </span>
+                            <button
+                              type="button"
+                              title="Stop sandbox"
+                              disabled={stoppingId === r.sandbox_id}
+                              onClick={() => stopSandbox(r.sandbox_id)}
+                              className="w-5 h-5 flex items-center justify-center rounded hover:bg-red-500/20 text-red-400 hover:text-red-500 transition-colors disabled:opacity-40"
+                            >
+                              {stoppingId === r.sandbox_id
+                                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                : <StopCircle className="w-3.5 h-3.5" />}
+                            </button>
                           </span>
                         )}
                       </td>

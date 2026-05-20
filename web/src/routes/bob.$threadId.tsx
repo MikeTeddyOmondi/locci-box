@@ -2,7 +2,7 @@ import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getThreadMessages,
   saveThreadMessages,
@@ -33,9 +33,12 @@ function ThreadPage() {
   const { threadId } = Route.useParams();
   const { user, token } = useAuth();
 
-  const [initialMessages] = useState<UIMessage[]>(() =>
-    typeof window !== "undefined" ? getThreadMessages(threadId) : [],
-  );
+  const { data: initialMessages = [] } = useQuery({
+    queryKey: ["bob-messages", threadId],
+    queryFn: () => getThreadMessages(threadId),
+    enabled: !!user,
+    staleTime: Infinity,
+  });
 
   if (!user) return <Navigate to="/" />;
 

@@ -1,14 +1,21 @@
 import { Router, Request, Response } from "express";
 import jwt from "jsonwebtoken";
+import { nanoid } from "nanoid";
 import { userService } from "../services/UserService.js";
 import { tenantService } from "../services/TenantService.js";
+import { tokenRevocationService } from "../services/TokenRevocationService.js";
 import { env } from "../config/env.js";
 import { logger } from "../utils/logger.js";
 
 const router: Router = Router();
 
+const TOKEN_TTL_SECONDS = 24 * 60 * 60; // 24 h
+
 function signToken(userId: string, email: string, tenantId: string): string {
-  return jwt.sign({ userId, email, tenantId }, env.JWT_SECRET!, { expiresIn: "24h" });
+  const jti = nanoid();
+  return jwt.sign({ userId, email, tenantId, jti }, env.JWT_SECRET!, {
+    expiresIn: TOKEN_TTL_SECONDS,
+  });
 }
 
 /**
@@ -107,10 +114,31 @@ router.post("/login", async (req: Request, res: Response): Promise<void> => {
 
 /**
  * POST /api/auth/logout
- * Client-side only — just a no-op endpoint for clean UX.
+ * Revokes the JWT so it cannot be reused before expiry.
  */
-router.post("/logout", (_req: Request, res: Response): void => {
-  res.json({ success: true });
+router.post("/logout", async (req: Request, res: Response): Promise<void> => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.slice(7);
+      try {
+        const payload = jwt.verify(token, env.JWT_SECRET!) as {
+          jti?: string;
+          exp?: number;
+        };
+        if (payload.jti && payload.exp) {
+          const expiresAt = new Date(payload.exp * 1000).toISOString();
+          await tokenRevocationService.revoke(payload.jti, expiresAt);
+        }
+      } catch {
+        // Invalid token — still return success (idempotent logout)
+      }
+    }
+    res.json({ success: true });
+  } catch (error) {
+    logger.error({ error }, "Logout error");
+    res.status(500).json({ success: false, error: "Internal server error" });
+  }
 });
 
 export default router;

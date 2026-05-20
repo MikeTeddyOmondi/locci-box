@@ -8,6 +8,13 @@
       "when": 1779041760768,
       "tag": "0000_glossy_power_pack",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1779295644783,
+      "tag": "0001_harsh_black_crow",
+      "breakpoints": true
     }
   ]
 }

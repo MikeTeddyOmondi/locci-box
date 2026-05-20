@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { tenantService } from "../services/TenantService.js";
 import { apiKeyService } from "../services/ApiKeyService.js";
+import { tokenRevocationService } from "../services/TokenRevocationService.js";
 import { logger } from "../utils/logger.js";
 import { env } from "../config/env.js";
 
@@ -37,7 +38,12 @@ export async function authenticate(
           userId: string;
           email: string;
           tenantId: string;
+          jti?: string;
         };
+        if (payload.jti && (await tokenRevocationService.isRevoked(payload.jti))) {
+          res.status(401).json({ success: false, error: "Token has been revoked" });
+          return;
+        }
         const tenant = await tenantService.getById(payload.tenantId);
         if (!tenant) {
           res.status(401).json({ success: false, error: "Invalid token" });

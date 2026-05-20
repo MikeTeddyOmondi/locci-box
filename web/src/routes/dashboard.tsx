@@ -15,6 +15,7 @@ import {
   KeyRound,
   Plus,
   ExternalLink,
+  Copy,
 } from "lucide-react";
 import {
   XAxis,
@@ -92,6 +93,13 @@ function Page() {
   const { user } = useAuth();
   const [statsData, setStatsData] = useState<StatsData | null>(null);
   const [keys, setKeys] = useState<ApiKeyData[]>([]);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  function copyId(id: string) {
+    navigator.clipboard.writeText(id).catch(() => {});
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  }
 
   useEffect(() => {
     apiClient.getStats().then(setStatsData).catch(() => {});
@@ -297,20 +305,21 @@ function Page() {
             <p className="text-sm text-white/60">Last 10 sandbox executions</p>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[640px]">
+            <table className="w-full text-sm min-w-[760px]">
               <thead className="bg-white/5">
                 <tr className="text-left text-xs uppercase tracking-wider text-white/50">
                   <th className="px-4 sm:px-6 py-3 font-medium">Timestamp</th>
+                  <th className="px-4 sm:px-6 py-3 font-medium">Sandbox ID</th>
                   <th className="px-4 sm:px-6 py-3 font-medium">Language</th>
                   <th className="px-4 sm:px-6 py-3 font-medium">Status</th>
                   <th className="px-4 sm:px-6 py-3 font-medium">Duration</th>
-                  <th className="px-4 sm:px-6 py-3 font-medium">Tenant</th>
+                  <th className="px-4 sm:px-6 py-3 font-medium">Exit Code</th>
                 </tr>
               </thead>
               <tbody>
                 {recentRuns.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-6 py-8 text-center text-white/40 text-sm">
+                    <td colSpan={6} className="px-6 py-8 text-center text-white/40 text-sm">
                       No runs yet — execute some code to see activity here.
                     </td>
                   </tr>
@@ -328,6 +337,19 @@ function Page() {
                       className="border-t border-white/5 hover:bg-white/5 transition-colors"
                     >
                       <td className="px-4 sm:px-6 py-3 text-white/70 whitespace-nowrap">{time}</td>
+                      <td className="px-4 sm:px-6 py-3">
+                        <button
+                          type="button"
+                          title={r.sandbox_id}
+                          onClick={() => copyId(r.sandbox_id)}
+                          className="inline-flex items-center gap-1.5 font-mono text-xs text-white/60 hover:text-white transition-colors group"
+                        >
+                          <span>{r.sandbox_id.slice(0, 14)}…</span>
+                          {copiedId === r.sandbox_id
+                            ? <Check className="w-3 h-3 text-success shrink-0" />
+                            : <Copy className="w-3 h-3 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />}
+                        </button>
+                      </td>
                       <td className="px-4 sm:px-6 py-3 font-medium">
                         {langLabel[r.language] ?? r.language}
                       </td>
@@ -348,9 +370,11 @@ function Page() {
                           </span>
                         )}
                       </td>
-                      <td className="px-4 sm:px-6 py-3 font-mono text-xs">{r.duration_ms}ms</td>
+                      <td className="px-4 sm:px-6 py-3 font-mono text-xs">
+                        {r.duration_ms != null ? `${r.duration_ms}ms` : "—"}
+                      </td>
                       <td className="px-4 sm:px-6 py-3 font-mono text-xs text-white/60">
-                        exit {r.exit_code}
+                        {r.exit_code != null ? `exit ${r.exit_code}` : "—"}
                       </td>
                     </tr>
                   );

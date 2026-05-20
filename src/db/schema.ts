@@ -1,4 +1,4 @@
-import { pgTable, text, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, index } from "drizzle-orm/pg-core";
 
 export const tenants = pgTable("tenants", {
   id: text("id").primaryKey(),
@@ -42,3 +42,12 @@ export const sandboxRuns = pgTable("sandbox_runs", {
   durationMs: integer("duration_ms").notNull(),
   createdAt: text("created_at").notNull(),
 });
+
+export const revokedTokens = pgTable(
+  "revoked_tokens",
+  {
+    jti: text("jti").primaryKey(),
+    expiresAt: text("expires_at").notNull(),
+  },
+  (t) => [index("revoked_tokens_expires_at_idx").on(t.expiresAt)],
+);

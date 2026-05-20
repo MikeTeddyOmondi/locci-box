@@ -1,7 +1,8 @@
 import "@tanstack/react-start";
 import { createFileRoute } from "@tanstack/react-router";
 import { convertToModelMessages, streamText, type UIMessage } from "ai";
-import { createLovableAiGatewayProvider } from "@/lib/ai-gateway";
+import { createGroq } from "@ai-sdk/groq";
+import { jwtVerify } from "jose";
 
 const SYSTEM_PROMPT = `You are BOB — Locci Box's senior code-review assistant.
 You help engineers find bugs, security holes, performance issues, and style problems in code they paste.
@@ -19,16 +20,18 @@ export const Route = createFileRoute("/api/bob")({
   server: {
     handlers: {
       POST: async ({ request }: { request: Request }) => {
-        // Simple API key authentication
         const auth = request.headers.get("authorization");
         if (!auth?.startsWith("Bearer ")) {
           return new Response("Unauthorized", { status: 401 });
         }
-        const apiKey = auth.slice(7);
+        const token = auth.slice(7);
 
-        // Validate API key (in production, check against database or environment)
-        const validApiKey = process.env.VITE_API_KEY || process.env.API_KEY;
-        if (!validApiKey || apiKey !== validApiKey) {
+        const jwtSecret = process.env.JWT_SECRET;
+        if (!jwtSecret) return new Response("Server misconfigured", { status: 500 });
+
+        try {
+          await jwtVerify(token, new TextEncoder().encode(jwtSecret));
+        } catch {
           return new Response("Unauthorized", { status: 401 });
         }
 
@@ -37,11 +40,11 @@ export const Route = createFileRoute("/api/bob")({
         const threadId = body.threadId;
         if (!threadId) return new Response("Missing threadId", { status: 400 });
 
-        const lovableApiKey = process.env.LOVABLE_API_KEY;
-        if (!lovableApiKey) return new Response("Missing LOVABLE_API_KEY", { status: 500 });
+        const groqApiKey = process.env.GROQ_API_KEY;
+        if (!groqApiKey) return new Response("Missing GROQ_API_KEY", { status: 500 });
 
-        const gateway = createLovableAiGatewayProvider(lovableApiKey);
-        const model = gateway("google/gemini-3-flash-preview");
+        const groq = createGroq({ apiKey: groqApiKey });
+        const model = groq("llama-3.3-70b-versatile");
 
         const result = streamText({
           model,
@@ -52,7 +55,6 @@ export const Route = createFileRoute("/api/bob")({
         return result.toUIMessageStreamResponse({
           originalMessages: messages,
           onFinish: async ({ messages: finalMessages }) => {
-            // Message persistence removed - can be added later with proper storage
             console.log("[bob] conversation completed", {
               threadId,
               messageCount: finalMessages.length,

@@ -1,62 +1,55 @@
-import { createServerFn } from "@tanstack/react-start";
-import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { UIMessage } from "ai";
 
-export const listThreads = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { supabase } = context;
-    const { data, error } = await supabase
-      .from("bob_threads")
-      .select("id,title,updated_at")
-      .order("updated_at", { ascending: false })
-      .limit(50);
-    if (error) throw new Error(error.message);
-    return data ?? [];
-  });
+export type BobThread = { id: string; title: string; updatedAt: string };
 
-export const createThread = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input) => z.object({ title: z.string().min(1).max(120).optional() }).parse(input))
-  .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
-    const { data: row, error } = await supabase
-      .from("bob_threads")
-      .insert({ user_id: userId, title: data.title ?? "New review" })
-      .select("id,title,updated_at")
-      .single();
-    if (error) throw new Error(error.message);
-    return row;
-  });
+const THREADS_KEY = "bob_threads";
+const threadKey = (id: string) => `bob_msg_${id}`;
 
-export const renameThread = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input) => z.object({ id: z.string().uuid(), title: z.string().min(1).max(120) }).parse(input))
-  .handler(async ({ data, context }) => {
-    const { error } = await context.supabase
-      .from("bob_threads").update({ title: data.title }).eq("id", data.id);
-    if (error) throw new Error(error.message);
-    return { ok: true };
-  });
+function load<T>(key: string, fallback: T): T {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const v = localStorage.getItem(key);
+    return v ? (JSON.parse(v) as T) : fallback;
+  } catch {
+    return fallback;
+  }
+}
 
-export const deleteThread = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input) => z.object({ id: z.string().uuid() }).parse(input))
-  .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.from("bob_threads").delete().eq("id", data.id);
-    if (error) throw new Error(error.message);
-    return { ok: true };
-  });
+export function listThreads(): BobThread[] {
+  return load<BobThread[]>(THREADS_KEY, []);
+}
 
-export const getThreadMessages = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((input) => z.object({ threadId: z.string().uuid() }).parse(input))
-  .handler(async ({ data, context }) => {
-    const { data: rows, error } = await context.supabase
-      .from("bob_messages")
-      .select("id,ui_message,created_at")
-      .eq("thread_id", data.threadId)
-      .order("created_at", { ascending: true });
-    if (error) throw new Error(error.message);
-    return (rows ?? []).map((r) => JSON.parse(JSON.stringify(r.ui_message)));
-  });
+export function createThread(title = "New review"): BobThread {
+  const thread: BobThread = {
+    id: `t_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    title,
+    updatedAt: new Date().toISOString(),
+  };
+  localStorage.setItem(THREADS_KEY, JSON.stringify([thread, ...listThreads()]));
+  return thread;
+}
+
+export function renameThread(id: string, title: string): void {
+  const threads = listThreads().map((t) =>
+    t.id === id ? { ...t, title, updatedAt: new Date().toISOString() } : t,
+  );
+  localStorage.setItem(THREADS_KEY, JSON.stringify(threads));
+}
+
+export function deleteThread(id: string): void {
+  localStorage.setItem(
+    THREADS_KEY,
+    JSON.stringify(listThreads().filter((t) => t.id !== id)),
+  );
+  localStorage.removeItem(threadKey(id));
+}
+
+export function getThreadMessages(threadId: string): UIMessage[] {
+  return load<UIMessage[]>(threadKey(threadId), []);
+}
+
+export function saveThreadMessages(threadId: string, messages: UIMessage[]): void {
+  if (typeof window !== "undefined") {
+    localStorage.setItem(threadKey(threadId), JSON.stringify(messages));
+  }
+}

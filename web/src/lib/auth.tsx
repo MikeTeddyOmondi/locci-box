@@ -80,10 +80,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     persist(t, { ...u, isDemo: true });
   };
 
-  const logout = () => {
+  const logout = async () => {
+    const storedToken = localStorage.getItem("locci_jwt");
+    if (storedToken) {
+      try {
+        await fetch(`${API_BASE}/auth/logout`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${storedToken}` },
+        });
+      } catch {
+        // Best-effort — always clear locally even if the request fails
+      }
+    }
     localStorage.removeItem("locci_jwt");
     localStorage.removeItem("locci_user");
-    // Also clean up legacy keys
+    // Legacy keys
     localStorage.removeItem("locci_email");
     localStorage.removeItem("locci_api_key");
     localStorage.removeItem("locci_is_demo");

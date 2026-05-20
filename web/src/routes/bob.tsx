@@ -6,8 +6,7 @@ import {
   useRouterState,
   Navigate,
 } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
+import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/lib/auth";
@@ -26,18 +25,16 @@ function BobLayout() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const path = useRouterState({ select: (s) => s.location.pathname });
-  const list = useServerFn(listThreads);
-  const create = useServerFn(createThread);
-  const remove = useServerFn(deleteThread);
 
   const { data: threads } = useQuery({
     queryKey: ["bob-threads"],
-    queryFn: () => list(),
+    queryFn: () => listThreads(),
     enabled: !!user,
+    initialData: [],
   });
 
   const newThread = useMutation({
-    mutationFn: () => create({ data: { title: "New review" } }),
+    mutationFn: async () => createThread("New review"),
     onSuccess: (row) => {
       qc.invalidateQueries({ queryKey: ["bob-threads"] });
       navigate({ to: "/bob/$threadId", params: { threadId: row.id } });
@@ -46,7 +43,7 @@ function BobLayout() {
   });
 
   const del = useMutation({
-    mutationFn: (id: string) => remove({ data: { id } }),
+    mutationFn: async (id: string) => { deleteThread(id); },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["bob-threads"] }),
   });
 

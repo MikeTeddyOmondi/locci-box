@@ -1,9 +1,11 @@
 import express, { Express } from "express";
 import cors from "cors";
+import helmet from "helmet";
 import pinoHttp from "pino-http";
 import { logger } from "./utils/logger.js";
 import { isDevelopment, env } from "./config/env.js";
 import { authenticate } from "./middleware/auth.js";
+import { authRateLimit } from "./middleware/authRateLimit.js";
 import { rateLimiter } from "./middleware/rateLimiter.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { notFoundHandler } from "./middleware/notFoundHandler.js";
@@ -16,6 +18,7 @@ import apiKeysRoutes from "./routes/apikeys.js";
 import mcpHttpRouter from "./mcp/http.js";
 
 function configureMiddleware(app: Express): void {
+  app.use(helmet());
   app.use(
     cors({
       origin: isDevelopment
@@ -38,6 +41,8 @@ function configureMiddleware(app: Express): void {
 function configureRoutes(app: Express): void {
   // Public routes
   app.use("/health", healthRoutes);
+  app.use("/api/auth/login", authRateLimit);
+  app.use("/api/auth/register", authRateLimit);
   app.use("/api/auth", authRoutes);
 
   // Protected API routes

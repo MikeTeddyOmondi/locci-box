@@ -113,8 +113,39 @@ jobs:
             locci/box-cli:latest
             locci/box-cli:${{ steps.tag.outputs.version }}
 
+  npm-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install CLI dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: cli
+
+      - name: Build CLI
+        run: pnpm build
+        working-directory: cli
+
+      - name: Publish @locci/box to NPM
+        run: pnpm publish --no-git-checks
+        working-directory: cli
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
   release:
-    needs: [build-cli, docker]
+    needs: [build-cli, docker, npm-publish]
     runs-on: ubuntu-latest
     permissions:
       contents: write

@@ -20,6 +20,14 @@
   ],
   "author": "MikeTeddyOmondi",
   "license": "MIT",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
   "dependencies": {
     "@clack/prompts": "^0.7.0",
     "@modelcontextprotocol/sdk": "^1.29.0",

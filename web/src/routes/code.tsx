@@ -1,15 +1,8 @@
 import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import Editor from "@monaco-editor/react";
+import Editor, { type Monaco } from "@monaco-editor/react";
 import { AppLayout } from "@/components/AppLayout";
 import { useAuth } from "@/lib/auth";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Play,
   Save,
@@ -29,6 +22,13 @@ import {
   PanelLeft,
   Pencil,
 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -96,7 +96,7 @@ server.listen(3000, () => console.log("listening on :3000"));
   },
 ];
 
-function defineLightTheme(monaco: any) {
+function defineLightTheme(monaco: Monaco) {
   monaco.editor.defineTheme("sandbox-light", {
     base: "vs",
     inherit: true,
@@ -296,10 +296,12 @@ function Page() {
           {/* IDE shell */}
           <div className="hero-white overflow-hidden flex flex-col lg:flex-row lg:h-[calc(100vh-9rem)] rounded-xl border border-slate-200 shadow-sm animate-fade-up">
             {/* File tree */}
-            <aside className={cn(
-              "lg:flex lg:w-60 hero-soft border-b lg:border-b-0 lg:border-r hero-divider flex-col",
-              explorerOpen ? "flex w-full" : "hidden lg:flex",
-            )}>
+            <aside
+              className={cn(
+                "lg:flex lg:w-60 hero-soft border-b lg:border-b-0 lg:border-r hero-divider flex-col",
+                explorerOpen ? "flex w-full" : "hidden lg:flex",
+              )}
+            >
               <div className="px-4 py-3 border-b hero-divider flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <FolderOpen className="w-4 h-4 text-blue-500" />
@@ -339,8 +341,14 @@ function Page() {
                           onChange={(e) => setEditingName(e.target.value)}
                           onBlur={commitRename}
                           onKeyDown={(e) => {
-                            if (e.key === "Enter") { e.preventDefault(); commitRename(); }
-                            if (e.key === "Escape") { e.preventDefault(); cancelRename(); }
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              commitRename();
+                            }
+                            if (e.key === "Escape") {
+                              e.preventDefault();
+                              cancelRename();
+                            }
                           }}
                           onClick={(e) => e.stopPropagation()}
                           aria-label="Rename file"
@@ -424,7 +432,7 @@ function Page() {
                 <div className="flex-1" />
                 <div className="flex items-center gap-1 px-2 shrink-0">
                   <Select value={active.lang} onValueChange={(v) => changeLang(v as Lang)}>
-                    <SelectTrigger className="h-8 w-32 text-xs text-slate-700 border-slate-200 bg-white">
+                    <SelectTrigger className="h-8 w-32 text-xs bg-white border-slate-200 hero-text">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>

@@ -211,8 +211,8 @@
     border-radius: 16px;
     box-shadow: var(--shadow-hero);
   }
-  .hero-text { color: var(--hero-text); }
-  .hero-text-muted { color: var(--hero-text-muted); }
+  .hero-text { color: var(--hero-text) !important; }
+  .hero-text-muted { color: var(--hero-text-muted) !important; }
   .hero-border { border-color: var(--hero-border); }
   .hero-divider { border-color: var(--hero-divider); }
   .hero-soft { background-color: var(--hero-white-soft); }

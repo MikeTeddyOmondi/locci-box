@@ -424,7 +424,7 @@ function Page() {
                 <div className="flex-1" />
                 <div className="flex items-center gap-1 px-2 shrink-0">
                   <Select value={active.lang} onValueChange={(v) => changeLang(v as Lang)}>
-                    <SelectTrigger className="h-8 w-32 text-xs hero-text border-slate-200 bg-white">
+                    <SelectTrigger className="h-8 w-32 text-xs text-slate-700 border-slate-200 bg-white">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>

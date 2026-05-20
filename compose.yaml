@@ -53,6 +53,8 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
+      JWT_SECRET: ${JWT_SECRET}
+      GROQ_API_KEY: ${GROQ_API_KEY}
     networks:
       - proxy-network
       - default

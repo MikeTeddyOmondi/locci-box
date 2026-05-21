@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`loccibox metrics`** — regular users now see their own tenant stats (via `GET /api/stats`) instead of a 403. Admin API keys still get the full system-wide view via `GET /api/metrics`. The command auto-detects which view to show based on the credential in the active profile.
+
 - **CLI config directory** moved from `~/.loccibox/` to `~/.locci/box/` to establish `.locci/` as the standard home directory for all Locci Cloud service configs. On first run after upgrade, the CLI auto-migrates `~/.loccibox/config.json` → `~/.locci/box/config.json` and removes the old file/directory. The migration shim is temporary and will be dropped in a future release.
 
 ---

@@ -3,6 +3,7 @@ import type {
   SandboxResult,
   SandboxInfo,
   MetricsData,
+  StatsData,
   ApiResponse,
   ApiKey,
 } from "../types/index.js";
@@ -63,6 +64,13 @@ export class LocciBoxAPI {
    */
   async getMetrics(): Promise<MetricsData> {
     return await this.request<MetricsData>("/api/metrics");
+  }
+
+  /**
+   * Get per-tenant stats for the logged-in user (requires JWT)
+   */
+  async getStats(jwtToken: string): Promise<StatsData> {
+    return this.request<StatsData>("/api/stats", {}, jwtToken);
   }
 
   /**

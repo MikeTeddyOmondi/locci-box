@@ -65,6 +65,26 @@ export interface TenantUsage {
   last_activity: string;
 }
 
+export interface RecentRun {
+  sandbox_id: string;
+  language: string;
+  status: string;
+  exit_code: number;
+  duration_ms: number;
+  created_at: string;
+}
+
+export interface StatsData {
+  tenant_id: string;
+  organization: string;
+  total_runs: number;
+  active_sandboxes: number;
+  avg_execution_ms: number;
+  success_runs: number;
+  recent_runs: RecentRun[];
+  last_activity: string;
+}
+
 /**
  * API Response Types
  */

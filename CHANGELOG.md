@@ -5,13 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [Unreleased] → 1.3.0
+
+### Added
+
+- `d8e6c12` - **BOB AI moved to Express API** — BOB code-review assistant endpoint migrated from TanStack Start server route to the Express API (`POST /api/bob`). Uses Groq `llama-3.3-70b-versatile` via `@ai-sdk/groq`. Thread list and message history now persisted in PGlite (`bob_threads`, `bob_messages` tables). New CRUD routes: `GET/POST /api/bob/threads`, `PATCH/DELETE /api/bob/threads/:id`, `GET /api/bob/threads/:id/messages`. Migration: `drizzle/0002_yielding_vector.sql`.
+- `decb208` - **`loccibox metrics` — per-user stats fallback** — regular users (non-admin API key) now see their own tenant stats (`GET /api/stats`) instead of a 403. Displays total runs, success rate, active sandboxes, avg execution time, and last 10 recent runs. Admin keys still get the full system-wide view via `GET /api/metrics`.
+- `6fe9aec` - **SECURITY.md** — threat model, 6 sandbox SSRF/network reachability tests with pass/fail criteria, and iptables mitigation steps.
 
 ### Changed
 
-- **`loccibox metrics`** — regular users now see their own tenant stats (via `GET /api/stats`) instead of a 403. Admin API keys still get the full system-wide view via `GET /api/metrics`. The command auto-detects which view to show based on the credential in the active profile.
+- `175c9a8` - **CLI config directory** moved from `~/.loccibox/` to `~/.locci/box/` to establish `.locci/` as the standard home directory for all Locci Cloud service configs. On first run after upgrade the CLI auto-migrates the old config and removes `~/.loccibox/`. Migration shim will be removed in v1.4.x.
+- `7421e64` - **BOB AI chat components** simplified — prompt input, message, conversation, and shimmer components refactored for the new API-backed transport.
+- `ac58a46` - **AppLayout, web server, Supabase stubs** updated — layout polish, server entry cleanup, Supabase client stubs aligned to current auth model.
+- `3683509` - **Web pages** (docs, faq, index, keys, settings, root) updated — copy and UI refinements across static and authenticated pages.
+- `35352ee` - **UI components** (button-group, input-group, spinner) updated — consistency and style fixes.
 
-- **CLI config directory** moved from `~/.loccibox/` to `~/.locci/box/` to establish `.locci/` as the standard home directory for all Locci Cloud service configs. On first run after upgrade, the CLI auto-migrates `~/.loccibox/config.json` → `~/.locci/box/config.json` and removes the old file/directory. The migration shim is temporary and will be dropped in a future release.
+### Fixed
+
+- `3e33c2a` - **Stopped sandbox stays in activity list** — stopping a sandbox now performs an optimistic update that marks its status as "Stopped" with a badge instead of removing it from the recent runs table. Active sandbox count decrements immediately.
+- `200eb04` - **Language dropdown text visible on light background** — Radix `SelectTrigger` now carries `hero-text` with `!important` in `@layer utilities`, overriding the cascade that was rendering the selected value invisible.
 
 ---
 

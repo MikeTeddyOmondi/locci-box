@@ -33,5 +33,8 @@ temp/
 # PGlite database files (persisted via Docker volume in production)
 data/locci-box
 
+# Claude Code
+CLAUDE.md
+
 # Made with Bob
 node-compile-cache/

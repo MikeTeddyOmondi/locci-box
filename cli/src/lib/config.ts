@@ -1,10 +1,14 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync, rmSync } from "node:fs";
 import type { Config, Profile } from "../types/index.js";
 
-const CONFIG_DIR = join(homedir(), ".loccibox");
+const CONFIG_DIR = join(homedir(), ".locci", "box");
 const CONFIG_FILE = join(CONFIG_DIR, "config.json");
+
+// Temporary migration shim — remove after v1.4.x
+const LEGACY_CONFIG_DIR = join(homedir(), ".loccibox");
+const LEGACY_CONFIG_FILE = join(LEGACY_CONFIG_DIR, "config.json");
 
 /**
  * Get the default config structure
@@ -26,10 +30,32 @@ function ensureConfigDir(): void {
 }
 
 /**
- * Load configuration from ~/.loccibox/config.json
+ * Migrate config from ~/.loccibox/ → ~/.locci/box/ (temporary, remove after v1.4.x).
+ * Runs once: copies the old file to the new location then deletes the old directory.
+ */
+function migrateIfNeeded(): void {
+  if (!existsSync(LEGACY_CONFIG_FILE)) return;
+  if (existsSync(CONFIG_FILE)) return; // already migrated
+
+  ensureConfigDir();
+  const content = readFileSync(LEGACY_CONFIG_FILE, "utf-8");
+  writeFileSync(CONFIG_FILE, content, "utf-8");
+  try {
+    rmSync(LEGACY_CONFIG_DIR, { recursive: true, force: true });
+  } catch {
+    // best-effort cleanup
+  }
+  console.log(
+    "ℹ  Migrated config: ~/.loccibox/ → ~/.locci/box/ (this message appears once)",
+  );
+}
+
+/**
+ * Load configuration from ~/.locci/box/config.json
  * Falls back to environment variables if config doesn't exist
  */
 export function loadConfig(): Config {
+  migrateIfNeeded();
   ensureConfigDir();
 
   if (!existsSync(CONFIG_FILE)) {

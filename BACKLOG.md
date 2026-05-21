@@ -59,6 +59,8 @@
 
 ## Dev / DX
 
+- [ ] **CLI — Remove `~/.loccibox` migration shim** — The one-time migration from `~/.loccibox/config.json` → `~/.locci/box/config.json` added in v1.2.3 can be removed once the old path is no longer in circulation (target: next minor bump after ~2 versions).
+
 - [ ] **PGlite auto-reset on corruption (dev only)** — add `DB_AUTO_RESET=true` env flag; on startup, if the initial schema migration throws, wipe `data/locci-box` and reinitialize automatically. Guard must be env-gated so it never fires in production.
 
 ## Production Hardening

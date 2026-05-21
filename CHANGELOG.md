@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **CLI config directory** moved from `~/.loccibox/` to `~/.locci/box/` to establish `.locci/` as the standard home directory for all Locci Cloud service configs. On first run after upgrade, the CLI auto-migrates `~/.loccibox/config.json` → `~/.locci/box/config.json` and removes the old file/directory. The migration shim is temporary and will be dropped in a future release.
+
 ---
 
 ## [1.2.2] - 2026-05-20

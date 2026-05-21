@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import { Sandbox } from "microsandbox";
+import { Sandbox, NetworkPolicy } from "microsandbox";
 import {
   SandboxExecutionParams,
   SandboxResult,
@@ -96,7 +96,10 @@ export class SandboxService {
       let builder = Sandbox.builder(sandboxId)
         .image(imageName)
         .cpus(params.cpu || 1)
-        .memory(params.memory || 128); // MB
+        .memory(params.memory || 128) // MB
+        // Explicit policy: allow public internet, block private ranges + cloud metadata.
+        // publicOnly() is the microsandbox default but we set it explicitly so intent is clear.
+        .network((n) => n.policy(NetworkPolicy.publicOnly()));
 
       // Add environment variables if provided
       if (params.env) {

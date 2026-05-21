@@ -9,39 +9,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `d8e6c12` - **BOB AI moved to Express API** — BOB code-review assistant endpoint migrated from TanStack Start server route to the Express API (`POST /api/bob`). Uses Groq `llama-3.3-70b-versatile` via `@ai-sdk/groq`. Thread list and message history now persisted in PGlite (`bob_threads`, `bob_messages` tables). New CRUD routes: `GET/POST /api/bob/threads`, `PATCH/DELETE /api/bob/threads/:id`, `GET /api/bob/threads/:id/messages`. Migration: `drizzle/0002_yielding_vector.sql`.
-- `decb208` - **`loccibox metrics` — per-user stats fallback** — regular users (non-admin API key) now see their own tenant stats (`GET /api/stats`) instead of a 403. Displays total runs, success rate, active sandboxes, avg execution time, and last 10 recent runs. Admin keys still get the full system-wide view via `GET /api/metrics`.
+- `4c97b12` - **BOB AI code reviewer** — initial implementation using Groq (`llama-3.3-70b-versatile`) via `@ai-sdk/groq`. Copy-to-clipboard and retry icons on assistant messages. Auto-renames thread from first user message.
+- `4c97b12` - **Token revocation on logout** — JWT now includes a `jti` (nanoid). `POST /api/auth/logout` inserts the jti into a new `revoked_tokens` PGlite table; middleware rejects revoked tokens. Expired entries pruned hourly.
+- `4c97b12` - **Auth brute-force protection** — IP-based rate limiter (10 attempts/min) on `POST /api/auth/login` and `POST /api/auth/register`.
+- `4c97b12` - **Security headers** — `helmet` applied globally to all API responses (CSP, HSTS, X-Frame-Options, etc.).
+- `4c97b12` - **Sandbox IDs in Recent Activity** — dashboard table now shows a truncated sandbox ID with copy-to-clipboard. "Tenant" column corrected to "Exit Code". Running sandboxes show `—` for null exit code and duration.
+- `4c97b12` - **`GROQ_API_KEY`** placeholder added to `.env.example`.
+- `d8e6c12` - **BOB AI persistence** — BOB endpoint moved to Express API (`POST /api/bob`). Thread list and message history now persisted in PGlite (`bob_threads`, `bob_messages` tables). New CRUD routes: `GET/POST /api/bob/threads`, `PATCH/DELETE /api/bob/threads/:id`, `GET /api/bob/threads/:id/messages`. Migration: `drizzle/0002_yielding_vector.sql`.
+- `decb208` - **`loccibox metrics` — per-user stats fallback** — regular users now see their own tenant stats (`GET /api/stats`) instead of a 403. Displays total runs, success rate, active sandboxes, avg execution time, and last 10 recent runs. Admin keys still get the full system-wide view via `GET /api/metrics`.
 - `6fe9aec` - **SECURITY.md** — threat model, 6 sandbox SSRF/network reachability tests with pass/fail criteria, and iptables mitigation steps.
 
 ### Changed
 
 - `175c9a8` - **CLI config directory** moved from `~/.loccibox/` to `~/.locci/box/` to establish `.locci/` as the standard home directory for all Locci Cloud service configs. On first run after upgrade the CLI auto-migrates the old config and removes `~/.loccibox/`. Migration shim will be removed in v1.4.x.
-- `7421e64` - **BOB AI chat components** simplified — prompt input, message, conversation, and shimmer components refactored for the new API-backed transport.
+- `7421e64` - **BOB AI chat components** simplified — prompt input, message, conversation, and shimmer components refactored for the API-backed transport.
 - `ac58a46` - **AppLayout, web server, Supabase stubs** updated — layout polish, server entry cleanup, Supabase client stubs aligned to current auth model.
 - `3683509` - **Web pages** (docs, faq, index, keys, settings, root) updated — copy and UI refinements across static and authenticated pages.
 - `35352ee` - **UI components** (button-group, input-group, spinner) updated — consistency and style fixes.
 
 ### Fixed
 
+- `4c97b12` - **Web logout now invalidates the JWT** — `auth.tsx` calls `POST /api/auth/logout` before clearing `localStorage`, so the token is blacklisted server-side even if the client is compromised.
 - `3e33c2a` - **Stopped sandbox stays in activity list** — stopping a sandbox now performs an optimistic update that marks its status as "Stopped" with a badge instead of removing it from the recent runs table. Active sandbox count decrements immediately.
 - `200eb04` - **Language dropdown text visible on light background** — Radix `SelectTrigger` now carries `hero-text` with `!important` in `@layer utilities`, overriding the cascade that was rendering the selected value invisible.
 
 ---
 
-## [1.2.2] - 2026-05-20
+## [1.2.1] - 2026-05-20
 
-### Added
+### Changed
 
-- `4c97b12` - **BOB AI code reviewer** — replaces Lovable AI Gateway with Groq (`llama-3.3-70b-versatile`) via `@ai-sdk/groq`. Thread list and message history stored in `localStorage` (no Supabase). Copy-to-clipboard and retry icons on assistant messages. Auto-renames thread from first user message.
-- `4c97b12` - **Token revocation on logout** — JWT now includes a `jti` (nanoid). `POST /api/auth/logout` inserts the jti into a new `revoked_tokens` PGlite table; middleware rejects revoked tokens. Expired entries pruned hourly.
-- `4c97b12` - **Auth brute-force protection** — IP-based rate limiter (10 attempts/min) on `POST /api/auth/login` and `POST /api/auth/register`.
-- `4c97b12` - **Security headers** — `helmet` applied globally to all API responses (CSP, HSTS, X-Frame-Options, etc.).
-- `4c97b12` - **Sandbox IDs in Recent Activity** — dashboard table now shows a truncated sandbox ID with copy-to-clipboard. "Tenant" column corrected to "Exit Code". Running sandboxes show `—` for null exit code and duration.
-- `4c97b12` - **`GROQ_API_KEY`** placeholder added to `.env.example`.
-
-### Fixed
-
-- `4c97b12` - **Web logout now invalidates the JWT** — `auth.tsx` calls `POST /api/auth/logout` before clearing `localStorage`, so the token is blacklisted server-side even if the client is compromised.
+- `f92bf07` - Version bump only — no code changes. Required to work around the NPM 24-hour republish embargo on the same version number.
 
 ---
 

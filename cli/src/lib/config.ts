@@ -72,7 +72,7 @@ export function loadConfig(): Config {
 }
 
 /**
- * Save configuration to ~/.loccibox/config.json
+ * Save configuration to ~/.locci/box/config.json
  */
 export function saveConfig(config: Config): void {
   ensureConfigDir();

@@ -20,15 +20,30 @@ Run these against the live API to verify the isolation boundaries. All tests use
 
 ### Test 1 — Outbound internet (baseline)
 
-Confirms whether sandbox code can make outbound network requests at all.
+Confirms whether sandbox code can make outbound network requests at all. Tests both native `curl` availability and the ability to install it if missing (which itself confirms outbound + package manager access).
 
 ```bash
-loccibox run --profile prod --lang bash --code \
-  'curl -s --max-time 5 https://ipinfo.io/ip 2>&1 && echo "" || echo "NO OUTBOUND"'
+loccibox run --profile prod --lang bash --code '
+# Try curl directly first
+if command -v curl >/dev/null 2>&1; then
+  echo "curl already present"
+  curl -s --max-time 5 https://ipinfo.io/ip 2>&1 && echo "" || echo "NO OUTBOUND"
+else
+  echo "curl not found — attempting install"
+  # Alpine (node/bash/ruby images)
+  if command -v apk >/dev/null 2>&1; then
+    apk add --no-cache curl 2>&1 && curl -s --max-time 5 https://ipinfo.io/ip || echo "INSTALL FAILED OR NO OUTBOUND"
+  # Debian/Ubuntu (python:slim image)
+  elif command -v apt-get >/dev/null 2>&1; then
+    apt-get update -qq && apt-get install -y -qq curl 2>&1 && curl -s --max-time 5 https://ipinfo.io/ip || echo "INSTALL FAILED OR NO OUTBOUND"
+  else
+    echo "NO PACKAGE MANAGER"
+  fi
+fi'
 ```
 
-**Pass:** `NO OUTBOUND` or connection refused
-**Fail:** Returns an IP address — outbound is open
+**Pass:** `INSTALL FAILED OR NO OUTBOUND` or `NO PACKAGE MANAGER` on install attempt
+**Fail (severe):** Package installs successfully and returns an IP — confirms outbound network AND unrestricted package manager access inside the microVM
 
 ---
 

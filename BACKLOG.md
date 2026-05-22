@@ -69,6 +69,10 @@
 - [x] Set up CI/CD pipeline (GitHub Actions: ci.yml + release.yml)
 - [x] Add comprehensive test suite (48 unit + integration tests via Vitest + supertest)
 - [ ] **Replace PGlite with PostgreSQL** — swap `drizzle-orm/pglite` driver for `drizzle-orm/node-postgres`; same schema, adds crash recovery, concurrent access, and proper prod reliability
+- [x] **Sandbox network policy hardening** — replaced `NetworkPolicy.publicOnly()` with `defaultDeny` + domain allowlist (`pypi.org`, `files.pythonhosted.org`, `registry.npmjs.org`, `*.npmjs.org`, `*.alpinelinux.org`). Arbitrary public internet blocked; VPS origin IP no longer discoverable from sandbox code. All 6 security tests pass. Implemented in `src/services/SandboxService.ts`, documented in `SECURITY.md`.
+
+- [ ] **Sandbox allowlist — Ruby gems** — `rubygems.org` and `*.rubygems.org` not yet in the domain allowlist. Ruby sandboxes can run code but `gem install` will fail. Add when Ruby runtime usage warrants it.
+
 - [ ] **Redis for rate limiting + caching** — move the in-process rate limiter to Redis so limits survive restarts and work across multiple API replicas
 - [ ] **WebSocket support** — real-time output streaming for long-running sandbox executions instead of polling
 - [ ] **Webhook notifications** — POST to a user-configured URL on sandbox job completion/failure

@@ -97,9 +97,24 @@ export class SandboxService {
         .image(imageName)
         .cpus(params.cpu || 1)
         .memory(params.memory || 128) // MB
-        // Explicit policy: allow public internet, block private ranges + cloud metadata.
-        // publicOnly() is the microsandbox default but we set it explicitly so intent is clear.
-        .network((n) => n.policy(NetworkPolicy.publicOnly()));
+        // Allowlist: deny all egress by default, allow DNS + known package registries on 443.
+        // This prevents VPS origin IP exposure via outbound traffic while still allowing installs.
+        .network((n) => n.policy(
+          NetworkPolicy.builder()
+            .defaultDeny()
+            .egress((e) => e.udp().port(53).allow((d) => d.any()))  // DNS resolution
+            .egress((e) => e.tcp().port(53).allow((d) => d.any()))  // DNS over TCP fallback
+            .egress((e) =>
+              e.tcp().port(443)
+                .allow((d) => d.domain("pypi.org"))
+                .allow((d) => d.domainSuffix("pypi.org"))
+                .allow((d) => d.domain("files.pythonhosted.org"))
+                .allow((d) => d.domain("registry.npmjs.org"))
+                .allow((d) => d.domainSuffix("npmjs.org"))
+                .allow((d) => d.domainSuffix("alpinelinux.org"))
+            )
+            .build()
+        ));
 
       // Add environment variables if provided
       if (params.env) {

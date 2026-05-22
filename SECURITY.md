@@ -4,56 +4,45 @@
 
 Locci Box executes user code inside KVM-backed microVMs (microsandbox). Each execution gets a fresh VM; hardware virtualization is the primary isolation boundary. Breaking out requires a hypervisor-level CVE.
 
-**Default network policy: `NetworkPolicy.publicOnly()`**
-Set explicitly in `SandboxService.ts` and also the microsandbox SDK default. It:
-- Allows egress to the public internet
+**Active network policy: domain allowlist (`NetworkPolicy.builder().defaultDeny()`)**
+Set explicitly in `SandboxService.ts`. It:
+- Blocks all egress by default
+- Allows DNS (UDP/TCP port 53) for hostname resolution
+- Allows HTTPS (port 443) egress only to known package registries: `pypi.org`, `*.pypi.org`, `files.pythonhosted.org`, `registry.npmjs.org`, `*.npmjs.org`, `*.alpinelinux.org`
 - Blocks all RFC1918 private address ranges
 - Blocks cloud metadata endpoints (`169.254.169.254`, `fd00:ec2::254`)
+- Blocks arbitrary public internet (no VPS origin IP exposure)
 
-This means sandbox code **cannot** directly reach the host, other Docker containers, or cloud credentials. The host is not directly damageable from inside a sandbox.
+This means sandbox code **cannot** reach the host, other Docker containers, cloud credentials, or arbitrary internet endpoints. Only allowlisted package registries are reachable via TLS.
 
 ## Risk Areas
 
 | Risk | Severity | Status |
 |---|---|---|
-| Direct host/container access via network | ~~High~~ | **Mitigated** — `publicOnly` blocks private ranges |
-| Cloud metadata SSRF (`169.254.169.254`) | ~~High~~ | **Mitigated** — `publicOnly` blocks `metadata` group |
-| Public internet egress (abuse, exfil, mining) | Medium | **By design** — intentional, see mitigations |
+| Direct host/container access via network | ~~High~~ | **Mitigated** — `defaultDeny` blocks all private ranges |
+| Cloud metadata SSRF (`169.254.169.254`) | ~~High~~ | **Mitigated** — `defaultDeny` blocks metadata group |
+| Public internet egress (abuse, exfil, VPS IP exposure) | ~~Medium~~ | **Mitigated** — `defaultDeny` + domain allowlist blocks arbitrary egress |
 | Resource exhaustion (CPU, disk, bandwidth) | Medium | Partial — timeout + CPU/memory limits apply; disk unbounded |
 | `privileged: true` blast radius if microVM escape | Critical | By design (KVM requirement) — escape requires hypervisor CVE |
 | In-process rate limiter resets on restart | Medium | Backlog — needs Redis |
 
 ## Confirmed Test Results
 
-### Test 1 — Outbound internet ✗ FAIL (open)
-Public internet is reachable from sandboxes. `apk` successfully installed curl (9 packages from `dl-cdn.alpinelinux.org`) and the sandbox returned the VPS public IP `41.220.3.42`. This is expected behaviour given `publicOnly` — public egress is allowed by design.
+Tested locally against `refactors` branch with `NetworkPolicy.builder().defaultDeny()` + domain allowlist.
 
-### Tests 2, 4, 5 — Expected to PASS (blocked)
-`publicOnly` blocks private ranges and the metadata group. These should time out.
-Run them to confirm:
+| Test | Target | Result | Notes |
+|------|--------|--------|-------|
+| 1 — Public egress | `ipinfo.io` | ✓ **BLOCKED** | `NO OUTBOUND` — VPS IP no longer discoverable |
+| 2 — Cloud metadata SSRF | `169.254.169.254:80` | ✓ **BLOCKED** | Connection refused |
+| 3 — Network topology | `ip route` | Informational | Gateway: `100.96.x.x` (microVM internal, host not visible) |
+| 4 — Docker bridge | `172.17/18/19.0.1`, `10.0.0.1` | ✓ **BLOCKED** | All gateways unreachable |
+| 5 — Host port scan | Ports 22,80,443,5757,5432,6379,27017 | ✓ **BLOCKED** | All `closed` |
+| 6 — External IP loopback | `41.220.3.42:5757` | ✓ **BLOCKED** | Port unreachable |
+| Allowlist — PyPI | `pip install requests` | ✓ **REACHABLE** | Downloads from `pypi.org` / `files.pythonhosted.org` |
+| Allowlist — npm | `npm pack express --dry-run` | ✓ **REACHABLE** | Resolves from `registry.npmjs.org` |
+| Allowlist — blocked non-listed | `google.com:443` | ✓ **BLOCKED** | TLS disconnected before handshake |
 
-```bash
-# Test 2 — metadata endpoint (should be unreachable)
-loccibox run --profile prod --lang bash --code '
-apk add --no-cache curl -q 2>/dev/null
-curl -sv --max-time 3 http://169.254.169.254/ 2>&1 | head -20 || echo "METADATA UNREACHABLE"'
-
-# Test 4 — internal Docker bridge (should be unreachable)
-loccibox run --profile prod --lang bash --code '
-apk add --no-cache curl -q 2>/dev/null
-for gw in 172.17.0.1 172.18.0.1 172.19.0.1 10.0.0.1; do
-  r=$(curl -s --max-time 2 http://$gw:5757/health 2>&1)
-  echo "$gw:5757 -> $r"
-done'
-
-# Test 5 — host port scan (should all be closed/timed out)
-loccibox run --profile prod --lang bash --code '
-GW=$(ip route | awk "/default/{print \$3}")
-echo "Gateway: $GW"
-for port in 22 80 443 5757 5432 6379 27017; do
-  (echo >/dev/tcp/$GW/$port) 2>/dev/null && echo "OPEN $port" || echo "closed $port"
-done'
-```
+Previously with `publicOnly` (prod before v1.3.0): Test 1 was open — sandboxes could reach arbitrary internet and expose the VPS origin IP `41.220.3.42`.
 
 ## Sandbox Security Tests
 
@@ -172,22 +161,52 @@ if (typeof code === 'string' && code.length > 65_536) {
 
 ### Restrict egress to specific domains (optional hardening)
 
-If public internet access is not required for most use cases, tighten the policy in `SandboxService.ts`:
+The microsandbox SDK's `NetworkPolicy.builder()` supports domain-level allowlisting natively via `RuleBuilder`. Rules are evaluated first-match-wins.
 
 ```ts
-import { Sandbox, NetworkPolicy } from "microsandbox";
+import { Sandbox, NetworkPolicy, Rule, Destination } from "microsandbox";
 
-// Option A — fully offline
+// Option A — fully offline (no egress at all)
 .network((n) => n.policy(NetworkPolicy.none()))
 
-// Option B — allow only specific domains
+// Option B — allowlist specific domains only (HTTPS port 443)
 .network((n) => n.policy(
   NetworkPolicy.builder()
     .defaultDeny()
-    .egress((e) => e.tcp().port(443).allowPublic())
+    .egress((e) =>
+      e.tcp().port(443)
+        .allow((d) => d.domain("pypi.org"))
+        .allow((d) => d.domainSuffix("pypi.org"))        // *.pypi.org
+        .allow((d) => d.domain("registry.npmjs.org"))
+        .allow((d) => d.domainSuffix("alpinelinux.org")) // apk mirrors
+    )
     .build()
 ))
+
+// Option C — allowlist using Rule/Destination literals (no builder needed)
+// Rules are applied first-match-wins.
+.network((n) => n.policy({
+  defaultEgress: "deny",
+  defaultIngress: "allow",
+  rules: [
+    Rule.allowEgress(Destination.domain("api.openai.com")),
+    Rule.allowEgress(Destination.domainSuffix("githubusercontent.com")),
+    Rule.denyEgress(Destination.group("metadata")),
+  ],
+}))
 ```
+
+**Domain rule-adder methods available on `RuleBuilder`:**
+- `.allowDomain(d)` / `.denyDomain(d)` — exact hostname match
+- `.allowDomainSuffix(s)` / `.denyDomainSuffix(s)` — matches `s` and `*.s`
+- `.allowDomains([...])` / `.denyDomains([...])` — batch exact match
+- `.allowDomainSuffixes([...])` / `.denyDomainSuffixes([...])` — batch suffix match
+
+**`Destination` factory methods:**
+- `Destination.domain("hostname")` — exact hostname
+- `Destination.domainSuffix("example.com")` — matches `example.com` and `*.example.com`
+- `Destination.cidr("10.0.0.0/8")` — IP range
+- `Destination.group("metadata")` / `"private"` / `"public"` — named groups
 
 ### Redis-backed rate limiting (backlog)
 

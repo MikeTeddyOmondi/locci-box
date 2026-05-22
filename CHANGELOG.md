@@ -18,9 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `d8e6c12` - **BOB AI persistence** — BOB endpoint moved to Express API (`POST /api/bob`). Thread list and message history now persisted in PGlite (`bob_threads`, `bob_messages` tables). New CRUD routes: `GET/POST /api/bob/threads`, `PATCH/DELETE /api/bob/threads/:id`, `GET /api/bob/threads/:id/messages`. Migration: `drizzle/0002_yielding_vector.sql`.
 - `decb208` - **`loccibox metrics` — per-user stats fallback** — regular users now see their own tenant stats (`GET /api/stats`) instead of a 403. Displays total runs, success rate, active sandboxes, avg execution time, and last 10 recent runs. Admin keys still get the full system-wide view via `GET /api/metrics`.
 - `6fe9aec` - **SECURITY.md** — threat model, 6 sandbox SSRF/network reachability tests with pass/fail criteria, and iptables mitigation steps.
+- **SECURITY.md updated** — full test result table with confirmed pass/fail for all 6 tests plus allowlist verification (PyPI, npm, google.com). Documents domain allowlist policy replacing `publicOnly`.
 
 ### Changed
 
+- **Sandbox network policy** hardened from `NetworkPolicy.publicOnly()` to `defaultDeny` + domain allowlist. Package registries (PyPI, npm, Alpine) remain reachable via HTTPS. Arbitrary public internet blocked — eliminates VPS origin IP exposure via sandbox outbound traffic. DNS (UDP/TCP 53) explicitly allowed for hostname resolution.
 - `175c9a8` - **CLI config directory** moved from `~/.loccibox/` to `~/.locci/box/` to establish `.locci/` as the standard home directory for all Locci Cloud service configs. On first run after upgrade the CLI auto-migrates the old config and removes `~/.loccibox/`. Migration shim will be removed in v1.4.x.
 - `7421e64` - **BOB AI chat components** simplified — prompt input, message, conversation, and shimmer components refactored for the API-backed transport.
 - `ac58a46` - **AppLayout, web server, Supabase stubs** updated — layout polish, server entry cleanup, Supabase client stubs aligned to current auth model.

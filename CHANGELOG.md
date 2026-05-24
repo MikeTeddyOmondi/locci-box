@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-05-24
+
+### Added
+
+- `52d6631` - **PGLite (dev) / PostgreSQL (prod) database split** — `DATABASE_MODE` env var selects driver at startup (`pglite` default, `postgresql` for production). `src/db/index.ts` conditionally initialises `@electric-sql/pglite` or `pg.Pool`; `initDb()` and migrations work identically on both. `drizzle.config.prod.ts` added for prod schema tooling. `db:*:prod` scripts added to `package.json`. `postgres:17-alpine` service added to `compose.yaml` under `prod-db` profile. Eliminates the PGLite corruption risk that caused the v1.3.0 production incident.
+
+### Changed
+
+- `52d6631` - **`compose.yaml`** — `DATABASE_MODE` and `DATABASE_URL` env vars wired to api service; `postgres:17-alpine` service added (opt-in via `--profile prod-db`); `postgres-data` volume added.
+- `52d6631` - **`.env.example`** — `DATABASE_MODE`, `DATABASE_URL`, and `POSTGRES_PASSWORD` documented.
+- `52d6631` - **`vitest.config.ts`** — `DATABASE_MODE=pglite` locked in test env so tests are unaffected by local `.env` overrides.
+
+---
+
 ## [1.3.0] - 2026-05-22
 
 ### Added

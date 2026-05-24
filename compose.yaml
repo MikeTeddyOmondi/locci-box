@@ -18,6 +18,8 @@ services:
       DEFAULT_MAX_CONCURRENT_SANDBOXES: ${DEFAULT_MAX_CONCURRENT_SANDBOXES:-5}
       DEFAULT_SANDBOX_TIMEOUT_SECONDS: ${DEFAULT_SANDBOX_TIMEOUT_SECONDS:-30}
       DEFAULT_RATE_LIMIT_PER_MINUTE: ${DEFAULT_RATE_LIMIT_PER_MINUTE:-60}
+      DATABASE_MODE: ${DATABASE_MODE:-pglite}
+      DATABASE_URL: ${DATABASE_URL:-}
       DB_PATH: /app/data/locci-box
       MCP_HTTP_ENABLED: ${MCP_HTTP_ENABLED:-false}
     volumes:
@@ -73,9 +75,27 @@ services:
     entrypoint: ["loccibox"]
     command: ["--help"]
 
+  postgres:
+    image: postgres:17-alpine
+    container_name: locci-box-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: loccibox
+      POSTGRES_USER: locci
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - default
+    profiles:
+      - prod-db
+
 volumes:
   db-data:
     name: locci-box-db-data
+    driver: local
+  postgres-data:
+    name: locci-box-pg-data
     driver: local
 
 networks:

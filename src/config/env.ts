@@ -60,10 +60,13 @@ const EnvSchema = v.object({
   // Groq API key for BOB code-review assistant
   GROQ_API_KEY: v.optional(v.string()),
 
-  // Database (optional for now)
+  // Database mode: pglite (dev/embedded) or postgresql (production)
+  DATABASE_MODE: v.optional(v.picklist(["pglite", "postgresql"]), "pglite"),
+
+  // PostgreSQL connection string — required when DATABASE_MODE=postgresql
   DATABASE_URL: v.optional(v.string()),
 
-  // PGlite database path
+  // PGLite database path — used when DATABASE_MODE=pglite
   DB_PATH: v.optional(v.string(), "./data/locci-box"),
 });
 
@@ -85,6 +88,7 @@ function parseEnv() {
       MCP_HTTP_PORT: process.env.MCP_HTTP_PORT,
       JWT_SECRET: process.env.JWT_SECRET,
       GROQ_API_KEY: process.env.GROQ_API_KEY,
+      DATABASE_MODE: process.env.DATABASE_MODE,
       DATABASE_URL: process.env.DATABASE_URL,
       DB_PATH: process.env.DB_PATH,
     });

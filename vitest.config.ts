@@ -8,6 +8,7 @@ export default defineConfig({
     setupFiles: ["./tests/setup.ts"],
     env: {
       ADMIN_API_KEY: "test-admin-key",
+      DATABASE_MODE: "pglite",
       DB_PATH: "",
       JWT_SECRET: "test-jwt-secret-for-ci",
       LOG_LEVEL: "silent",

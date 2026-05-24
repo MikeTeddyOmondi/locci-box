@@ -1,29 +1,52 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { PGlite } from "@electric-sql/pglite";
-import { drizzle } from "drizzle-orm/pglite";
-import { migrate } from "drizzle-orm/pglite/migrator";
-import { sql } from "drizzle-orm";
+import { sql } from "drizzle-orm/sql/sql";
 import bcrypt from "bcryptjs";
 import * as schema from "./schema.js";
 import { env } from "../config/env.js";
 import { logger } from "../utils/logger.js";
 
-const dbPath = env.DB_PATH;
+// PGLite (dev)
+import { PGlite } from "@electric-sql/pglite";
+import { drizzle as drizzlePGLite } from "drizzle-orm/pglite";
+import { migrate as migratePGLite } from "drizzle-orm/pglite/migrator";
 
-const client = new PGlite(dbPath);
-export const db = drizzle({ client, schema });
+// PostgreSQL (prod)
+import pg from "pg";
+import { drizzle as drizzlePG } from "drizzle-orm/node-postgres";
+import { migrate as migratePG } from "drizzle-orm/node-postgres/migrator";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export async function initDb(): Promise<void> {
-  logger.info({ path: dbPath }, "Initializing database");
+type MigrateFn = (db: any, config: { migrationsFolder: string }) => Promise<void>;
 
-  // Resolve migrations folder relative to this file so it works after tsc compilation
-  // In dev: src/db/ -> ../../drizzle; in dist: dist/db/ -> ../../drizzle
+let db: ReturnType<typeof drizzlePGLite> | ReturnType<typeof drizzlePG>;
+let migrateFn: MigrateFn;
+
+if (env.DATABASE_MODE === "postgresql") {
+  if (!env.DATABASE_URL) {
+    throw new Error("DATABASE_URL is required when DATABASE_MODE=postgresql");
+  }
+  db = drizzlePG(new pg.Pool({ connectionString: env.DATABASE_URL }), { schema });
+  migrateFn = migratePG;
+} else {
+  db = drizzlePGLite(new PGlite(env.DB_PATH), { schema });
+  migrateFn = migratePGLite;
+}
+
+export { db };
+
+export async function initDb(): Promise<void> {
+  const label =
+    env.DATABASE_MODE === "postgresql"
+      ? `PostgreSQL (${env.DATABASE_URL})`
+      : `PGLite (${env.DB_PATH})`;
+  logger.info({ path: label }, "Initializing database");
+
+  // Resolve migrations folder: src/db/ -> ../../drizzle; dist/db/ -> ../../drizzle
   const migrationsFolder = path.resolve(__dirname, "../../drizzle");
 
-  await migrate(db, { migrationsFolder });
+  await migrateFn(db, { migrationsFolder });
 
   await seedDefaults();
 

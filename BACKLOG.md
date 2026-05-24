@@ -68,7 +68,9 @@
 - [x] Integrate real microsandbox SDK (was simulated in early build)
 - [x] Set up CI/CD pipeline (GitHub Actions: ci.yml + release.yml)
 - [x] Add comprehensive test suite (48 unit + integration tests via Vitest + supertest)
-- [ ] **PGLite (dev) + PostgreSQL (prod) split — v1.4.0** — Two drizzle config files, one DB driver per environment. Plan:
+- [ ] **`compose.yaml` — postgres healthcheck + api `depends_on`** — On first boot the api starts before postgres is ready and gets `ECONNREFUSED`, then restarts and connects fine. Add `healthcheck` (`pg_isready`) on the postgres service and `depends_on: postgres: condition: service_healthy` on the api so Docker waits before starting the api.
+
+- [x] **PGLite (dev) + PostgreSQL (prod) split — v1.4.0** — Two drizzle config files, one DB driver per environment. Plan:
   - `drizzle-dev.config.ts` — `dialect: "postgresql"`, `driver: "pglite"`, `dbCredentials: { url: DB_PATH }` (existing PGLite, zero setup)
   - `drizzle-prod.config.ts` — `dialect: "postgresql"`, `dbCredentials: { url: DATABASE_URL }` (real Postgres via `postgres` or `node-postgres`)
   - `src/db/index.ts` — conditional driver: `NODE_ENV === "production"` → `drizzle-orm/node-postgres`; otherwise → `drizzle-orm/pglite`

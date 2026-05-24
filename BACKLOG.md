@@ -68,7 +68,17 @@
 - [x] Integrate real microsandbox SDK (was simulated in early build)
 - [x] Set up CI/CD pipeline (GitHub Actions: ci.yml + release.yml)
 - [x] Add comprehensive test suite (48 unit + integration tests via Vitest + supertest)
-- [ ] **Replace PGlite with PostgreSQL** — swap `drizzle-orm/pglite` driver for `drizzle-orm/node-postgres`; same schema, adds crash recovery, concurrent access, and proper prod reliability
+- [ ] **PGLite (dev) + PostgreSQL (prod) split — v1.4.0** — Two drizzle config files, one DB driver per environment. Plan:
+  - `drizzle-dev.config.ts` — `dialect: "postgresql"`, `driver: "pglite"`, `dbCredentials: { url: DB_PATH }` (existing PGLite, zero setup)
+  - `drizzle-prod.config.ts` — `dialect: "postgresql"`, `dbCredentials: { url: DATABASE_URL }` (real Postgres via `postgres` or `node-postgres`)
+  - `src/db/index.ts` — conditional driver: `NODE_ENV === "production"` → `drizzle-orm/node-postgres`; otherwise → `drizzle-orm/pglite`
+  - Add `postgres` (or `pg`) to prod dependencies; keep `@electric-sql/pglite` for dev only
+  - Update `package.json` scripts: `db:generate`, `db:migrate`, `db:push`, `db:studio` pass `--config=drizzle-dev.config.ts`; add `db:generate:prod` etc. for prod config
+  - `compose.yaml` — add `postgres` service (image: `postgres:17-alpine`), bind volume for data, `DATABASE_URL` env wired to `api` service; remove `db-data` named volume
+  - `.env` / `.env.example` — add `DATABASE_URL=postgres://locci:locci@localhost:5432/loccibox` for dev, real DSN for prod
+  - `docs/DATABASE.md` — new doc explaining dev (PGLite, no setup) vs prod (Postgres), migration commands per environment, and how to run `db:migrate:prod`
+  - `README.md` — update setup section to reflect Postgres requirement for prod; keep dev quickstart pointing at PGLite
+  - Fixes the PGLite corruption risk that brought down prod in v1.3.0
 - [x] **Sandbox network policy hardening** — replaced `NetworkPolicy.publicOnly()` with `defaultDeny` + domain allowlist (`pypi.org`, `files.pythonhosted.org`, `registry.npmjs.org`, `*.npmjs.org`, `*.alpinelinux.org`). Arbitrary public internet blocked; VPS origin IP no longer discoverable from sandbox code. All 6 security tests pass. Implemented in `src/services/SandboxService.ts`, documented in `SECURITY.md`.
 
 - [ ] **Sandbox allowlist — Ruby gems** — `rubygems.org` and `*.rubygems.org` not yet in the domain allowlist. Ruby sandboxes can run code but `gem install` will fail. Add when Ruby runtime usage warrants it.

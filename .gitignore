@@ -33,6 +33,9 @@ temp/
 # PGlite database files (persisted via Docker volume in production)
 data/locci-box
 
+# JuiceFS local dev mount point (FUSE-mounted at runtime; never committed)
+juicefs/
+
 # Claude Code
 CLAUDE.md
 

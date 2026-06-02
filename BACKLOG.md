@@ -85,6 +85,15 @@
 
 - [ ] **Sandbox allowlist — Ruby gems** — `rubygems.org` and `*.rubygems.org` not yet in the domain allowlist. Ruby sandboxes can run code but `gem install` will fail. Add when Ruby runtime usage warrants it.
 
+- [x] **JuiceFS persistent workspaces — v1.5.0** — `JFS_ENABLED=true` + Redis + external
+  S3/RustFS mounts a per-user `/workspace` volume backed by JuiceFS into every sandbox.
+  Enables stateful agent sessions, output artifact persistence, and per-user storage
+  billing via `VolumeService.measureUsage()` (surfaced as `storage_bytes`/`storage_mib` on
+  `GET /api/stats`). Fully opt-in: `docker compose --profile jfs up -d`; default
+  `JFS_ENABLED=false` is a zero-change tmpfs fallback. Implemented in
+  `src/services/VolumeService.ts`, wired into `src/services/SandboxService.ts`,
+  `src/config/env.ts`, `src/routes/stats.ts`, `compose.yaml`, `.env.example`.
+  Upgrade path: swap Redis metadata engine for TiKV for production HA.
 - [ ] **Redis for rate limiting + caching** — move the in-process rate limiter to Redis so limits survive restarts and work across multiple API replicas
 - [ ] **WebSocket support** — real-time output streaming for long-running sandbox executions instead of polling
 - [ ] **Webhook notifications** — POST to a user-configured URL on sandbox job completion/failure

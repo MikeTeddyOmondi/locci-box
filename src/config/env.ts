@@ -68,6 +68,17 @@ const EnvSchema = v.object({
 
   // PGLite database path — used when DATABASE_MODE=pglite
   DB_PATH: v.optional(v.string(), "./data/locci-box"),
+
+  // Persistent volumes via JuiceFS (optional — default off is a no-op tmpfs fallback)
+  JFS_ENABLED: v.optional(
+    v.pipe(
+      v.string(),
+      v.transform((val) => val === "true"),
+    ),
+    "false",
+  ),
+  JFS_ROOT: v.optional(v.string(), "/mnt/locci-box"),
+  JFS_QUOTA_MIB: v.optional(v.pipe(v.string(), v.transform(Number)), "512"),
 });
 
 /**
@@ -91,6 +102,9 @@ function parseEnv() {
       DATABASE_MODE: process.env.DATABASE_MODE,
       DATABASE_URL: process.env.DATABASE_URL,
       DB_PATH: process.env.DB_PATH,
+      JFS_ENABLED: process.env.JFS_ENABLED,
+      JFS_ROOT: process.env.JFS_ROOT,
+      JFS_QUOTA_MIB: process.env.JFS_QUOTA_MIB,
     });
 
     return parsed;

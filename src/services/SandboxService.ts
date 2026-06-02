@@ -7,6 +7,7 @@ import {
   SandboxStatus,
 } from "../types/index.js";
 import { logger } from "../utils/logger.js";
+import { volumeService } from "./VolumeService.js";
 
 /**
  * SandboxService wraps the microsandbox SDK with error handling,
@@ -122,6 +123,28 @@ export class SandboxService {
           builder = builder.env(key, value);
         }
       }
+
+      // Provision persistent workspace (no-op tmpfs fallback when JFS_ENABLED=false)
+      const volumes = await volumeService.provision(tenantId, sandboxId);
+
+      // /workspace — JuiceFS bind when available, tmpfs fallback otherwise
+      if (volumes.workspace) {
+        builder = builder.volume("/workspace", (m) =>
+          m.bind(volumes.workspace!),
+        );
+      } else {
+        builder = builder.volume("/workspace", (m) => m.tmpfs().size(512));
+      }
+
+      // /shared — read-only shared datasets, only when the directory exists
+      if (volumes.shared) {
+        builder = builder.volume("/shared", (m) =>
+          m.bind(volumes.shared!).readonly(),
+        );
+      }
+
+      // /tmp/sandbox — always ephemeral tmpfs scratch, zero cleanup cost
+      builder = builder.volume("/tmp/sandbox", (m) => m.tmpfs().size(256));
 
       sandbox = await builder.create();
 
@@ -282,6 +305,9 @@ export class SandboxService {
       }
     }
 
+    // Remove the per-run JuiceFS workspace (no-op when JFS_ENABLED=false)
+    await volumeService.cleanup(sandboxData.info.tenant_id, sandboxId);
+
     // Always remove from tracking regardless of stop/kill outcome
     this.activeSandboxes.delete(sandboxId);
     logger.info({ sandbox_id: sandboxId }, "Microsandbox stopped");
@@ -342,6 +368,9 @@ export class SandboxService {
     if (!sandboxData) {
       return;
     }
+
+    // Remove the per-run JuiceFS workspace (no-op when JFS_ENABLED=false)
+    await volumeService.cleanup(sandboxData.info.tenant_id, sandboxId);
 
     try {
       // Try graceful stop first

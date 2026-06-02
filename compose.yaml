@@ -22,8 +22,13 @@ services:
       DATABASE_URL: ${DATABASE_URL:-}
       DB_PATH: /app/data/locci-box
       MCP_HTTP_ENABLED: ${MCP_HTTP_ENABLED:-false}
+      JFS_ENABLED: ${JFS_ENABLED:-false}
+      JFS_ROOT: /mnt/locci-box
+      JFS_QUOTA_MIB: ${JFS_QUOTA_MIB:-512}
     volumes:
       - db-data:/app/data
+      # JuiceFS FUSE mount (shared propagation from the juicefs container)
+      - /mnt/locci-box:/mnt/locci-box:shared
     privileged: true
     devices:
       - /dev/kvm:/dev/kvm
@@ -90,12 +95,92 @@ services:
     profiles:
       - prod-db
 
+  # ── JuiceFS persistent volumes (opt-in: docker compose --profile jfs up -d) ──
+  # Data blocks live in an external S3-compatible store (RUSTFS_* below); only
+  # Redis (metadata) + the JuiceFS client run here.
+  redis:
+    image: redis:7-alpine
+    container_name: locci-box-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --appendfsync everysec
+    volumes:
+      - redis-data:/data
+    networks:
+      - default
+    profiles:
+      - jfs
+
+  juicefs-init:
+    # One-shot: formats the JuiceFS volume if not already done.
+    # Safe to re-run — exits 0 if the volume already exists.
+    image: juicedata/juicefs:latest
+    container_name: locci-box-jfs-init
+    depends_on:
+      - redis
+    entrypoint:
+      - sh
+      - -c
+      - |
+        juicefs format \
+          --storage s3 \
+          --bucket ${RUSTFS_ENDPOINT:-http://rustfs:9000}/${JFS_BUCKET:-locci-box} \
+          --access-key ${RUSTFS_ACCESS_KEY} \
+          --secret-key ${RUSTFS_SECRET_KEY} \
+          redis://redis:6379/2 \
+          locci-box 2>&1 | grep -v "already exists" || true
+    networks:
+      - default
+    profiles:
+      - jfs
+
+  juicefs:
+    # Long-running FUSE daemon. Mounts /mnt/locci-box on the host via shared propagation.
+    image: juicedata/juicefs:latest
+    container_name: locci-box-jfs
+    restart: unless-stopped
+    depends_on:
+      juicefs-init:
+        condition: service_completed_successfully
+    privileged: true
+    devices:
+      - /dev/fuse
+    cap_add:
+      - SYS_ADMIN
+    security_opt:
+      - apparmor:unconfined
+    entrypoint:
+      - sh
+      - -c
+      - |
+        mkdir -p /mnt/locci-box && \
+        juicefs mount \
+          --cache-dir /var/jfs-cache \
+          --cache-size 10240 \
+          --writeback \
+          --background \
+          redis://redis:6379/2 \
+          /mnt/locci-box && \
+        tail -f /dev/null
+    volumes:
+      - jfs-cache:/var/jfs-cache
+      - /mnt/locci-box:/mnt/locci-box:shared
+    networks:
+      - default
+    profiles:
+      - jfs
+
 volumes:
   db-data:
     name: locci-box-db-data
     driver: local
   postgres-data:
     name: locci-box-pg-data
+    driver: local
+  redis-data:
+    name: locci-box-redis-data
+    driver: local
+  jfs-cache:
+    name: locci-box-jfs-cache
     driver: local
 
 networks:

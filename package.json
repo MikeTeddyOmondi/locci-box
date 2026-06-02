@@ -1,6 +1,6 @@
 {
   "name": "@locci/box-api",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
@@ -29,6 +29,14 @@
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",
+    "jfs:format": "scripts/jfs.sh format",
+    "jfs:mount": "scripts/jfs.sh mount",
+    "jfs:mount:fg": "scripts/jfs.sh mount:fg",
+    "jfs:umount": "scripts/jfs.sh umount",
+    "jfs:status": "scripts/jfs.sh status",
+    "jfs:info": "scripts/jfs.sh info",
+    "jfs:verify": "scripts/jfs.sh verify",
+    "jfs:logs": "scripts/jfs.sh logs",
     "db:generate": "drizzle-kit generate --config drizzle.config.ts",
     "db:migrate": "drizzle-kit migrate --config drizzle.config.ts",
     "db:push": "drizzle-kit push --config drizzle.config.ts",

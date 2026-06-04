@@ -62,8 +62,6 @@ services:
     environment:
       NODE_ENV: production
       VITE_API_URL: http://api:5757
-      # Server-only (SSR) fallback credential — never bundled into the client.
-      ADMIN_API_KEY: ${ADMIN_API_KEY}
     networks:
       - proxy-network
       - default

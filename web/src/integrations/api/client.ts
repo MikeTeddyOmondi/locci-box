@@ -100,14 +100,12 @@ class LocciBoxAPIClient {
 
   // Read the best available credential fresh on every request:
   // JWT token (web login) takes priority over API key (CLI/legacy)
+  // This isomorphic client is for user-scoped calls only — it carries the logged-in
+  // user's JWT. It never touches secrets. Privileged/server-side calls (e.g. admin
+  // metrics) belong in a TanStack server function: `createServerFn().handler()` that
+  // reads `process.env.ADMIN_API_KEY` per-request, so the key stays off the client.
   private getToken(): string {
-    // Server-side (SSR): read the admin key from the server-only runtime env.
-    // It is NOT VITE_-prefixed, so it is never inlined into the public client bundle.
-    if (typeof window === "undefined") {
-      const g = globalThis as { process?: { env?: Record<string, string | undefined> } };
-      return g.process?.env?.ADMIN_API_KEY ?? "";
-    }
-    // Browser: only the logged-in user's JWT (or an explicitly stored API key).
+    if (typeof window === "undefined") return "";
     return localStorage.getItem("locci_jwt") || localStorage.getItem("locci_api_key") || "";
   }
 

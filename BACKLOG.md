@@ -2,6 +2,13 @@
 
 ## Features / Updates
 
+- [ ] **Admin pages — system-wide metrics dashboard** — Web UI for service-wide
+  metrics (`GET /api/metrics`, admin-only via `authenticateAdmin`). Since the web
+  is JWT-only (no admin key bundled), fetch this through a TanStack **server
+  function** (`createServerFn().handler()` reading `process.env.ADMIN_API_KEY`
+  per-request) so the admin key stays server-side. Gate the page to admins.
+  (Note: the admin key is currently used by the CLI, not the web.)
+
 - [x] **Downloads Page** — New web page showing users how to get the CLI. Options:
   - Pull the CLI Docker image from Docker Hub: `docker pull locci/box-cli` and run it with `docker run --rm -e LOCCIBOX_API_URL=... -e LOCCIBOX_API_KEY=... locci/box-cli --help`
   - Download prebuilt binaries hosted on GitHub Releases (Linux x64/arm64, macOS arm64)

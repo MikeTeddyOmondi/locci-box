@@ -471,10 +471,11 @@ docker compose -f compose.rootless.yml --profile jfs up -d --build
 The api container needs `privileged` + `/dev/fuse` + `SYS_ADMIN` (FUSE) and
 `/dev/kvm` (microsandbox) — all already set in `compose.rootless.yml`.
 
-> **Note on `juicedata/mount`:** the JuiceFS CE client image is
-> `juicedata/mount:ce-vX.Y.Z`. `juicedata/juicefs:latest` is a Docker *plugin* and
-> cannot be run with `docker run`/Compose. Its binary is glibc-linked and needs
-> `libfdb_c.so` (both bundled into the ubuntu-based api image).
+> **Images & binaries:** the JuiceFS CE client image is `juicedata/mount:ce-vX.Y.Z`
+> (`juicedata/juicefs:latest` is a Docker *plugin*, not runnable). The api image
+> installs the **official CE binary** (`d.juicefs.com/install`) for the self-mount —
+> not the `juicedata/mount` binary, which is dynamically linked to `librados.so.2`
+> /`libfdb_c.so` and fails on a minimal image.
 
 ### Without Docker (bare metal on thanos)
 

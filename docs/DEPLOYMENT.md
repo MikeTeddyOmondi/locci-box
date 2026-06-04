@@ -165,19 +165,24 @@ Storage usage is also surfaced at `GET /api/stats` as `storage_bytes` / `storage
 
 ## 6. Known issues & caveats (validated on thanos)
 
-### Execution requires rootful Docker or bare-metal
-On **rootless Docker**, microsandbox cannot complete a microVM boot even after fixes:
+### microsandbox on rootless Docker needs `/dev/kvm` world-accessible
+microsandbox boots a microVM, which needs KVM. Two prerequisites on rootless Docker:
 1. `xattr not supported on root filesystem` → fixed by `--enable-xattr` (done in all mount paths).
-2. `SIGABRT … before agent relay` → `/dev/kvm` is `nobody:nogroup` in the userns;
-   fixed by `sudo chmod 666 /dev/kvm` on the host.
-3. `handshake read id_offset: timed out before relay sent bytes` → the in-VM agent
-   relay never completes under rootless Docker (nested-virt / vsock), **even with
-   `/dev/vhost-vsock` passed and chmod'd**. This is the hard stop.
+2. `SIGABRT … before agent relay` (or `handshake … timed out before relay sent bytes`)
+   → `/dev/kvm` shows as `nobody:nogroup` inside the userns, so the VMM can't open it.
 
-**Conclusion:** JuiceFS persistence works fully under rootless Docker, but **code
-execution does not** — deploy the API on **rootful Docker** or **bare-metal** (both give
-unrestricted KVM). A standard production VPS running rootful Docker is expected to work
-with `compose.yaml --profile jfs`.
+**Fix (persistent):** make `/dev/kvm` world-accessible on the host so the rootless
+container can use it, via a udev rule that survives reboots:
+```bash
+echo 'KERNEL=="kvm", MODE="0666"' | sudo tee /etc/udev/rules.d/65-kvm.rules
+sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+```
+(A bare `sudo chmod 666 /dev/kvm` works too but resets on reboot — hence the udev rule.)
+
+**Result:** with that rule in place, **code execution runs to completion on rootless
+Docker** (verified on thanos: `print(2+2)` → `stdout "4\n"`, exit 0; first boot ~20–25s).
+On **rootful Docker** `/dev/kvm` is directly usable, so a standard production VPS works
+with `compose.yaml --profile jfs` without the udev tweak.
 
 ### `RUSTFS_ENDPOINT` must be container-reachable
 Inside a container, `127.0.0.1` is the container itself. Use the host LAN IP
@@ -214,8 +219,9 @@ and **juicefs against the direct RustFS endpoint works**. So:
 | `compose.yaml --profile jfs` (rootless) `:shared` propagation | ❌ rootless limitation |
 | `compose.rootless.yml` api self-mount JuiceFS (`--enable-xattr`) | ✅ |
 | In-container write → object appears in RustFS | ✅ |
-| microsandbox KVM boot (after `chmod 666 /dev/kvm`) | ✅ boots |
-| microsandbox code execution under rootless Docker | ❌ relay handshake timeout |
+| microsandbox KVM boot (rootless, after `/dev/kvm` 0666 udev rule) | ✅ |
+| microsandbox code execution under rootless Docker | ✅ `print(2+2)` → `4`, exit 0 (~23s first boot) |
 
-**Net:** the JuiceFS persistent-workspace feature is production-ready; run the API on
-rootful Docker / bare-metal for code execution.
+**Net:** the full stack — JuiceFS persistent workspaces **and** sandbox code execution —
+works under rootless Docker once `/dev/kvm` is world-accessible (udev rule above). Rootful
+Docker needs no such tweak.

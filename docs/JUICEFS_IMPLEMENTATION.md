@@ -73,6 +73,9 @@ On the host machine running `compose.yaml` (thanos):
 
 - **KVM** — already required by microsandbox.
 - **FUSE** — `/dev/fuse` must be present (standard on Ubuntu 24.04).
+- **JuiceFS must be mounted with `--enable-xattr`** — microsandbox runs in strict
+  mode and refuses a `/workspace` whose filesystem lacks extended attributes
+  (`xattr not supported on root filesystem`). All mount paths here pass this flag.
 - **RustFS** (or any S3-compatible store) accessible from the Docker network.
 - No other changes to the host OS required — JuiceFS runs fully inside Docker.
 
@@ -346,6 +349,7 @@ Add three new services under the `jfs` Compose profile, and extend the `api` ser
       - |
         mkdir -p /mnt/locci-box && \
         juicefs mount \
+          --enable-xattr \
           --cache-dir /var/jfs-cache \
           --cache-size 10240 \
           --writeback \
@@ -502,6 +506,7 @@ Wants=network-online.target
 [Service]
 Type=forking
 ExecStart=/usr/local/bin/juicefs mount \
+  --enable-xattr \
   --cache-dir /mnt/jfs-cache \
   --cache-size 20480 \
   --writeback \

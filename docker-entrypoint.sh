@@ -17,7 +17,9 @@ if [ "${JFS_SELF_MOUNT}" = "true" ]; then
   JFS_META_URL="${JFS_META_URL:-redis://valkey:6379/2}"
   mkdir -p "${JFS_ROOT}"
   echo "[entrypoint] self-mounting JuiceFS ${JFS_META_URL} -> ${JFS_ROOT}"
-  juicefs mount --background "${JFS_META_URL}" "${JFS_ROOT}" \
+  # --enable-xattr is REQUIRED: microsandbox strict mode rejects a /workspace whose
+  # filesystem lacks extended-attribute support ("xattr not supported on root filesystem").
+  juicefs mount --enable-xattr --background "${JFS_META_URL}" "${JFS_ROOT}" \
     || echo "[entrypoint] WARN: JuiceFS self-mount failed; VolumeService will fall back to tmpfs"
 fi
 

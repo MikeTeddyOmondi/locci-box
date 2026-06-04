@@ -156,6 +156,7 @@ services:
       - |
         mkdir -p /mnt/locci-box && \
         juicefs mount \
+          --enable-xattr \
           --cache-dir /var/jfs-cache \
           --cache-size 10240 \
           --writeback \

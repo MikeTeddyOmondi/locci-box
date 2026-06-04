@@ -39,13 +39,14 @@ case "$cmd" in
     ;;
   mount)
     mkdir -p "${JFS_ROOT}"
-    juicefs mount --background "${JFS_META_URL}" "${JFS_ROOT}"
+    # --enable-xattr required for microsandbox /workspace (strict mode needs xattrs)
+    juicefs mount --enable-xattr --background "${JFS_META_URL}" "${JFS_ROOT}"
     echo "Mounted ${JFS_BUCKET} at ${JFS_ROOT}"
     ;;
   mount:fg)
     mkdir -p "${JFS_ROOT}"
     # Foreground — useful for watching block I/O to RustFS. Ctrl-C to stop.
-    juicefs mount "${JFS_META_URL}" "${JFS_ROOT}"
+    juicefs mount --enable-xattr "${JFS_META_URL}" "${JFS_ROOT}"
     ;;
   umount)
     juicefs umount "${JFS_ROOT}"

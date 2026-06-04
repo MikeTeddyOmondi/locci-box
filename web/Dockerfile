@@ -11,6 +11,10 @@ COPY web/ .
 # Inject build-time env — override at runtime via docker run -e or compose
 ARG VITE_API_URL=http://api:5757
 ENV VITE_API_URL=$VITE_API_URL
+# VITE_API_KEY is the fallback credential bundled into the client (used for SSR and
+# when no user JWT is present). WARNING: it ends up in the public JS bundle.
+ARG VITE_API_KEY=
+ENV VITE_API_KEY=$VITE_API_KEY
 RUN bun run build
 
 FROM oven/bun:1-alpine AS runner

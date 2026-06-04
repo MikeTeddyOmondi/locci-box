@@ -51,6 +51,8 @@ services:
       dockerfile: web/Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:5757}
+        # Fallback credential bundled into the web client (same as the API admin key).
+        VITE_API_KEY: ${ADMIN_API_KEY}
     image: locci/box-web
     container_name: locci-box-web
     restart: unless-stopped

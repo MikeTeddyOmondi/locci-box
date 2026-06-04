@@ -290,13 +290,13 @@ Add three new services under the `jfs` Compose profile, and extend the `api` ser
 **New services** (append to the `services:` block):
 
 ```yaml
-  redis:
-    image: redis:7-alpine
-    container_name: locci-box-redis
+  valkey:
+    image: valkey/valkey:8.0.2
+    container_name: locci-box-valkey
     restart: unless-stopped
-    command: redis-server --appendonly yes --appendfsync everysec
+    command: valkey-server --appendonly yes --appendfsync everysec
     volumes:
-      - redis-data:/data
+      - valkey-data:/data
     networks:
       - default
     profiles:
@@ -305,10 +305,10 @@ Add three new services under the `jfs` Compose profile, and extend the `api` ser
   juicefs-init:
     # One-shot: formats the JuiceFS volume if not already done.
     # Safe to re-run — exits 0 if the volume already exists.
-    image: juicedata/juicefs:latest
+    image: juicedata/mount:ce-v1.3.1
     container_name: locci-box-jfs-init
     depends_on:
-      - redis
+      - valkey
     entrypoint:
       - sh
       - -c
@@ -318,7 +318,7 @@ Add three new services under the `jfs` Compose profile, and extend the `api` ser
           --bucket http://${RUSTFS_ENDPOINT:-rustfs:9000}/${JFS_BUCKET:-locci-box} \
           --access-key ${RUSTFS_ACCESS_KEY:-loccidev} \
           --secret-key ${RUSTFS_SECRET_KEY:-loccidev123} \
-          redis://redis:6379/2 \
+          redis://valkey:6379/2 \
           locci-box 2>&1 | grep -v "already exists" || true
     networks:
       - default
@@ -327,7 +327,7 @@ Add three new services under the `jfs` Compose profile, and extend the `api` ser
 
   juicefs:
     # Long-running FUSE daemon. Mounts /mnt/locci-box on the host via shared propagation.
-    image: juicedata/juicefs:latest
+    image: juicedata/mount:ce-v1.3.1
     container_name: locci-box-jfs
     restart: unless-stopped
     depends_on:
@@ -350,7 +350,7 @@ Add three new services under the `jfs` Compose profile, and extend the `api` ser
           --cache-size 10240 \
           --writeback \
           --background \
-          redis://redis:6379/2 \
+          redis://valkey:6379/2 \
           /mnt/locci-box && \
         tail -f /dev/null
     volumes:
@@ -384,8 +384,8 @@ Add three new services under the `jfs` Compose profile, and extend the `api` ser
 **New volumes** (append to the `volumes:` block):
 
 ```yaml
-  redis-data:
-    name: locci-box-redis-data
+  valkey-data:
+    name: locci-box-valkey-data
     driver: local
   jfs-cache:
     name: locci-box-jfs-cache
@@ -422,7 +422,7 @@ JFS_BUCKET=locci-box
 
 ```bash
 # First time only — pull the JuiceFS image
-docker pull juicedata/juicefs:latest
+docker pull juicedata/mount:ce-v1.3.1
 
 # Start everything including JuiceFS
 JFS_ENABLED=true \
@@ -431,7 +431,7 @@ RUSTFS_SECRET_KEY=<secret> \
 docker compose --profile jfs up -d
 
 # Verify the mount is live
-docker exec locci-box-jfs juicefs status redis://redis:6379/2
+docker exec locci-box-jfs juicefs status redis://valkey:6379/2
 
 # Check the mount on the host
 ls /mnt/locci-box

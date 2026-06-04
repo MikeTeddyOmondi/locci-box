@@ -97,14 +97,14 @@ services:
 
   # ── JuiceFS persistent volumes (opt-in: docker compose --profile jfs up -d) ──
   # Data blocks live in an external S3-compatible store (RUSTFS_* below); only
-  # Redis (metadata) + the JuiceFS client run here.
-  redis:
-    image: redis:7-alpine
-    container_name: locci-box-redis
+  # Valkey (metadata) + the JuiceFS client run here.
+  valkey:
+    image: valkey/valkey:8.0.2
+    container_name: locci-box-valkey
     restart: unless-stopped
-    command: redis-server --appendonly yes --appendfsync everysec
+    command: valkey-server --appendonly yes --appendfsync everysec
     volumes:
-      - redis-data:/data
+      - valkey-data:/data
     networks:
       - default
     profiles:
@@ -113,10 +113,12 @@ services:
   juicefs-init:
     # One-shot: formats the JuiceFS volume if not already done.
     # Safe to re-run — exits 0 if the volume already exists.
-    image: juicedata/juicefs:latest
+    # NOTE: juicedata/juicefs:latest is a Docker *plugin*, not a runnable image —
+    # the JuiceFS CE client image is juicedata/mount:ce-vX.Y.Z.
+    image: juicedata/mount:ce-v1.3.1
     container_name: locci-box-jfs-init
     depends_on:
-      - redis
+      - valkey
     entrypoint:
       - sh
       - -c
@@ -126,7 +128,7 @@ services:
           --bucket ${RUSTFS_ENDPOINT:-http://rustfs:9000}/${JFS_BUCKET:-locci-box} \
           --access-key ${RUSTFS_ACCESS_KEY} \
           --secret-key ${RUSTFS_SECRET_KEY} \
-          redis://redis:6379/2 \
+          redis://valkey:6379/2 \
           locci-box 2>&1 | grep -v "already exists" || true
     networks:
       - default
@@ -135,7 +137,7 @@ services:
 
   juicefs:
     # Long-running FUSE daemon. Mounts /mnt/locci-box on the host via shared propagation.
-    image: juicedata/juicefs:latest
+    image: juicedata/mount:ce-v1.3.1
     container_name: locci-box-jfs
     restart: unless-stopped
     depends_on:
@@ -158,7 +160,7 @@ services:
           --cache-size 10240 \
           --writeback \
           --background \
-          redis://redis:6379/2 \
+          redis://valkey:6379/2 \
           /mnt/locci-box && \
         tail -f /dev/null
     volumes:
@@ -176,8 +178,8 @@ volumes:
   postgres-data:
     name: locci-box-pg-data
     driver: local
-  redis-data:
-    name: locci-box-redis-data
+  valkey-data:
+    name: locci-box-valkey-data
     driver: local
   jfs-cache:
     name: locci-box-jfs-cache
@@ -186,3 +188,5 @@ volumes:
 networks:
   proxy-network:
     external: true
+  default:
+    name: locci-box-default

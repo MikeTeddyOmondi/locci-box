@@ -9,13 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **JuiceFS persistent workspaces** — opt-in per-user `/workspace` volume mounted into every microsandbox run, backed by JuiceFS → Redis (metadata) + an external S3-compatible store (data blocks). Fully gated behind `JFS_ENABLED` (default `false`) and the `jfs` Compose profile; when disabled, `/workspace` falls back to tmpfs with zero behaviour change. New `src/services/VolumeService.ts` (`provision`/`cleanup`/`measureUsage`); `SandboxService.execute()` wires `/workspace` (JuiceFS bind or tmpfs), read-only `/shared`, and ephemeral `/tmp/sandbox`, with per-run workspace cleanup on stop/timeout/error.
+- **JuiceFS persistent workspaces** — opt-in per-user `/workspace` volume mounted into every microsandbox run, backed by JuiceFS → Valkey/Redis (metadata) + an external S3-compatible store (data blocks). Fully gated behind `JFS_ENABLED` (default `false`) and the `jfs` Compose profile; when disabled, `/workspace` falls back to tmpfs with zero behaviour change. New `src/services/VolumeService.ts` (`provision`/`cleanup`/`measureUsage`); `SandboxService.execute()` wires `/workspace` (JuiceFS bind or tmpfs), read-only `/shared`, and ephemeral `/tmp/sandbox`, with per-run workspace cleanup on stop/timeout/error.
 - **Storage usage in stats** — `GET /api/stats` now returns `storage_bytes` and `storage_mib` for the tenant via `VolumeService.measureUsage()` (`du` against the FUSE mount, so it works without the juicefs binary in the api container). Reports `0` when JuiceFS is disabled.
 - **`JFS_ENABLED` / `JFS_ROOT` / `JFS_QUOTA_MIB`** env vars added to the Valibot schema in `src/config/env.ts` and documented in `.env.example` alongside `RUSTFS_ENDPOINT` / `RUSTFS_ACCESS_KEY` / `RUSTFS_SECRET_KEY` / `JFS_BUCKET`.
 
 ### Changed
 
-- **`compose.yaml`** — `redis`, `juicefs-init`, and `juicefs` services added under the `jfs` profile (data blocks in an external S3/RustFS store); api service gains `JFS_*` env vars and the `/mnt/locci-box:/mnt/locci-box:shared` FUSE mount; `redis-data` and `jfs-cache` volumes added.
+- **`compose.yaml`** — `valkey`, `juicefs-init`, and `juicefs` services added under the `jfs` profile (data blocks in an external S3/RustFS store); JuiceFS client image is `juicedata/mount:ce-v1.3.1` (note: `juicedata/juicefs:latest` is a Docker *plugin*, not a runnable image); api service gains `JFS_*` env vars and the `/mnt/locci-box:/mnt/locci-box:shared` FUSE mount; `valkey-data` + `jfs-cache` volumes and a named `locci-box-default` network added.
 
 ---
 

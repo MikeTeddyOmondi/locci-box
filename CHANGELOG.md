@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`compose.yaml`** — `valkey`, `juicefs-init`, and `juicefs` services added under the `jfs` profile (data blocks in an external S3/RustFS store); JuiceFS client image is `juicedata/mount:ce-v1.3.1` (note: `juicedata/juicefs:latest` is a Docker *plugin*, not a runnable image); api service gains `JFS_*` env vars and the `/mnt/locci-box:/mnt/locci-box:shared` FUSE mount; `valkey-data` + `jfs-cache` volumes and a named `locci-box-default` network added.
 
+### Fixed
+
+- **CLI `keys` subcommand now honors `--profile`** — `loccibox keys list/create/revoke/delete` ignored the `--profile <name>` flag that every other subcommand (`run`, `sandboxes`, `metrics`, `stop`, `status`, `login`) supports; it always used the default profile (`getProfile()` with no argument). Added `--profile` to each `keys` subcommand and threaded it through `authOrExit()` → `getProfile(name)` in `cli/src/commands/keys.ts`.
+
 ---
 
 ## [1.4.0] - 2026-05-24

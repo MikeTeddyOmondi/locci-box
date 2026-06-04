@@ -8,13 +8,12 @@ FROM oven/bun:1-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY web/ .
-# Inject build-time env — override at runtime via docker run -e or compose
+# Inject build-time env — override at runtime via docker run -e or compose.
+# NOTE: only VITE_-prefixed vars are bundled into the client. The admin fallback
+# credential is read server-side at runtime from process.env.ADMIN_API_KEY (see
+# the SSR branch of integrations/api/client.ts), so it is NOT baked in here.
 ARG VITE_API_URL=http://api:5757
 ENV VITE_API_URL=$VITE_API_URL
-# VITE_API_KEY is the fallback credential bundled into the client (used for SSR and
-# when no user JWT is present). WARNING: it ends up in the public JS bundle.
-ARG VITE_API_KEY=
-ENV VITE_API_KEY=$VITE_API_KEY
 RUN bun run build
 
 FROM oven/bun:1-alpine AS runner

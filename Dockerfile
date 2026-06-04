@@ -22,11 +22,20 @@ COPY src/ ./src/
 COPY tsconfig.json package.json ./
 RUN pnpm build
 
+# JuiceFS client (CE). juicedata/juicefs:latest is a Docker *plugin*; the runnable
+# CE client image is juicedata/mount:ce-vX.Y.Z. Its binary is glibc-linked and needs
+# libfdb_c.so — both satisfied by the ubuntu:24.04 runner below. Only used for the
+# rootless single-container deploy (compose.rootless.yml); harmless otherwise.
+FROM juicedata/mount:ce-v1.3.1 AS jfs
+
 FROM node-base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 # Install microsandbox CLI (msb) — needs glibc 2.39, satisfied by ubuntu:24.04
 RUN curl -fsSL https://install.microsandbox.dev | sh
+# JuiceFS client for optional in-container self-mount (JFS_SELF_MOUNT=true)
+COPY --from=jfs /usr/local/bin/juicefs /usr/local/bin/juicefs
+COPY --from=jfs /usr/lib/libfdb_c.so /usr/lib/libfdb_c.so
 COPY --from=builder /app/dist ./dist
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json docker-entrypoint.sh ./

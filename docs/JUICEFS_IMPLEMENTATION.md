@@ -451,6 +451,31 @@ cp .env .env.prod
 docker compose --env-file .env.prod --profile jfs up -d
 ```
 
+### Rootless Docker (single-container variant)
+
+The default `compose.yaml` `jfs` profile runs JuiceFS in a **separate** container and
+shares its FUSE mount to the `api` container via a `:shared` bind. This requires
+**rootful Docker** — under **rootless Docker** the mount cannot propagate across
+containers (`path /mnt/locci-box ... is not a shared mount`).
+
+For rootless hosts, use **`compose.rootless.yml`**, which mounts JuiceFS *inside*
+the `api` container (`JFS_SELF_MOUNT=true`, handled by `docker-entrypoint.sh`; the
+`juicefs` binary is baked into the api image). No cross-container propagation:
+
+```bash
+# RUSTFS_ENDPOINT must be reachable from inside the container — use the host's
+# routable IP (e.g. http://192.168.0.100:9000), not 127.0.0.1.
+docker compose -f compose.rootless.yml --profile jfs up -d --build
+```
+
+The api container needs `privileged` + `/dev/fuse` + `SYS_ADMIN` (FUSE) and
+`/dev/kvm` (microsandbox) — all already set in `compose.rootless.yml`.
+
+> **Note on `juicedata/mount`:** the JuiceFS CE client image is
+> `juicedata/mount:ce-vX.Y.Z`. `juicedata/juicefs:latest` is a Docker *plugin* and
+> cannot be run with `docker run`/Compose. Its binary is glibc-linked and needs
+> `libfdb_c.so` (both bundled into the ubuntu-based api image).
+
 ### Without Docker (bare metal on thanos)
 
 ```bash

@@ -1,0 +1,141 @@
+# ── Rootless-Docker deployment variant ────────────────────────────────────────
+# Rootless Docker cannot propagate a :shared bind mount between containers, so the
+# default compose.yaml `jfs` profile (separate juicefs mount container) fails with
+# "path /mnt/locci-box ... is not a shared mount". This standalone file instead
+# mounts JuiceFS *inside* the api container (JFS_SELF_MOUNT=true), eliminating
+# cross-container propagation entirely.
+#
+# Usage:
+#   docker compose -f compose.rootless.yml --profile jfs up -d --build
+#
+# Requires (per host): a reachable S3/RustFS endpoint (RUSTFS_ENDPOINT) and the
+# api container needs privileged + /dev/fuse + SYS_ADMIN to mount FUSE, plus
+# /dev/kvm for microsandbox. For standard *rootful* Docker, prefer compose.yaml.
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: locci/box-api
+    container_name: locci-box-api
+    restart: unless-stopped
+    ports:
+      - "${PORT:-5757}:5757"
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 5757
+      ADMIN_API_KEY: ${ADMIN_API_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      DEFAULT_MAX_CONCURRENT_SANDBOXES: ${DEFAULT_MAX_CONCURRENT_SANDBOXES:-5}
+      DEFAULT_SANDBOX_TIMEOUT_SECONDS: ${DEFAULT_SANDBOX_TIMEOUT_SECONDS:-30}
+      DEFAULT_RATE_LIMIT_PER_MINUTE: ${DEFAULT_RATE_LIMIT_PER_MINUTE:-60}
+      DATABASE_MODE: ${DATABASE_MODE:-pglite}
+      DATABASE_URL: ${DATABASE_URL:-}
+      DB_PATH: /app/data/locci-box
+      MCP_HTTP_ENABLED: ${MCP_HTTP_ENABLED:-false}
+      # JuiceFS persistent workspaces — self-mounted in this container
+      JFS_ENABLED: ${JFS_ENABLED:-true}
+      JFS_ROOT: /mnt/locci-box
+      JFS_QUOTA_MIB: ${JFS_QUOTA_MIB:-512}
+      JFS_SELF_MOUNT: "true"
+      JFS_META_URL: redis://valkey:6379/2
+    volumes:
+      - db-data:/app/data
+    privileged: true
+    devices:
+      - /dev/kvm:/dev/kvm
+      - /dev/net/tun:/dev/net/tun
+      - /dev/fuse
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+      - SYS_ADMIN
+    security_opt:
+      - apparmor:unconfined
+    depends_on:
+      juicefs-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5757/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - proxy-network
+      - default
+    profiles:
+      - jfs
+
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:5757}
+    image: locci/box-web
+    container_name: locci-box-web
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-4173}:4173"
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      VITE_API_URL: http://api:5757
+    networks:
+      - proxy-network
+      - default
+    profiles:
+      - jfs
+
+  valkey:
+    image: valkey/valkey:8.0.2
+    container_name: locci-box-valkey
+    restart: unless-stopped
+    command: valkey-server --appendonly yes --appendfsync everysec
+    volumes:
+      - valkey-data:/data
+    networks:
+      - default
+    profiles:
+      - jfs
+
+  juicefs-init:
+    # One-shot: formats the JuiceFS volume if not already done.
+    image: juicedata/mount:ce-v1.3.1
+    container_name: locci-box-jfs-init
+    depends_on:
+      - valkey
+    entrypoint:
+      - sh
+      - -c
+      - |
+        juicefs format \
+          --storage s3 \
+          --bucket ${RUSTFS_ENDPOINT:-http://rustfs:9000}/${JFS_BUCKET:-locci-box} \
+          --access-key ${RUSTFS_ACCESS_KEY} \
+          --secret-key ${RUSTFS_SECRET_KEY} \
+          redis://valkey:6379/2 \
+          locci-box 2>&1 | grep -v "already exists" || true
+    networks:
+      - default
+    profiles:
+      - jfs
+
+volumes:
+  db-data:
+    name: locci-box-db-data
+    driver: local
+  valkey-data:
+    name: locci-box-valkey-data
+    driver: local
+
+networks:
+  proxy-network:
+    external: true
+  default:
+    name: locci-box-default

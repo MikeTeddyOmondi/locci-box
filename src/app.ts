@@ -25,8 +25,9 @@ function configureMiddleware(app: Express): void {
       origin: isDevelopment
         ? true
         : [
-            /\.loccibox\.dev$/,
-            /^https:\/\/loccibox\.dev$/,
+            /\.mt0\.dev$/, // covers box.mt0.dev and other *.mt0.dev subdomains
+            /^https:\/\/mt0\.dev$/,
+            /^https?:\/\/192\.168\.0\.100(:\d+)?$/, // homelab host (any port)
             /\.locci\.cloud$/,
             /^https:\/\/locci\.cloud$/,
           ],

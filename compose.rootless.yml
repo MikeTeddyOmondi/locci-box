@@ -58,6 +58,8 @@ services:
     depends_on:
       juicefs-init:
         condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:5757/health"]
       interval: 30s
@@ -104,6 +106,26 @@ services:
     profiles:
       - jfs
 
+  postgres:
+    image: postgres:17-alpine
+    container_name: locci-box-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: loccibox
+      POSTGRES_USER: locci
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U locci -d loccibox"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - default
+    profiles:
+      - jfs
+
   juicefs-init:
     # One-shot: formats the JuiceFS volume if not already done.
     image: juicedata/mount:ce-v1.3.1
@@ -132,6 +154,9 @@ volumes:
     driver: local
   valkey-data:
     name: locci-box-valkey-data
+    driver: local
+  postgres-data:
+    name: locci-box-pg-data
     driver: local
 
 networks:

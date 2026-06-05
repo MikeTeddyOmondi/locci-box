@@ -185,7 +185,11 @@ pnpm mcp   # or: node dist/mcp/server.js
 Register with Claude Code:
 
 ```bash
-claude mcp add --transport stdio locci-box -- node dist/mcp/server.js
+claude mcp add LocciBox \
+  --scope local \
+  --env LOCCIBOX_API_KEY=lbk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx \
+  --env LOCCIBOX_API_URL=https://api-box.locci.cloud \
+  -- loccibox mcp start
 ```
 
 Available tools: `run_sandbox`, `get_sandbox_status`, `stop_sandbox`.

@@ -103,6 +103,19 @@
   `src/services/VolumeService.ts`, wired into `src/services/SandboxService.ts`,
   `src/config/env.ts`, `src/routes/stats.ts`, `compose.yaml`, `.env.example`.
   Upgrade path: swap Redis metadata engine for TiKV for production HA.
+  - [ ] **Named persistent volumes (paid)** — expose `POST /api/volumes`, `GET /api/volumes/:name`,
+    `DELETE /api/volumes/:name`; mount `volumes/<userId>/<volumeName>/` instead of the per-run
+    `workspaces/<userId>/<sandboxId>/` path and skip `cleanup()` for named volumes so data
+    survives across runs. Gate behind `pro+` plan.
+  - [ ] **Plan/tier gating for volumes** — add `plan: free | pro | team` enum to tenant schema;
+    drive named-volume allowance, max volume count, and `JFS_QUOTA_MIB` override from plan tier.
+  - [ ] **Hard quota enforcement** — replace best-effort `juicefs quota set` (no-op in CE) with a
+    pre-flight `du` check in `VolumeService.provision()`; reject with `storage_limit_exceeded`
+    when tenant is over quota.
+  - [ ] **Volume TTL / data lifecycle** — add `last_accessed_at` to volume metadata; cron job
+    archives/deletes volumes inactive beyond plan-configured TTL (e.g. 30 days on pro).
+  - [ ] **Shared datasets as a paid feature** — expose a UI for teams to upload read-only datasets
+    mounted at `/shared`; `SandboxService` already wires the bind mount when the directory exists.
 - [ ] **Redis for rate limiting + caching** — move the in-process rate limiter to Redis so limits survive restarts and work across multiple API replicas
 - [ ] **WebSocket support** — real-time output streaming for long-running sandbox executions instead of polling
 - [ ] **Webhook notifications** — POST to a user-configured URL on sandbox job completion/failure

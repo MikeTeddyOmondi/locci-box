@@ -13,6 +13,7 @@
     "mcp": "node dist/mcp/server.js",
     "mcp:dev": "MCP_ENABLED=true tsx src/mcp/server.ts",
     "mcp:inspect": "MCP_ENABLED=true npx -y @modelcontextprotocol/inspector tsx src/mcp/server.ts",
+    "bench:storage": "tsx tests/benchmarks/storage-bench.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

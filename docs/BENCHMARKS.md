@@ -95,6 +95,28 @@ _Generated: 2026-06-15T17:51:02Z · thanos · sizes = 1, 10, 100 MiB · iteratio
 
 <!-- RESULTS:END -->
 
+### Cold-read variant
+
+Re-run with `COLD_READ=true` (drops the **guest** page cache via `sync; echo 3 >
+/proc/sys/vm/drop_caches` before each in-sandbox read). Same config otherwise
+(1/10/100 MiB, 5 iters, 2026-06-15).
+
+| Size | Operation | tmpfs median MiB/s | JuiceFS median MiB/s | JuiceFS vs tmpfs |
+| --- | --- | ---: | ---: | ---: |
+| 1 MiB | In-sandbox read (cold) | 85.3 | 47.0 | 55% |
+| 10 MiB | In-sandbox read (cold) | 590.3 | 15.2 | 3% |
+| 100 MiB | In-sandbox read (cold) | 1675.9 | 11.5 | 1% |
+
+Takeaways vs the warm read above:
+
+- **JuiceFS large reads are unchanged** (warm ~12–16 vs cold ~11–15 MiB/s) — they were
+  already storage-bound, not served from cache. Only the 1 MiB case shed cache benefit
+  (warm ~72 → cold ~47 MiB/s).
+- **tmpfs stays fast** because `drop_caches` can't evict tmpfs pages (tmpfs *is* page
+  cache with no backing store to reclaim to).
+- Caveat: this clears only the guest kernel cache; the JuiceFS client cache in the `api`
+  container is untouched, so true cold-from-S3 reads could be at or below these figures.
+
 ## Interpretation
 
 - **Raw I/O: tmpfs wins by 1–2 orders of magnitude, as expected.** tmpfs is RAM, so it

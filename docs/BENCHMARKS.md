@@ -51,33 +51,76 @@ Harness: [`tests/benchmarks/storage-bench.ts`](../tests/benchmarks/storage-bench
   lives inside `api`. The image ([`Dockerfile`](../Dockerfile)) bundles both the `msb`
   CLI and the JuiceFS CE binary.
 - **JuiceFS metadata:** Valkey (`redis://valkey:6379/2`). **Data:** S3-compatible object store.
-- **SDK:** `microsandbox@^0.4.6`.
-- _(Exact kernel / JuiceFS CE version / S3 backend recorded with the results below.)_
+- **SDK:** `microsandbox@0.4.6`.
+- **Host:** Linux x86_64, kernel `6.8.0-124-generic`.
+- **JuiceFS CE:** `1.3.1+2025-12-02.e0032b2` (in-container CE binary).
+- _Run date: 2026-06-15._
 
 ## Results
 
 <!-- RESULTS:START -->
-_Not yet run. Populate by running the harness inside the thanos `api` container:_
 
-```bash
-# from ~/src/locci-box on thanos
-docker compose cp tests/benchmarks/storage-bench.ts api:/tmp/storage-bench.ts
-docker compose exec -e MODES=tmpfs,juicefs -e SIZES_MIB=1,10,100 -e ITERS=5 \
-  api node_modules/.bin/tsx /tmp/storage-bench.ts
-```
+_Generated: 2026-06-15T17:51:02Z · thanos · sizes = 1, 10, 100 MiB · iterations = 5 (first discarded as warmup) · modes = tmpfs, juicefs._
 
-Paste the harness's Markdown output (everything between its own `RESULTS` markers) here.
+- **tmpfs**: enabled
+- **juicefs**: enabled — `/mnt/locci-box` writable (self-mounted in `api`)
+- **SDK `metrics()`**: available
+
+### 1 MiB
+
+| Operation | tmpfs median MiB/s | tmpfs mean | JuiceFS median MiB/s | JuiceFS mean | JuiceFS vs tmpfs |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Upload (host→guest, copyFromHost) | 35.1 | 35.0 | 8.3 | 8.2 | 24% |
+| In-sandbox write (dd, fdatasync) | 55.8 | 55.4 | 8.6 | 8.6 | 15% |
+| In-sandbox read (dd) | 198.4 | 199.5 | 72.3 | 70.7 | 36% |
+| Download (guest→host, copyToHost) | 27.2 | 27.3 | 22.2 | 21.4 | 82% |
+
+### 10 MiB
+
+| Operation | tmpfs median MiB/s | tmpfs mean | JuiceFS median MiB/s | JuiceFS mean | JuiceFS vs tmpfs |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Upload (host→guest, copyFromHost) | 48.7 | 49.2 | 13.2 | 13.2 | 27% |
+| In-sandbox write (dd, fdatasync) | 278.2 | 277.6 | 15.7 | 15.1 | 6% |
+| In-sandbox read (dd) | 990.2 | 985.6 | 15.5 | 15.6 | 2% |
+| Download (guest→host, copyToHost) | 35.7 | 35.5 | 34.2 | 34.2 | 96% |
+
+### 100 MiB
+
+| Operation | tmpfs median MiB/s | tmpfs mean | JuiceFS median MiB/s | JuiceFS mean | JuiceFS vs tmpfs |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Upload (host→guest, copyFromHost) | 61.4 | 61.2 | 13.0 | 13.0 | 21% |
+| In-sandbox write (dd, fdatasync) | 336.4 | 336.1 | 14.6 | 14.5 | 4% |
+| In-sandbox read (dd) | 1805.1 | 1795.2 | 12.1 | 12.0 | 1% |
+| Download (guest→host, copyToHost) | 37.5 | 37.5 | 37.4 | 37.4 | 100% |
+
 <!-- RESULTS:END -->
 
 ## Interpretation
 
-_(Filled in after the first run.)_ Expect:
+- **Raw I/O: tmpfs wins by 1–2 orders of magnitude, as expected.** tmpfs is RAM, so it
+  scales with size (read hits ~1.8 GiB/s, write ~336 MiB/s at 100 MiB). JuiceFS raw write
+  plateaus at **~14–16 MiB/s** regardless of size — gated by FUSE + synchronous S3 PUTs of
+  4 MiB blocks under `conv=fdatasync`. JuiceFS read falls from ~72 MiB/s (1 MiB, served
+  from cache) to **~12 MiB/s** at 100 MiB, where the working set exceeds cache and blocks
+  must be fetched from the object store.
 
-- **tmpfs** to dominate raw I/O (RAM-speed, no FUSE/network round-trips).
-- **JuiceFS** write throughput gated by FUSE + S3 PUT latency and the 4 MiB block size;
-  metadata ops gated by Valkey round-trips.
-- The trade-off JuiceFS buys: per-user persistence, cross-run artifact recovery, and a
-  billable storage axis (`GET /api/stats` → `storage_bytes`).
+- **The host↔guest SDK channel is the real ceiling for transfers.** Upload/download go
+  through the microsandbox host-guest channel, which caps tmpfs upload at ~35–61 MiB/s and
+  download at ~27–37 MiB/s — far below tmpfs's raw speed. Because the channel dominates,
+  **JuiceFS download is essentially identical to tmpfs (82–100%)**: the read is cache-warm
+  (it immediately follows the write) so the storage backend barely matters.
+
+- **JuiceFS upload pays the write penalty (~21–27% of tmpfs).** `copyFromHost` lands the
+  bytes on the FUSE mount, so it inherits the S3-flush cost on top of the channel.
+
+- **Trade-off.** JuiceFS is ~5–25× slower for write-heavy/large work, but buys per-user
+  persistence, cross-run artifact recovery, and a billable storage axis
+  (`GET /api/stats` → `storage_bytes`). For ephemeral compute, tmpfs (the default) is the
+  right call; reserve JuiceFS for workloads that must persist or share state across runs.
+
+> Caveats: in-sandbox **read** is warm-cache (runs right after the write); cold-read
+> JuiceFS would be slower. Numbers reflect one S3 backend on one host on 2026-06-15 — treat
+> as directional, re-run with `pnpm bench:storage` for your own environment.
 
 ## How to reproduce
 

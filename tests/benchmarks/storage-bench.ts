@@ -39,6 +39,11 @@ const MODES = (process.env.MODES ?? "tmpfs,juicefs")
   .map((s) => s.trim())
   .filter(Boolean) as StorageMode[];
 const JFS_ROOT = process.env.JFS_ROOT ?? "/mnt/locci-box";
+// Drop the guest page cache before the in-sandbox read so it isn't served warm from
+// the just-completed write. NOTE: this clears the guest kernel cache only; the JuiceFS
+// client cache in the api container is not cleared, so cold-storage (S3) reads would be
+// at or below these figures. Best-effort — needs root in the guest.
+const COLD_READ = (process.env.COLD_READ ?? "false") === "true";
 const TENANT = process.env.BENCH_TENANT ?? "bench";
 const IMAGE = process.env.BENCH_IMAGE ?? "python:3.11-slim";
 const WORKSPACE_TMPFS_MIB = parseInt(process.env.WORKSPACE_TMPFS_MIB ?? "512", 10);
@@ -205,6 +210,13 @@ async function runIteration(
 
     // in-sandbox read
     {
+      if (COLD_READ) {
+        // Untimed: flush and drop the guest page cache so the read isn't warm.
+        await sandbox.exec("sh", [
+          "-c",
+          "sync; echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true",
+        ]);
+      }
       const before = await snapshot(sandbox);
       const t = now();
       const r = await sandbox.exec("dd", [
@@ -283,7 +295,7 @@ function buildReport(
   lines.push(`_Generated: ${new Date().toISOString()}_`);
   lines.push("");
   lines.push(
-    `**Config:** sizes = ${SIZES_MIB.join(", ")} MiB · iterations = ${ITERS} (first discarded as warmup) · modes = ${MODES.join(", ")}`,
+    `**Config:** sizes = ${SIZES_MIB.join(", ")} MiB · iterations = ${ITERS} (first discarded as warmup) · modes = ${MODES.join(", ")} · read = ${COLD_READ ? "cold (guest cache dropped)" : "warm"}`,
   );
   lines.push("");
   for (const [mode, status] of Object.entries(modeStatus)) {
@@ -333,7 +345,7 @@ function opLabel(op: Op): string {
     case "write":
       return "In-sandbox write (dd, fdatasync)";
     case "read":
-      return "In-sandbox read (dd)";
+      return `In-sandbox read (dd${COLD_READ ? ", cold" : ""})`;
   }
 }
 

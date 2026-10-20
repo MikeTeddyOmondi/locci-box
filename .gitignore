@@ -32,6 +32,8 @@ temp/
 
 # PGlite database files (persisted via Docker volume in production)
 data/locci-box
+# Agent box workspaces when JuiceFS is off (BOX_LOCAL_ROOT)
+data/boxes/
 
 # JuiceFS local dev mount point (FUSE-mounted at runtime; never committed)
 juicefs/

@@ -1,6 +1,6 @@
 import { mkdir, rm } from "node:fs/promises";
 import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
 import { env } from "../config/env.js";
@@ -82,6 +82,39 @@ export class VolumeService {
     } catch (err) {
       logger.warn({ err, workspacePath }, "JuiceFS cleanup failed");
     }
+  }
+
+  /**
+   * A stable /workspace for an agent box, kept across stops so a restarted box
+   * finds its files: workspaces/<ownerId>/boxes/<boxId> on JuiceFS, or a plain
+   * host directory under BOX_LOCAL_ROOT when JuiceFS is off. Unlike provision(),
+   * never tmpfs: a box's workspace has to outlive the microVM.
+   */
+  async provisionBox(ownerId: string, boxId: string): Promise<string> {
+    const path = this.boxPath(ownerId, boxId);
+    await mkdir(path, { recursive: true });
+    if (this.enabled) await this.setQuota(path);
+    logger.info({ ownerId, boxId, path }, "Provisioned box workspace");
+    return path;
+  }
+
+  /** Delete a box's workspace (box_stop with remove). */
+  async removeBox(ownerId: string, boxId: string): Promise<void> {
+    const path = this.boxPath(ownerId, boxId);
+    try {
+      await rm(path, { recursive: true, force: true });
+      logger.info({ ownerId, boxId }, "Removed box workspace");
+    } catch (err) {
+      logger.warn({ err, path }, "Box workspace removal failed");
+    }
+  }
+
+  private boxPath(ownerId: string, boxId: string): string {
+    // Ids come from our own tables, but they end up in a host path: keep them to one segment.
+    const safe = (s: string) => s.replace(/[^A-Za-z0-9_-]/g, "_");
+    return this.enabled
+      ? join(this.root, "workspaces", safe(ownerId), "boxes", safe(boxId))
+      : resolve(env.BOX_LOCAL_ROOT, safe(ownerId), safe(boxId));
   }
 
   /**

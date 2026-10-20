@@ -77,3 +77,25 @@ export const revokedTokens = pgTable(
   },
   (t) => [index("revoked_tokens_expires_at_idx").on(t.expiresAt)],
 );
+
+// Agent boxes (src/services/BoxService.ts). The row outlives the microVM: a
+// stopped box restarts under the same id with its disk and /workspace intact.
+export const boxes = pgTable(
+  "boxes",
+  {
+    id: text("id").primaryKey(),
+    tenantId: text("tenant_id").notNull(),
+    // The user behind a user API key or JWT, or the tenant id for a tenant key:
+    // user keys all map to tenant_default, so the tenant alone is not an owner.
+    ownerId: text("owner_id").notNull(),
+    status: text("status").notNull(), // running | stopped
+    image: text("image").notNull(),
+    memoryMib: integer("memory_mib").notNull(),
+    workspacePath: text("workspace_path"),
+    createdAt: text("created_at").notNull(),
+    startedAt: text("started_at").notNull(),
+    lastUsedAt: text("last_used_at").notNull(),
+    stoppedAt: text("stopped_at"),
+  },
+  (t) => [index("boxes_owner_id_idx").on(t.ownerId)],
+);

@@ -1,3 +1,5 @@
+import os from "node:os";
+import path from "node:path";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
@@ -13,6 +15,8 @@ export default defineConfig({
       JWT_SECRET: "test-jwt-secret-for-ci",
       LOG_LEVEL: "silent",
       NODE_ENV: "test",
+      // Box workspaces from the integration tests go here, not into ./data.
+      BOX_LOCAL_ROOT: path.join(os.tmpdir(), "locci-box-test-boxes"),
     },
     coverage: {
       provider: "v8",

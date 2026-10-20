@@ -79,6 +79,17 @@ const EnvSchema = v.object({
   ),
   JFS_ROOT: v.optional(v.string(), "/mnt/locci-box"),
   JFS_QUOTA_MIB: v.optional(v.pipe(v.string(), v.transform(Number)), "512"),
+
+  // Agent boxes: long-lived microVMs an AI works in across calls (src/services/BoxService.ts)
+  BOX_IMAGE: v.optional(v.string(), "docker.io/library/node:22-bookworm"),
+  BOX_MEMORY_MIB: v.optional(v.pipe(v.string(), v.transform(Number), v.minValue(256)), "1024"),
+  BOX_CPUS: v.optional(v.pipe(v.string(), v.transform(Number), v.minValue(1)), "2"),
+  BOX_IDLE_MINUTES: v.optional(v.pipe(v.string(), v.transform(Number), v.minValue(1)), "15"),
+  BOX_MAX_HOURS: v.optional(v.pipe(v.string(), v.transform(Number), v.minValue(1)), "8"),
+  BOX_EXEC_TIMEOUT_SECONDS: v.optional(v.pipe(v.string(), v.transform(Number), v.minValue(1)), "120"),
+  BOX_EXEC_MAX_SECONDS: v.optional(v.pipe(v.string(), v.transform(Number), v.minValue(1)), "600"),
+  // Where a box's /workspace lives when JuiceFS is off (a host directory, so it survives a stop)
+  BOX_LOCAL_ROOT: v.optional(v.string(), "./data/boxes"),
 });
 
 /**
@@ -105,6 +116,14 @@ function parseEnv() {
       JFS_ENABLED: process.env.JFS_ENABLED,
       JFS_ROOT: process.env.JFS_ROOT,
       JFS_QUOTA_MIB: process.env.JFS_QUOTA_MIB,
+      BOX_IMAGE: process.env.BOX_IMAGE,
+      BOX_MEMORY_MIB: process.env.BOX_MEMORY_MIB,
+      BOX_CPUS: process.env.BOX_CPUS,
+      BOX_IDLE_MINUTES: process.env.BOX_IDLE_MINUTES,
+      BOX_MAX_HOURS: process.env.BOX_MAX_HOURS,
+      BOX_EXEC_TIMEOUT_SECONDS: process.env.BOX_EXEC_TIMEOUT_SECONDS,
+      BOX_EXEC_MAX_SECONDS: process.env.BOX_EXEC_MAX_SECONDS,
+      BOX_LOCAL_ROOT: process.env.BOX_LOCAL_ROOT,
     });
 
     return parsed;

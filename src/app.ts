@@ -16,6 +16,7 @@ import authRoutes from "./routes/auth.js";
 import statsRoutes from "./routes/stats.js";
 import apiKeysRoutes from "./routes/apikeys.js";
 import bobRoutes from "./routes/bob.js";
+import boxRoutes from "./routes/boxes.js";
 import mcpHttpRouter from "./mcp/http.js";
 
 function configureMiddleware(app: Express): void {
@@ -49,6 +50,7 @@ function configureRoutes(app: Express): void {
 
   // Protected API routes
   app.use("/api/sandbox", authenticate, rateLimiter.limit(), sandboxRoutes);
+  app.use("/api/boxes", authenticate, rateLimiter.limit(), boxRoutes);
   app.use("/api/stats", authenticate, statsRoutes);
   app.use("/api/keys", authenticate, apiKeysRoutes);
   app.use("/api/metrics", metricsRoutes);

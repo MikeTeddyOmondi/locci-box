@@ -2,10 +2,18 @@ import { initDb } from "./db/index.js";
 import { createApp } from "./app.js";
 import { logger } from "./utils/logger.js";
 import { env, isDevelopment } from "./config/env.js";
+import { boxService } from "./services/BoxService.js";
 
 async function startServer() {
   try {
     await initDb();
+
+    // Agent boxes: pick up the ones still running from before a restart, then
+    // stop idle ones every minute.
+    await boxService.reconcile().catch((error) =>
+      logger.error({ error: String(error) }, "Reconciling boxes failed"),
+    );
+    boxService.startSweeper();
 
     const app = createApp();
 

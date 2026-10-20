@@ -1,12 +1,18 @@
 # ── Web (TanStack Start) ─────────────────────────────────────────────────────
-FROM oven/bun:1-alpine AS deps
+# Dependencies come from the workspace's pnpm-lock.yaml. web/ has no lockfile of
+# its own, and a bare `bun install` took the newest version in every ^ range:
+# with @lovable.dev/vite-tanstack-config 1.8.0 the build skipped TanStack Start
+# and vite looked for an index.html. Hoisted, so web's packages sit flat in node_modules.
+FROM node:22-alpine AS deps
 WORKDIR /app
-COPY web/package.json web/bun.lock* ./
-RUN bun install --frozen-lockfile
+RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY web/package.json ./web/
+RUN pnpm install --frozen-lockfile --filter @locci/box-web --config.node-linker=hoisted
 
 FROM oven/bun:1-alpine AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
+WORKDIR /app/web
+COPY --from=deps /app/node_modules /app/node_modules
 COPY web/ .
 # Inject build-time env — override at runtime via docker run -e or compose.
 # NOTE: only VITE_-prefixed vars are bundled into the client. The admin fallback
@@ -20,9 +26,9 @@ FROM oven/bun:1-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 RUN apk add --no-cache nginx
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./
+COPY --from=builder /app/web/dist ./dist
+COPY --from=deps /app/node_modules ./node_modules
+COPY web/package.json ./
 COPY web/nginx.conf /etc/nginx/http.d/default.conf
 COPY web/web-entrypoint.sh ./web-entrypoint.sh
 RUN chmod +x web-entrypoint.sh

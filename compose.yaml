@@ -27,6 +27,9 @@ services:
       JFS_QUOTA_MIB: ${JFS_QUOTA_MIB:-512}
     volumes:
       - db-data:/app/data
+      # microsandbox's image cache and agent boxes' disks: kept across
+      # redeploys, so stopped boxes keep their installs and the image is pulled once.
+      - msb-data:/root/.microsandbox
       # JuiceFS FUSE mount (shared propagation from the juicefs container)
       - /mnt/locci-box:/mnt/locci-box:shared
     privileged: true
@@ -175,6 +178,9 @@ services:
 volumes:
   db-data:
     name: locci-box-db-data
+    driver: local
+  msb-data:
+    name: locci-box-msb-data
     driver: local
   postgres-data:
     name: locci-box-pg-data

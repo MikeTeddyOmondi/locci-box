@@ -44,6 +44,9 @@ services:
       JFS_META_URL: redis://valkey:6379/2
     volumes:
       - db-data:/app/data
+      # microsandbox's image cache and agent boxes' disks: kept across
+      # redeploys, so stopped boxes keep their installs and the image is pulled once.
+      - msb-data:/root/.microsandbox
     privileged: true
     devices:
       - /dev/kvm:/dev/kvm
@@ -151,6 +154,9 @@ services:
 volumes:
   db-data:
     name: locci-box-db-data
+    driver: local
+  msb-data:
+    name: locci-box-msb-data
     driver: local
   valkey-data:
     name: locci-box-valkey-data

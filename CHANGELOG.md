@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Web Docker image builds again**: `web/` has no lockfile, so the image's `bun install` took the newest version in every `^` range, and with `@lovable.dev/vite-tanstack-config` 1.8.0 the build skipped TanStack Start and failed on a missing `index.html`. `web/Dockerfile` now installs from the workspace's `pnpm-lock.yaml` (pnpm 10.33.0, hoisted).
 - **CLI `keys` subcommand now honors `--profile`** — `loccibox keys list/create/revoke/delete` ignored the `--profile <name>` flag that every other subcommand (`run`, `sandboxes`, `metrics`, `stop`, `status`, `login`) supports; it always used the default profile (`getProfile()` with no argument). Added `--profile` to each `keys` subcommand and threaded it through `authOrExit()` → `getProfile(name)` in `cli/src/commands/keys.ts`.
 
 ---

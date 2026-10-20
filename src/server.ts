@@ -9,11 +9,12 @@ async function startServer() {
     await initDb();
 
     // Agent boxes: pick up the ones still running from before a restart, then
-    // stop idle ones every minute.
+    // stop idle ones every minute. The box image is pulled in the background.
     await boxService.reconcile().catch((error) =>
       logger.error({ error: String(error) }, "Reconciling boxes failed"),
     );
     boxService.startSweeper();
+    void boxService.warmImage();
 
     const app = createApp();
 

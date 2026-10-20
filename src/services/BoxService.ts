@@ -3,6 +3,8 @@ import { and, eq } from "drizzle-orm";
 import { posix } from "node:path";
 import {
   ExecTimeoutError,
+  Image,
+  ImageNotFoundError,
   NetworkPolicy,
   Sandbox,
   SandboxNotFoundError,
@@ -80,7 +82,7 @@ export interface BoxFile {
 export class BoxError extends Error {
   constructor(
     message: string,
-    readonly status: 400 | 404 | 409 | 413 | 429 | 500,
+    readonly status: 400 | 404 | 409 | 413 | 429 | 500 | 503,
   ) {
     super(message);
     this.name = "BoxError";
@@ -147,6 +149,41 @@ export class BoxService {
   /** Calls in flight per box; the idle sweep leaves a busy box alone. */
   private busy = new Map<string, number>();
   private sweeper: NodeJS.Timeout | null = null;
+  /** False while warmImage() is pulling BOX_IMAGE into microsandbox's cache. */
+  private imageReady = true;
+
+  /**
+   * Pull BOX_IMAGE when this host has not cached it. The first pull is minutes
+   * (about 1 GB; measured on thanos), longer than a client waits for a create,
+   * so it happens at startup and creates answer 503 until it is done.
+   * microsandbox has no pull on its own, so a throwaway sandbox does it.
+   */
+  async warmImage(): Promise<void> {
+    try {
+      await Image.get(env.BOX_IMAGE);
+      return;
+    } catch (error) {
+      if (!(error instanceof ImageNotFoundError)) {
+        logger.warn({ error: String(error) }, "Checking the box image failed");
+        return;
+      }
+    }
+    this.imageReady = false;
+    const name = `box-warmup-${nanoid(6)}`;
+    const t0 = Date.now();
+    logger.info({ image: env.BOX_IMAGE }, "Pulling the box image");
+    try {
+      const sandbox = await Sandbox.builder(name).image(env.BOX_IMAGE).memory(256).cpus(1).replace().createDetached();
+      await sandbox.stopAndWait().catch(() => {});
+      logger.info({ image: env.BOX_IMAGE, ms: Date.now() - t0 }, "Box image ready");
+    } catch (error) {
+      logger.error({ image: env.BOX_IMAGE, error: String(error) }, "Pulling the box image failed");
+    } finally {
+      // A failed pull is retried by the next create, which then reports the error.
+      this.imageReady = true;
+      await this.removeVm(name);
+    }
+  }
 
   /** Create a box, or with `boxId`, reattach to one the caller owns (starting it if stopped). */
   async create(owner: BoxOwner, boxId?: string): Promise<BoxInfo> {
@@ -155,6 +192,7 @@ export class BoxService {
       return this.info(await this.row(owner, boxId));
     }
 
+    this.assertImageReady();
     await this.reserve(owner.tenantId);
     const id = `box_${nanoid(12)}`;
     try {
@@ -351,6 +389,12 @@ export class BoxService {
     return row;
   }
 
+  private assertImageReady(): void {
+    if (!this.imageReady) {
+      throw new BoxError("The box image is still downloading on this host; retry in a minute", 503);
+    }
+  }
+
   /** Count a box against the tenant's sandbox limit, as run_sandbox does. */
   private async reserve(tenantId: string): Promise<void> {
     if (!(await tenantService.canCreateSandbox(tenantId))) {
@@ -426,6 +470,7 @@ export class BoxService {
       }
     }
     if (!sandbox) {
+      this.assertImageReady();
       const workspace = row.workspacePath ?? (await volumeService.provisionBox(row.ownerId, row.id));
       const builder = Sandbox.builder(row.id)
         .image(row.image)

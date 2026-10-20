@@ -7,6 +7,7 @@ const vm = vi.hoisted(() => {
   class ExecTimeoutError extends Error {}
   class SandboxNotFoundError extends Error {}
   class SandboxStillRunningError extends Error {}
+  class ImageNotFoundError extends Error {}
   const files = new Map<string, Buffer>();
   const state = {
     created: [] as string[],
@@ -15,6 +16,9 @@ const vm = vi.hoisted(() => {
     stopped: [] as string[],
     commands: [] as string[],
     running: new Set<string>(),
+    imageCached: true,
+    /** Holds createDetached until released, to catch a create mid-pull. */
+    gate: null as Promise<void> | null,
   };
   const sandbox = (name: string) => ({
     execWith: async (cmd: string, configure: (b: any) => any) => {
@@ -49,6 +53,8 @@ const vm = vi.hoisted(() => {
   const Sandbox = {
     builder: (name: string) =>
       chain(async () => {
+        if (state.gate) await state.gate;
+        state.imageCached = true;
         state.created.push(name);
         state.running.add(name);
         return sandbox(name);
@@ -66,13 +72,31 @@ const vm = vi.hoisted(() => {
     remove: async (name: string) => void state.removed.push(name),
   };
   const NetworkPolicy = { builder: () => chain(async () => ({})) };
-  return { state, files, Sandbox, NetworkPolicy, ExecTimeoutError, SandboxNotFoundError, SandboxStillRunningError };
+  const Image = {
+    get: async (ref: string) => {
+      if (!state.imageCached) throw new ImageNotFoundError(`image not found: ${ref}`);
+      return { reference: ref };
+    },
+  };
+  return {
+    state,
+    files,
+    Sandbox,
+    NetworkPolicy,
+    Image,
+    ExecTimeoutError,
+    ImageNotFoundError,
+    SandboxNotFoundError,
+    SandboxStillRunningError,
+  };
 });
 
 vi.mock("microsandbox", () => ({
   Sandbox: vm.Sandbox,
   NetworkPolicy: vm.NetworkPolicy,
+  Image: vm.Image,
   ExecTimeoutError: vm.ExecTimeoutError,
+  ImageNotFoundError: vm.ImageNotFoundError,
   SandboxNotFoundError: vm.SandboxNotFoundError,
   SandboxStillRunningError: vm.SandboxStillRunningError,
 }));
@@ -249,5 +273,30 @@ describe("agent boxes", () => {
     expect(rowA.status).toBe("stopped");
     expect(rowB.status).toBe("running");
     expect(await activeCount()).toBe(1);
+  });
+
+  it("pulls a missing image at startup and answers 503 to creates until it is cached", async () => {
+    vm.state.imageCached = false;
+    let release!: () => void;
+    vm.state.gate = new Promise((r) => (release = r));
+    const warming = boxService.warmImage();
+    await new Promise((r) => setTimeout(r, 10));
+
+    const early = await request(app).post("/api/boxes").set("Authorization", alice);
+    expect(early.status).toBe(503);
+    expect(early.body.error).toMatch(/retry/);
+    expect(await activeCount()).toBe(0);
+
+    vm.state.gate = null;
+    release();
+    await warming;
+    expect(vm.state.removed.some((n) => n.startsWith("box-warmup-"))).toBe(true);
+    expect((await request(app).post("/api/boxes").set("Authorization", alice)).status).toBe(201);
+  });
+
+  it("skips the pull when the image is already cached", async () => {
+    const before = vm.state.created.length;
+    await boxService.warmImage();
+    expect(vm.state.created.length).toBe(before);
   });
 });

@@ -174,8 +174,12 @@ POST /api/boxes/box_mG6f118Otufb/exec  {"command": "apt-get install -y -qq jq >/
   "stderr": "", "duration_ms": 9131, "timed_out": false, "truncated": false } }
 ```
 
+On a host that has not cached `BOX_IMAGE`, the API pulls it in the background at startup (about
+1 GB unpacked; over 10 minutes on a busy host) and answers `503` to box creates until it is done,
+so a client is told to retry instead of waiting out its own timeout.
+
 Measured on an M-series Mac (microsandbox's darwin-arm64 build): a box boots in ~0.3 s once
-the image is cached (the first pull of the image takes a few minutes), restarts after a stop in
+the image is cached, restarts after a stop in
 ~0.2 s, `apt-get update && apt-get install jq` takes 9 s. Before stopping a box the API runs
 `sync` in it: without it, writes from the last seconds were lost on restart. `/workspace` is a
 JuiceFS directory (`workspaces/<owner>/boxes/<box id>`) with `JFS_ENABLED=true`, otherwise a

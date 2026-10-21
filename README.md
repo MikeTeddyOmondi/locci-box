@@ -34,7 +34,7 @@ A B2B platform that lets businesses and AI agents run untrusted code safely insi
 | `c` | GCC 16.2 (`gcc:16.2`) | `gcc main.c -lm && ./main` |
 | `cpp` | GCC 16.2, C++23 (`gcc:16.2`) | `g++ -std=c++23 main.cpp && ./main` |
 
-The code is written to a file in the sandbox's scratch folder and run from there, so Go, Rust, C and C++ take a whole program (`package main` and `func main`, `fn main`, `int main`). Each image is the latest stable release pinned to its minor version. Compilers get at least 512 MB (Go, Rust) or 256 MB (C, C++). Measured on an M-series Mac with the images cached: Python, Node, Bash, Ruby and C in 0.2 to 0.4 s, Rust 0.6 s, C++ 0.9 s, Go 4.6 s (it builds the standard library into a fresh cache each run). The first run of a language pulls its image (gcc is about 1.4 GB).
+The code is written to a file in the sandbox's scratch folder and run from there, so Go, Rust, C and C++ take a whole program (`package main` and `func main`, `fn main`, `int main`). Each image is the latest stable release pinned to its minor version. Compilers get at least 512 MB (Go, Rust) or 256 MB (C, C++). Compiling has its own 120 s limit; `timeout` limits the program's run (a run past it answers `status: "timeout"`, exit code 124), and a compile error comes back as the compiler's output and exit code. Go builds its standard library into its cache on first use (4.6 s per run on an M-series Mac, 280 s on a busy 2-core host), so the API builds it once per Go version into `RUNTIME_CACHE_ROOT` (181 MB) and each run links it read-only into its own cache: a Go program using `encoding/json` and `net/http` then builds and runs in 1.2 s. Measured on an M-series Mac with the images cached: Python, Node, Bash, Ruby and C in 0.3 to 0.5 s, Rust 0.7 s, C++ 1.1 s, Go 1.2 s. The API pulls missing runtime images at startup (gcc is about 1.4 GB) and answers `503` for a language whose image is still downloading. Each run's microVM is deleted when it ends.
 
 ---
 
@@ -43,13 +43,8 @@ The code is written to a file in the sandbox's scratch folder and run from there
 ### Prerequisites
 
 - **Node.js 22+** and **pnpm 9+**
-- **microsandbox CLI** — required for sandbox execution (KVM-based microVMs):
-  ```bash
-  curl -fsSL https://install.microsandbox.dev | sh
-  msb start          # start the microsandbox daemon
-  msb status         # verify it's running
-  ```
-  > Requires Linux with KVM support (`/dev/kvm`). The daemon must be running before starting the API.
+- **microsandbox** (KVM-based microVMs) comes with the SDK: `pnpm install` brings `microsandbox` 0.7.8 and its platform package, which carries the runtime (`msb`, `libkrunfw`). Linux needs KVM (`/dev/kvm`); macOS runs it on Apple silicon.
+  > A runtime in `~/.microsandbox` takes precedence over the bundled one. If it is another version (an older `install.microsandbox.dev` install), set `MSB_PATH` and `MSB_LIBKRUNFW_PATH` to the bundled files, or `MSB_HOME` to a separate (short) folder: a runtime of another version migrates or cannot read the other's database. The Docker image does this in `docker-entrypoint.sh`.
 
 ### Development
 
@@ -78,10 +73,7 @@ pnpm dev:all
 See [docs/DOCKER.md](./docs/DOCKER.md) for full instructions.
 
 ```bash
-# 1. Install and start microsandbox daemon (on the host)
-curl -fsSL https://install.microsandbox.dev | sh && msb start
-
-# 2. Configure and start
+# 1. Configure and start (the microsandbox runtime ships in the image, matching the SDK)
 cp .env.example .env   # fill in ADMIN_API_KEY and JWT_SECRET
 docker compose up -d
 ```

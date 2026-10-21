@@ -1,7 +1,19 @@
 #!/bin/bash
 set -e
 
-export PATH="/root/.microsandbox/bin:$PATH"
+# Use the runtime bundled with the microsandbox SDK (explicit paths win over
+# ~/.microsandbox), and put its msb first on PATH, so the runtime, the SDK and
+# the msb CLI are always one version.
+MSB_PKG=$(find /app/node_modules -type d -path '*@superradcompany/microsandbox-linux-*' 2>/dev/null | head -1)
+if [ -n "${MSB_PKG}" ] && [ -x "${MSB_PKG}/bin/msb" ]; then
+  export MSB_PATH="${MSB_PKG}/bin/msb"
+  export MSB_LIBKRUNFW_PATH=$(ls "${MSB_PKG}"/lib/libkrunfw.so* 2>/dev/null | head -1)
+  export PATH="${MSB_PKG}/bin:$PATH"
+  echo "[entrypoint] microsandbox runtime: $("${MSB_PATH}" --version 2>/dev/null) (${MSB_PKG})"
+else
+  echo "[entrypoint] WARN: no bundled microsandbox runtime found; using ~/.microsandbox"
+  export PATH="/root/.microsandbox/bin:$PATH"
+fi
 
 # Grant all processes access to /dev/kvm (child sandbox processes need it)
 if [ -e /dev/kvm ]; then

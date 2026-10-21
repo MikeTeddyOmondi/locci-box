@@ -1,5 +1,8 @@
 import { nanoid } from "nanoid";
-import { Image, ImageNotFoundError, Sandbox, NetworkPolicy } from "microsandbox";
+import { ExecTimeoutError, Image, ImageNotFoundError, Sandbox, NetworkPolicy } from "microsandbox";
+import { existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { env } from "../config/env.js";
 import {
   SupportedLanguage,
   SandboxExecutionParams,
@@ -15,15 +18,35 @@ interface Runtime {
   /** Latest stable release, pinned to the minor version (patch updates come with a pull). */
   image: string;
   file: string;
-  /** Runs in /tmp/sandbox, where the code was written. */
+  /** Compiles in /tmp/sandbox, where the code was written; its time does not count against the run's timeout. */
+  build?: string;
+  /** Runs in /tmp/sandbox, under the run's timeout. */
   run: string;
   /** Compilers need more than the 128 MB default. */
   memory?: number;
   env?: Record<string, string>;
 }
 
+/** Compiling has its own limit: on a busy host C++ took 79 s, past any run's timeout. */
+const BUILD_TIMEOUT_MS = 120_000;
+
+/**
+ * Go builds its standard library into the build cache on first use: 4.6 s on
+ * an M-series Mac, 280 s on thanos, per run. The API builds it once per Go
+ * version into a host folder (181 MB) and mounts it read-only; each run links
+ * it into its own writable cache (0.2 s), so no run can change what another
+ * run reads.
+ */
+const GO_CACHE_MOUNT = "/opt/gocache";
+const GO_CACHE_LINK = `{ cp -as ${GO_CACHE_MOUNT} /tmp/sandbox/.gocache 2>/dev/null || mkdir -p /tmp/sandbox/.gocache; }`;
+
+/** The host folder with Go's prebuilt standard library for this image (one per Go version). */
+export function goCacheDir(image: string = RUNTIMES.go.image): string {
+  return resolve(env.RUNTIME_CACHE_ROOT, image.replace(/[^A-Za-z0-9.-]+/g, "_"));
+}
+
 // The gcc image sets GPG_KEYS and GCC_MIRRORS to lists with tabs in them, and
-// microsandbox 0.4.6's VM builder panics on them (InvalidAscii, SIGABRT at boot).
+// microsandbox's VM builder panicked on them in 0.4.6 (InvalidAscii, SIGABRT at boot).
 // They are only for building the image.
 const GCC_ENV = { GPG_KEYS: "", GCC_MIRRORS: "" };
 
@@ -35,28 +58,35 @@ export const RUNTIMES: Record<SupportedLanguage, Runtime> = {
   go: {
     image: "docker.io/library/golang:1.27-alpine",
     file: "main.go",
-    // The build cache goes to the scratch folder; GOTOOLCHAIN=local keeps go from downloading another toolchain.
-    run: "GOCACHE=/tmp/sandbox/.gocache GOTOOLCHAIN=local go run main.go",
+    // The standard library comes prebuilt (GO_CACHE_MOUNT, see goCacheDir); GOTOOLCHAIN=local
+    // keeps go from downloading another toolchain.
+    build: `${GO_CACHE_LINK} && GOCACHE=/tmp/sandbox/.gocache GOTOOLCHAIN=local go build -o main main.go`,
+    run: "./main",
     memory: 512,
   },
-  rust: { image: "docker.io/library/rust:1.99-alpine", file: "main.rs", run: "rustc -o main main.rs && ./main", memory: 512 },
-  c: { image: "docker.io/library/gcc:16.2", file: "main.c", run: "gcc -o main main.c -lm && ./main", memory: 256, env: GCC_ENV },
+  rust: { image: "docker.io/library/rust:1.99-alpine", file: "main.rs", build: "rustc -o main main.rs", run: "./main", memory: 512 },
+  c: { image: "docker.io/library/gcc:16.2", file: "main.c", build: "gcc -o main main.c -lm", run: "./main", memory: 256, env: GCC_ENV },
   cpp: {
     image: "docker.io/library/gcc:16.2",
     file: "main.cpp",
-    run: "g++ -std=c++23 -o main main.cpp && ./main",
+    build: "g++ -std=c++23 -o main main.cpp",
+    run: "./main",
     memory: 256,
     env: GCC_ENV,
   },
 };
 
-/** microsandbox's first pull of an image often fails with "Not authorized" (measured: 1 to 2 tries); a retry gets it. */
-async function withPullRetry<T>(create: () => Promise<T>): Promise<T> {
+/**
+ * microsandbox's first pull of an image often fails with "Not authorized"
+ * (measured: 1 to 2 tries, with Docker Hub's limit not reached); a retry gets
+ * it. `create` must build a new SandboxBuilder each time: create() uses it up.
+ */
+export async function withPullRetry<T>(create: () => Promise<T>): Promise<T> {
   for (let attempt = 1; ; attempt++) {
     try {
       return await create();
     } catch (error) {
-      if (attempt >= 3 || !/Not authorized/i.test(String(error))) throw error;
+      if (attempt >= 4 || !/Not authorized/i.test(String(error))) throw error;
       logger.warn({ attempt, error: String(error) }, "Image pull refused; retrying");
       await new Promise((r) => setTimeout(r, 1000 * attempt));
     }
@@ -107,10 +137,12 @@ export class SandboxService {
       const started = Date.now();
       logger.info({ image: runtime.image }, "Pulling a runtime image");
       try {
-        let builder = Sandbox.builder(name).image(runtime.image).memory(256).cpus(1).replace();
-        for (const [key, value] of Object.entries(runtime.env ?? {})) builder = builder.env(key, value);
-        const sandbox = await withPullRetry(() => builder.create());
-        await sandbox.stopAndWait().catch(() => {});
+        const sandbox = await withPullRetry(() => {
+          let builder = Sandbox.builder(name).image(runtime.image).memory(256).cpus(1).replace();
+          for (const [key, value] of Object.entries(runtime.env ?? {})) builder = builder.env(key, value);
+          return builder.create();
+        });
+        await sandbox.stopWithTimeout(15_000).catch(() => sandbox.kill().catch(() => {}));
         logger.info({ image: runtime.image, ms: Date.now() - started }, "Runtime image ready");
       } catch (error) {
         logger.error({ image: runtime.image, error: String(error) }, "Pulling a runtime image failed");
@@ -119,6 +151,48 @@ export class SandboxService {
         this.pulling.delete(runtime.image);
         await Sandbox.remove(name).catch(() => {});
       }
+    }
+    await this.warmGoCache();
+  }
+
+  /** Build Go's standard library into goCacheDir() unless it is there already. */
+  async warmGoCache(): Promise<void> {
+    const dir = goCacheDir();
+    if (existsSync(resolve(dir, ".ready"))) return;
+    // Built beside the final folder and renamed when complete, so a run never mounts half a cache.
+    const building = `${dir}.building`;
+    rmSync(building, { recursive: true, force: true });
+    mkdirSync(building, { recursive: true });
+    const name = `sbox-gocache-${nanoid(6)}`;
+    const started = Date.now();
+    logger.info({ dir }, "Building Go's standard library cache");
+    try {
+      const sandbox = await withPullRetry(() =>
+        Sandbox.builder(name)
+          .image(RUNTIMES.go.image)
+          .memory(1024)
+          .cpus(2)
+          .replace()
+          .volume("/gocache", (m) => m.bind(building))
+          .create(),
+      );
+      try {
+        const result = await sandbox.execWith("/bin/sh", (b) =>
+          b.args(["-c", "GOCACHE=/gocache GOTOOLCHAIN=local go build std"]).timeout(30 * 60_000),
+        );
+        if (result.code !== 0) throw new Error(result.stderr().slice(-500));
+      } finally {
+        await sandbox.stopWithTimeout(15_000).catch(() => sandbox.kill().catch(() => {}));
+      }
+      writeFileSync(resolve(building, ".ready"), new Date().toISOString());
+      rmSync(dir, { recursive: true, force: true });
+      renameSync(building, dir);
+      logger.info({ dir, ms: Date.now() - started }, "Go standard library cache ready");
+    } catch (error) {
+      rmSync(building, { recursive: true, force: true });
+      logger.error({ error: String(error) }, "Building Go's standard library cache failed; Go runs build it themselves");
+    } finally {
+      await Sandbox.remove(name).catch(() => {});
     }
   }
 
@@ -163,64 +237,72 @@ export class SandboxService {
         "Building microsandbox with image",
       );
 
-      // Build and create the sandbox using the builder pattern
-      let builder = Sandbox.builder(sandboxId)
-        .image(imageName)
-        .cpus(params.cpu || 1)
-        .memory(Math.max(params.memory || 128, runtime.memory ?? 128)) // MB
-        // Allowlist: deny all egress by default, allow DNS + known package registries on 443.
-        // This prevents VPS origin IP exposure via outbound traffic while still allowing installs.
-        .network((n) => n.policy(
-          NetworkPolicy.builder()
-            .defaultDeny()
-            .egress((e) => e.udp().port(53).allow((d) => d.any()))  // DNS resolution
-            .egress((e) => e.tcp().port(53).allow((d) => d.any()))  // DNS over TCP fallback
-            .egress((e) =>
-              e.tcp().port(443)
-                .allow((d) => d.domain("pypi.org"))
-                .allow((d) => d.domainSuffix("pypi.org"))
-                .allow((d) => d.domain("files.pythonhosted.org"))
-                .allow((d) => d.domain("registry.npmjs.org"))
-                .allow((d) => d.domainSuffix("npmjs.org"))
-                .allow((d) => d.domainSuffix("alpinelinux.org"))
-            )
-            .build()
-        ));
-
-      for (const [key, value] of Object.entries(runtime.env ?? {})) {
-        builder = builder.env(key, value);
-      }
-      // Add environment variables if provided
-      if (params.env) {
-        for (const [key, value] of Object.entries(params.env)) {
-          builder = builder.env(key, value);
-        }
-      }
-
+      const timeoutMs = (params.timeout || 30) * 1000;
       // Provision persistent workspace (no-op tmpfs fallback when JFS_ENABLED=false)
       const volumes = await volumeService.provision(tenantId, sandboxId);
 
-      // /workspace — JuiceFS bind when available, tmpfs fallback otherwise
-      if (volumes.workspace) {
-        builder = builder.volume("/workspace", (m) =>
-          m.bind(volumes.workspace!),
-        );
-      } else {
-        builder = builder.volume("/workspace", (m) => m.tmpfs().size(512));
-      }
+      // A builder is used up by create(), so a retried pull needs a new one.
+      const makeBuilder = () => {
+        let builder = Sandbox.builder(sandboxId)
+          .image(imageName)
+          // A backstop if the API dies mid-run: the VM stops itself.
+          .maxDuration(Math.ceil((timeoutMs + BUILD_TIMEOUT_MS) / 1000) + 60)
+          .cpus(params.cpu || 1)
+          .memory(Math.max(params.memory || 128, runtime.memory ?? 128)) // MB
+          // Allowlist: deny all egress by default, allow DNS + known package registries on 443.
+          // This prevents VPS origin IP exposure via outbound traffic while still allowing installs.
+          .network((n) => n.policy(
+            NetworkPolicy.builder()
+              .defaultDeny()
+              .egress((e) => e.udp().port(53).allow((d) => d.any()))  // DNS resolution
+              .egress((e) => e.tcp().port(53).allow((d) => d.any()))  // DNS over TCP fallback
+              .egress((e) =>
+                e.tcp().port(443)
+                  .allow((d) => d.domain("pypi.org"))
+                  .allow((d) => d.domainSuffix("pypi.org"))
+                  .allow((d) => d.domain("files.pythonhosted.org"))
+                  .allow((d) => d.domain("registry.npmjs.org"))
+                  .allow((d) => d.domainSuffix("npmjs.org"))
+                  .allow((d) => d.domainSuffix("alpinelinux.org"))
+              )
+              .build()
+          ));
 
-      // /shared — read-only shared datasets, only when the directory exists
-      if (volumes.shared) {
-        builder = builder.volume("/shared", (m) =>
-          m.bind(volumes.shared!).readonly(),
-        );
-      }
+        for (const [key, value] of Object.entries(runtime.env ?? {})) {
+          builder = builder.env(key, value);
+        }
+        // Add environment variables if provided
+        if (params.env) {
+          for (const [key, value] of Object.entries(params.env)) {
+            builder = builder.env(key, value);
+          }
+        }
 
-      // /tmp/sandbox — always ephemeral tmpfs scratch, zero cleanup cost
-      builder = builder.volume("/tmp/sandbox", (m) => m.tmpfs().size(256));
+        // /workspace: JuiceFS bind when available, tmpfs fallback otherwise
+        if (volumes.workspace) {
+          builder = builder.volume("/workspace", (m) =>
+            m.bind(volumes.workspace!),
+          );
+        } else {
+          builder = builder.volume("/workspace", (m) => m.tmpfs().size(512));
+        }
 
-      const ready = builder;
-      sandbox = await withPullRetry(() => ready.create());
+        // /shared: read-only shared datasets, only when the directory exists
+        if (volumes.shared) {
+          builder = builder.volume("/shared", (m) =>
+            m.bind(volumes.shared!).readonly(),
+          );
+        }
+
+        // /tmp/sandbox: always ephemeral tmpfs scratch, zero cleanup cost
+        builder = builder.volume("/tmp/sandbox", (m) => m.tmpfs().size(256));
+        if (params.language === "go" && existsSync(resolve(goCacheDir(), ".ready"))) {
+          builder = builder.volume(GO_CACHE_MOUNT, (m) => m.bind(goCacheDir()).readonly());
+        }
+        return builder;
+      };
+
+      sandbox = await withPullRetry(() => makeBuilder().create());
 
       logger.debug(
         { sandbox_id: sandboxId },
@@ -242,13 +324,31 @@ export class SandboxService {
       // The code goes in a file, not an argument: compilers need one, and
       // an argument is capped at 128 KB by the kernel.
       await sandbox.fs().write(`/tmp/sandbox/${runtime.file}`, Buffer.from(params.code));
-      const result = await sandbox.shell(`cd /tmp/sandbox && ${runtime.run}`);
+      const live = sandbox;
+      const sh = (script: string, ms: number) =>
+        live.execWith("/bin/sh", (b) => b.args(["-c", `cd /tmp/sandbox && ${script}`]).timeout(ms));
+      let result: { code: number; stdout: () => string; stderr: () => string };
+      let status: SandboxStatus = "completed";
+      let phase: "build" | "run" = "build";
+      try {
+        const built = runtime.build ? await sh(runtime.build, BUILD_TIMEOUT_MS) : null;
+        phase = "run";
+        // A failed compile is the answer: its errors, its exit code.
+        result = built && built.code !== 0 ? built : await sh(runtime.run, timeoutMs);
+      } catch (error) {
+        if (!(error instanceof ExecTimeoutError)) throw error;
+        status = "timeout";
+        const stopped =
+          phase === "build"
+            ? `Compiling stopped after ${BUILD_TIMEOUT_MS / 1000} s.`
+            : `Stopped after ${Math.round(timeoutMs / 1000)} s (the run's time limit).`;
+        result = { code: 124, stdout: () => "", stderr: () => stopped };
+      }
 
       const duration = Date.now() - startTime;
 
       // Determine status based on exit code
-      let status: SandboxStatus = "completed";
-      if (result.code !== 0) {
+      if (status !== "timeout" && result.code !== 0) {
         status = "failed";
       }
 
@@ -439,8 +539,8 @@ export class SandboxService {
     await volumeService.cleanup(sandboxData.info.tenant_id, sandboxId);
 
     try {
-      // Try graceful stop first
-      await sandboxData.instance.stop();
+      // Try graceful stop first (bounded: stop() alone waits for as long as it takes)
+      await sandboxData.instance.stopWithTimeout(10_000);
       logger.debug(
         { sandbox_id: sandboxId },
         "Microsandbox cleaned up gracefully",
@@ -466,6 +566,18 @@ export class SandboxService {
     }
 
     this.activeSandboxes.delete(sandboxId);
+    // A run is never resumed: delete its VM and disk, or every run stays in
+    // ~/.microsandbox/sandboxes (about 120 piled up on a dev Mac). A stop can
+    // still be finishing, so retry briefly.
+    for (let attempt = 0; attempt < 20; attempt++) {
+      try {
+        await Sandbox.remove(sandboxId);
+        return;
+      } catch (error) {
+        if (!/still running|StillRunning/i.test(String(error))) return;
+        await new Promise((r) => setTimeout(r, 500));
+      }
+    }
   }
 }
 

@@ -17,7 +17,7 @@ const vm = vi.hoisted(() => {
     commands: [] as string[],
     running: new Set<string>(),
     imageCached: true,
-    /** Holds createDetached until released, to catch a create mid-pull. */
+    /** Holds create until released, to catch a create mid-pull. */
     gate: null as Promise<void> | null,
   };
   const sandbox = (name: string) => ({
@@ -42,14 +42,14 @@ const vm = vi.hoisted(() => {
       stat: async (p: string) => ({ kind: "file", size: files.get(p)!.length }),
       read: async (p: string) => files.get(p)!,
     }),
-    stopAndWait: async () => {
+    stopWithTimeout: async () => {
       state.stopped.push(name);
       state.running.delete(name);
     },
     kill: async () => state.running.delete(name),
   });
   const chain = (onCreate: () => any): any =>
-    new Proxy({}, { get: (_t, key) => (key === "createDetached" ? onCreate : () => chain(onCreate)) });
+    new Proxy({}, { get: (_t, key) => (key === "create" ? onCreate : () => chain(onCreate)) });
   const Sandbox = {
     builder: (name: string) =>
       chain(async () => {

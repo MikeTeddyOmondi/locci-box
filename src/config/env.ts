@@ -90,6 +90,8 @@ const EnvSchema = v.object({
   BOX_EXEC_MAX_SECONDS: v.optional(v.pipe(v.string(), v.transform(Number), v.minValue(1)), "600"),
   // Where a box's /workspace lives when JuiceFS is off (a host directory, so it survives a stop)
   BOX_LOCAL_ROOT: v.optional(v.string(), "./data/boxes"),
+  // Prebuilt toolchain caches for run_sandbox (Go's standard library), one folder per image.
+  RUNTIME_CACHE_ROOT: v.optional(v.string(), "./data/runtime-cache"),
 });
 
 /**
@@ -124,6 +126,7 @@ function parseEnv() {
       BOX_EXEC_TIMEOUT_SECONDS: process.env.BOX_EXEC_TIMEOUT_SECONDS,
       BOX_EXEC_MAX_SECONDS: process.env.BOX_EXEC_MAX_SECONDS,
       BOX_LOCAL_ROOT: process.env.BOX_LOCAL_ROOT,
+      RUNTIME_CACHE_ROOT: process.env.RUNTIME_CACHE_ROOT,
     });
 
     return parsed;

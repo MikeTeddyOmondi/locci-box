@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **microsandbox SDK 0.4.6 to 0.7.8**, with the runtime taken from the SDK's platform package: the Docker image no longer runs `install.microsandbox.dev` (unpinned, it installed msb 0.7.8 beside SDK 0.4.6, and running that msb migrated the database to a schema the SDK could not read); `docker-entrypoint.sh` sets `MSB_PATH` and `MSB_LIBKRUNFW_PATH` to the bundled files. API changes: `createDetached()` is `.detached(true).create()`, `stopAndWait()` is `stopWithTimeout(ms)` then `kill()`, and a builder is used up by `create()`, so a retried pull builds a new one.
+- **`run_sandbox` limits are enforced**: compiling (Go, Rust, C, C++) has its own 120 s limit, and `timeout` stops the program itself (`status: "timeout"`, exit code 124); before, a 30 s run of Go took 280 s on thanos. A compile error answers with the compiler's output. Go's standard library is built once per Go version into `RUNTIME_CACHE_ROOT` and linked read-only into each run (Go with `encoding/json` and `net/http`: 1.2 s, was 4.6 s for `fmt` alone on a Mac). Each run's microVM is deleted when it ends, so `~/.microsandbox/sandboxes` no longer keeps every run.
 - **`compose.yaml`** — `valkey`, `juicefs-init`, and `juicefs` services added under the `jfs` profile (data blocks in an external S3/RustFS store); JuiceFS client image is `juicedata/mount:ce-v1.3.1` (note: `juicedata/juicefs:latest` is a Docker *plugin*, not a runnable image); api service gains `JFS_*` env vars and the `/mnt/locci-box:/mnt/locci-box:shared` FUSE mount; `valkey-data` + `jfs-cache` volumes and a named `locci-box-default` network added.
 
 ### Fixed

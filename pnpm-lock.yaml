@@ -45,8 +45,8 @@ importers:
         specifier: ^9.0.3
         version: 9.0.3
       microsandbox:
-        specifier: ^0.4.6
-        version: 0.4.6
+        specifier: 0.7.8
+        version: 0.7.8
       nanoid:
         specifier: ^5.0.3
         version: 5.1.11
@@ -1311,6 +1311,9 @@ packages:
   '@mermaid-js/parser@1.1.1':
     resolution: {integrity: sha512-VuHdsYMK1bT6X2JbcAaWAhugTRvRBRyuZgd+c22swUeI9g/ntaxF7CY7dYarhZovofCbUNO0G7JesfmNtjYOCw==}
 
+  '@microsandbox/types@0.7.8':
+    resolution: {integrity: sha512-GCLuiSbTXU/5s8/VhyQzRc8AtDyz4uaIk3fP0GbWAPvj2xJfR7rpUr51UYZIFd9ONwAqa7XEfpyr8jnlFInkhA==}
+
   '@modelcontextprotocol/sdk@1.29.0':
     resolution: {integrity: sha512-zo37mZA9hJWpULgkRpowewez1y6ML5GsXJPY8FI0tBBCd77HEvza4jDqRKOXgHNn867PVGCyTdzqpz0izu5ZjQ==}
     engines: {node: '>=18'}
@@ -2357,25 +2360,37 @@ packages:
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
 
-  '@superradcompany/microsandbox-darwin-arm64@0.4.6':
-    resolution: {integrity: sha512-/TC09DAubzS73B1Lo6uY35ybwpZQQueE7kdAmd3CCmdk9Yl4V31A+8vnLSYk409oaK1URKaa3V5UTnGSYWwtXA==}
+  '@superradcompany/microsandbox-darwin-arm64@0.7.8':
+    resolution: {integrity: sha512-WoTlB2b06o32AXW3D3Xp6GLiSoAXGNqNikbakA/RP2Uqj2Z8mfoDZ7mYKONLG7PXUAWu/vTTqJkOtVt8JFEWvA==}
     engines: {node: '>= 22'}
     cpu: [arm64]
     os: [darwin]
 
-  '@superradcompany/microsandbox-linux-arm64-gnu@0.4.6':
-    resolution: {integrity: sha512-IaS21OrfxYIzlc6Coxp/eY+SYh9qer4zYX9pvp3jAq7+qpG0aKWzL+GyO4HNeDEKkiZpa1iE6OghhvHmMIt1vA==}
+  '@superradcompany/microsandbox-linux-arm64-gnu@0.7.8':
+    resolution: {integrity: sha512-NRm8GVXlgoPsLYX8BovMTwg4oNWiT0EZp34+6zM7s7slhCbv3TItebbg6urKj8yqKoLP1T+OHH/7Y/RnD9omZw==}
     engines: {node: '>= 22'}
     cpu: [arm64]
     os: [linux]
     libc: [glibc]
 
-  '@superradcompany/microsandbox-linux-x64-gnu@0.4.6':
-    resolution: {integrity: sha512-UqLB/sPfXCwQI8o8pyA31J2q3IvZXYMl3Wo9xDn+C2keIkamGydQiPvroUcJasKfrNH9MUpTZOPKETpFG5qS0Q==}
+  '@superradcompany/microsandbox-linux-x64-gnu@0.7.8':
+    resolution: {integrity: sha512-4AnLhlDSvgzQPTrKcd6kCpCpgPWq275sGWTy7tg1deo42lU0PXKtwnaUlBx7uBdQO4YFIGfIx0T8lgsGO9h5EA==}
     engines: {node: '>= 22'}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
+
+  '@superradcompany/microsandbox-win32-arm64-msvc@0.7.8':
+    resolution: {integrity: sha512-wwXD/B9JwmyDAhrkX2V4L4VHVumDK1JbMnUFTOuNCoozyeNV4fogL+BziINp3HeInBTbKOJrAI7+A8kTawKfPA==}
+    engines: {node: '>= 22'}
+    cpu: [arm64]
+    os: [win32]
+
+  '@superradcompany/microsandbox-win32-x64-msvc@0.7.8':
+    resolution: {integrity: sha512-m11kPzyaid/DMXK5kJRvDZEGkdlvndmOzfjNjfhqpL+LFQssnJgQ2WSyYfBQMrHj17pRfDkDxqwZPr9iXZoSMw==}
+    engines: {node: '>= 22'}
+    cpu: [x64]
+    os: [win32]
 
   '@tabby_ai/hijri-converter@1.0.5':
     resolution: {integrity: sha512-r5bClKrcIusDoo049dSL8CawnHR6mRdDwhlQuIgZRNty68q0x8k3Lf1BtPAMxRf/GgnHBnIO4ujd3+GQdLWzxQ==}
@@ -4708,8 +4723,8 @@ packages:
     resolution: {integrity: sha512-PXwfBhYu0hBCPw8Dn0E+WDYb7af3dSLVWKi3HGv84IdF4TyFoC0ysxFd0Goxw7nSv4T/PzEJQxsYsEiFCKo2BA==}
     engines: {node: '>=8.6'}
 
-  microsandbox@0.4.6:
-    resolution: {integrity: sha512-6uS+pF8E2gJjiI9MIXKjclRqQEJXZSWzXJs+ejLcO1zEn7/Vzrzv5G0q4p/w73XFyyFFEVhmndI+Uws7ysR18Q==}
+  microsandbox@0.7.8:
+    resolution: {integrity: sha512-bUll2JNeVhAdvtlemsD5rNkVpLU0KQSXVpuSjXFmkG6Z52Z2ZL9sP8hAdFT8pIGoEPLj+OB9ohgFEPsJgBVkFg==}
     engines: {node: '>= 22'}
     hasBin: true
 
@@ -6661,6 +6676,8 @@ snapshots:
     dependencies:
       '@chevrotain/types': 11.1.2
 
+  '@microsandbox/types@0.7.8': {}
+
   '@modelcontextprotocol/sdk@1.29.0(zod@4.4.3)':
     dependencies:
       '@hono/node-server': 1.19.14(hono@4.12.18)
@@ -7667,13 +7684,19 @@ snapshots:
       mermaid: 11.15.0
       react: 19.2.6
 
-  '@superradcompany/microsandbox-darwin-arm64@0.4.6':
+  '@superradcompany/microsandbox-darwin-arm64@0.7.8':
     optional: true
 
-  '@superradcompany/microsandbox-linux-arm64-gnu@0.4.6':
+  '@superradcompany/microsandbox-linux-arm64-gnu@0.7.8':
     optional: true
 
-  '@superradcompany/microsandbox-linux-x64-gnu@0.4.6':
+  '@superradcompany/microsandbox-linux-x64-gnu@0.7.8':
+    optional: true
+
+  '@superradcompany/microsandbox-win32-arm64-msvc@0.7.8':
+    optional: true
+
+  '@superradcompany/microsandbox-win32-x64-msvc@0.7.8':
     optional: true
 
   '@tabby_ai/hijri-converter@1.0.5': {}
@@ -10473,11 +10496,15 @@ snapshots:
       braces: 3.0.3
       picomatch: 2.3.2
 
-  microsandbox@0.4.6:
+  microsandbox@0.7.8:
+    dependencies:
+      '@microsandbox/types': 0.7.8
     optionalDependencies:
-      '@superradcompany/microsandbox-darwin-arm64': 0.4.6
-      '@superradcompany/microsandbox-linux-arm64-gnu': 0.4.6
-      '@superradcompany/microsandbox-linux-x64-gnu': 0.4.6
+      '@superradcompany/microsandbox-darwin-arm64': 0.7.8
+      '@superradcompany/microsandbox-linux-arm64-gnu': 0.7.8
+      '@superradcompany/microsandbox-linux-x64-gnu': 0.7.8
+      '@superradcompany/microsandbox-win32-arm64-msvc': 0.7.8
+      '@superradcompany/microsandbox-win32-x64-msvc': 0.7.8
 
   mime-db@1.52.0: {}
 

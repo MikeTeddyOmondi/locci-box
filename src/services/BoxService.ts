@@ -16,6 +16,7 @@ import { env } from "../config/env.js";
 import { logger } from "../utils/logger.js";
 import { tenantService } from "./TenantService.js";
 import { volumeService } from "./VolumeService.js";
+import { withPullRetry } from "./SandboxService.js";
 
 /**
  * Agent boxes: a microVM an AI works in the way a person works in a VM. Unlike
@@ -173,8 +174,10 @@ export class BoxService {
     const t0 = Date.now();
     logger.info({ image: env.BOX_IMAGE }, "Pulling the box image");
     try {
-      const sandbox = await Sandbox.builder(name).image(env.BOX_IMAGE).memory(256).cpus(1).replace().createDetached();
-      await sandbox.stopAndWait().catch(() => {});
+      const sandbox = await withPullRetry(() =>
+        Sandbox.builder(name).image(env.BOX_IMAGE).memory(256).cpus(1).replace().detached(true).create(),
+      );
+      await sandbox.stopWithTimeout(STOP_WAIT_MS).catch(() => sandbox.kill().catch(() => {}));
       logger.info({ image: env.BOX_IMAGE, ms: Date.now() - t0 }, "Box image ready");
     } catch (error) {
       logger.error({ image: env.BOX_IMAGE, error: String(error) }, "Pulling the box image failed");
@@ -472,7 +475,8 @@ export class BoxService {
     if (!sandbox) {
       this.assertImageReady();
       const workspace = row.workspacePath ?? (await volumeService.provisionBox(row.ownerId, row.id));
-      const builder = Sandbox.builder(row.id)
+      const makeBuilder = () =>
+        Sandbox.builder(row.id)
         .image(row.image)
         .memory(row.memoryMib)
         .cpus(env.BOX_CPUS)
@@ -481,10 +485,12 @@ export class BoxService {
         // A backstop for an API that died without stopping it; the sweep normally stops it first.
         .maxDuration(env.BOX_MAX_HOURS * 3600 + 600)
         .volume(WORKDIR, (m) => m.bind(workspace))
-        // policyFromBuilder: the JSON route (`.policy()`) sends "link-local",
-        // which microsandbox 0.4.6's parser rejects.
-        .network((n) => n.policyFromBuilder(boxNetworkPolicy()));
-      sandbox = await builder.createDetached();
+        // policyFromBuilder: in 0.4.6 the JSON route (`.policy()`) sent
+        // "link-local", which microsandbox's own parser rejected.
+        .network((n) => n.policyFromBuilder(boxNetworkPolicy()))
+        // Detached: the VM outlives this API process (reattached after a restart).
+        .detached(true);
+      sandbox = await withPullRetry(() => makeBuilder().create());
     }
     this.live.set(row.id, sandbox);
     return sandbox;
@@ -497,18 +503,12 @@ export class BoxService {
     if (sandbox) {
       // Without sync, writes from the last seconds were lost on restart (measured).
       await sandbox.execWith("/bin/sync", (b) => b.timeout(10_000)).catch(() => {});
-      const ok = await Promise.race([
-        sandbox.stopAndWait().then(
-          () => true,
-          () => false,
-        ),
-        new Promise<false>((r) => setTimeout(() => r(false), STOP_WAIT_MS).unref()),
-      ]);
-      if (!ok) await sandbox.kill().catch(() => {});
+      // stopWithTimeout throws at the deadline without killing; then kill.
+      await sandbox.stopWithTimeout(STOP_WAIT_MS).catch(() => sandbox.kill().catch(() => {}));
     } else if (row.status === "running") {
       // Held by an earlier API process: stop it by name.
       await Sandbox.get(row.id)
-        .then((h) => h.stop())
+        .then((h) => h.stopWithTimeout(STOP_WAIT_MS).catch(() => h.kill()))
         .catch((error) => {
           if (!(error instanceof SandboxNotFoundError)) {
             logger.warn({ box_id: row.id, error: String(error) }, "Stopping a box by name failed");

@@ -61,6 +61,24 @@ loccibox run -l bash -c "echo \$HOSTNAME"
 loccibox run -l node -f index.js -t 60
 ```
 
+### `box`
+Agent boxes from the terminal, the same operations as the `box_*` MCP tools. A box is a Debian microVM (apt, git, curl, gcc, Python 3, Node 22) that keeps running between calls and keeps its disk after a stop; work happens in `/workspace`.
+```bash
+loccibox box create                          # prints the new box id
+loccibox box create --attach <box_id>        # start or reattach to one
+loccibox box ls                              # your boxes, running and stopped
+loccibox box info <box_id>
+loccibox box exec <box_id> -- ls -la         # put -- before a command with flags
+loccibox box exec <box_id> 'apt-get install -y jq' -t 300
+loccibox box shell <box_id>                  # interactive: each line runs in the box, cd is remembered
+loccibox box write <box_id> app.py -f ./app.py
+echo 'print(1)' | loccibox box write <box_id> one.py
+loccibox box read <box_id> app.py [-o ./app.py]
+loccibox box stop <box_id> [--rm]            # stop keeps the disk; --rm deletes it
+loccibox box rm <box_id>
+```
+`exec` prints the command's stdout and stderr as they are and exits with its exit code, so it works in scripts and pipes. In `shell` each line is its own `sh -c` (variables and background jobs do not carry over; the folder, files and installs do).
+
 ### `sandboxes`
 List all currently running sandboxes — recover IDs when a response was lost.
 ```bash

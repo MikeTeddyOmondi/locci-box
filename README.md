@@ -212,6 +212,9 @@ loccibox init                                     # configure API URL + key
 loccibox run -l python -c "print('hello')"        # run code
 loccibox run -l node   -f script.js               # run file
 loccibox status <sandbox-id>                      # check status
+loccibox box create                               # an agent box (prints its id)
+loccibox box shell <box-id>                       # work in it interactively
+loccibox box exec <box-id> -- python3 --version   # one command, its exit code
 loccibox metrics                                  # view usage
 ```
 

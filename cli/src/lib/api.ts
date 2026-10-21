@@ -6,6 +6,9 @@ import type {
   StatsData,
   ApiResponse,
   ApiKey,
+  BoxInfo,
+  BoxExecResult,
+  BoxFile,
 } from "../types/index.js";
 
 /**
@@ -57,6 +60,59 @@ export class LocciBoxAPI {
     await this.request(`/api/sandbox/${sandboxId}`, {
       method: "DELETE",
     });
+  }
+
+  /** Create a box, or with `boxId` reattach to one (starting it if stopped). */
+  async createBox(boxId?: string): Promise<BoxInfo> {
+    return this.request<BoxInfo>("/api/boxes", {
+      method: "POST",
+      body: JSON.stringify(boxId ? { box_id: boxId } : {}),
+    });
+  }
+
+  /** Your boxes, running and stopped. */
+  async listBoxes(): Promise<BoxInfo[]> {
+    return this.request<BoxInfo[]>("/api/boxes");
+  }
+
+  async getBox(boxId: string): Promise<BoxInfo> {
+    return this.request<BoxInfo>(`/api/boxes/${encodeURIComponent(boxId)}`);
+  }
+
+  /** Run a shell command in the box (sh -c, in /workspace); `timeout` in seconds. */
+  async execBox(boxId: string, command: string, timeout?: number): Promise<BoxExecResult> {
+    return this.request<BoxExecResult>(`/api/boxes/${encodeURIComponent(boxId)}/exec`, {
+      method: "POST",
+      body: JSON.stringify({ command, timeout }),
+    });
+  }
+
+  async writeBoxFile(
+    boxId: string,
+    path: string,
+    content: string,
+    encoding: "utf8" | "base64" = "utf8",
+  ): Promise<{ box_id: string; path: string; size: number }> {
+    return this.request(`/api/boxes/${encodeURIComponent(boxId)}/files`, {
+      method: "PUT",
+      body: JSON.stringify({ path, content, encoding }),
+    });
+  }
+
+  async readBoxFile(boxId: string, path: string): Promise<BoxFile> {
+    return this.request<BoxFile>(
+      `/api/boxes/${encodeURIComponent(boxId)}/files?path=${encodeURIComponent(path)}`,
+    );
+  }
+
+  /** Stop a box, keeping its disk; it starts again on the next call. */
+  async stopBox(boxId: string): Promise<BoxInfo> {
+    return this.request<BoxInfo>(`/api/boxes/${encodeURIComponent(boxId)}/stop`, { method: "POST" });
+  }
+
+  /** Delete a box and its /workspace. */
+  async removeBox(boxId: string): Promise<void> {
+    await this.request(`/api/boxes/${encodeURIComponent(boxId)}`, { method: "DELETE" });
   }
 
   /**

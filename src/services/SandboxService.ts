@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import { Sandbox, NetworkPolicy } from "microsandbox";
+import { Image, ImageNotFoundError, Sandbox, NetworkPolicy } from "microsandbox";
 import {
   SupportedLanguage,
   SandboxExecutionParams,
@@ -73,6 +73,54 @@ export class SandboxService {
     string,
     { info: SandboxInfo; instance: Sandbox }
   > = new Map();
+  /** Images warmImages() is still pulling; a run that needs one answers 503 meanwhile. */
+  private pulling = new Set<string>();
+
+  /** True while this language's image is being pulled at startup. */
+  imagePending(language: string): boolean {
+    const runtime = RUNTIMES[language as SupportedLanguage];
+    return !!runtime && this.pulling.has(runtime.image);
+  }
+
+  /**
+   * Pull the images this host has not cached, one at a time, smallest first.
+   * A first pull can take longer than a client waits for its answer (Node 26
+   * took over 5 minutes on thanos), so it happens at startup instead of in a
+   * request. microsandbox has no pull on its own: a throwaway sandbox does it.
+   */
+  async warmImages(): Promise<void> {
+    const missing: Runtime[] = [];
+    const seen = new Set<string>();
+    for (const runtime of Object.values(RUNTIMES)) {
+      if (seen.has(runtime.image)) continue;
+      seen.add(runtime.image);
+      try {
+        await Image.get(runtime.image);
+      } catch (error) {
+        if (error instanceof ImageNotFoundError) missing.push(runtime);
+        else logger.warn({ image: runtime.image, error: String(error) }, "Checking a runtime image failed");
+      }
+    }
+    for (const runtime of missing) this.pulling.add(runtime.image);
+    for (const runtime of missing) {
+      const name = `sbox-warmup-${nanoid(6)}`;
+      const started = Date.now();
+      logger.info({ image: runtime.image }, "Pulling a runtime image");
+      try {
+        let builder = Sandbox.builder(name).image(runtime.image).memory(256).cpus(1).replace();
+        for (const [key, value] of Object.entries(runtime.env ?? {})) builder = builder.env(key, value);
+        const sandbox = await withPullRetry(() => builder.create());
+        await sandbox.stopAndWait().catch(() => {});
+        logger.info({ image: runtime.image, ms: Date.now() - started }, "Runtime image ready");
+      } catch (error) {
+        logger.error({ image: runtime.image, error: String(error) }, "Pulling a runtime image failed");
+      } finally {
+        // A failed pull is tried again by the next run in that language.
+        this.pulling.delete(runtime.image);
+        await Sandbox.remove(name).catch(() => {});
+      }
+    }
+  }
 
   /**
    * Execute code in a new microVM using microsandbox SDK

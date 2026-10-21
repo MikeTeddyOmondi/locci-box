@@ -16,6 +16,7 @@ vi.mock("../../src/services/SandboxService.js", () => ({
       }),
     ),
     getStatus: vi.fn().mockResolvedValue(null),
+    imagePending: vi.fn((language: string) => language === "rust"),
     stop: vi.fn().mockResolvedValue(undefined),
   },
 }));
@@ -58,6 +59,15 @@ describe("POST /api/sandbox/run", () => {
     expect(res.body.error).toMatch(/invalid language/i);
   });
 
+  it("answers 503 while the language's image is still downloading", async () => {
+    const res = await request(app)
+      .post("/api/sandbox/run")
+      .set("Authorization", `Bearer ${ADMIN_KEY}`)
+      .send({ language: "rust", code: "fn main() {}" });
+    expect(res.status).toBe(503);
+    expect(res.body.error).toMatch(/still downloading/);
+  });
+
   it("rejects code exceeding 1MB", async () => {
     const res = await request(app)
       .post("/api/sandbox/run")
@@ -81,7 +91,7 @@ describe("POST /api/sandbox/run", () => {
   });
 
   it("accepts all supported languages", async () => {
-    const langs = ["python", "node", "bash", "ruby", "go", "rust", "c", "cpp"];
+    const langs = ["python", "node", "bash", "ruby", "go", "c", "cpp"];
     for (const language of langs) {
       const res = await request(app)
         .post("/api/sandbox/run")

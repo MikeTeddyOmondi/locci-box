@@ -204,6 +204,9 @@ export function createMCPServer(): Server {
         case "run_sandbox": {
           const { language, code, timeout, api_key } = args as any;
           const tenant = await resolveTenant(resolveKey(api_key));
+          if (sandboxService.imagePending(language)) {
+            return err(`The ${language} runtime is still downloading on this host; retry in a minute`);
+          }
           const canCreate = await tenantService.canCreateSandbox(tenant.id);
           if (!canCreate) return err("Sandbox limit reached for this tenant");
           await tenantService.incrementActive(tenant.id);

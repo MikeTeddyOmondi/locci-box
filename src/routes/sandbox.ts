@@ -56,6 +56,15 @@ router.post("/run", async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    if (sandboxService.imagePending(language)) {
+      res.status(503).json({
+        success: false,
+        error: `The ${language} runtime is still downloading on this host; retry in a minute`,
+        retry_after: 60,
+      });
+      return;
+    }
+
     // Check if tenant can create new sandbox
     const canCreate = await tenantService.canCreateSandbox(tenantId);
     if (!canCreate) {

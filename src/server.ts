@@ -3,6 +3,7 @@ import { createApp } from "./app.js";
 import { logger } from "./utils/logger.js";
 import { env, isDevelopment } from "./config/env.js";
 import { boxService } from "./services/BoxService.js";
+import { sandboxService } from "./services/SandboxService.js";
 
 async function startServer() {
   try {
@@ -14,7 +15,8 @@ async function startServer() {
       logger.error({ error: String(error) }, "Reconciling boxes failed"),
     );
     boxService.startSweeper();
-    void boxService.warmImage();
+    // Then the run_sandbox runtimes, one pull at a time.
+    void boxService.warmImage().then(() => sandboxService.warmImages());
 
     const app = createApp();
 

@@ -10,7 +10,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY web/package.json ./web/
 # Generous retries: on a slow link a single tarball timed out and failed the build.
 RUN pnpm install --frozen-lockfile --filter @locci/box-web --config.node-linker=hoisted \
-    --config.fetch-retries=6 --config.fetch-timeout=300000 --config.network-concurrency=8
+    --config.fetch-retries=6 --config.fetch-timeout=300000
 
 FROM oven/bun:1-alpine AS builder
 WORKDIR /app/web

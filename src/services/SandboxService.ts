@@ -1,6 +1,7 @@
 import { nanoid } from "nanoid";
 import { Sandbox, NetworkPolicy } from "microsandbox";
 import {
+  SupportedLanguage,
   SandboxExecutionParams,
   SandboxResult,
   SandboxInfo,
@@ -8,6 +9,59 @@ import {
 } from "../types/index.js";
 import { logger } from "../utils/logger.js";
 import { volumeService } from "./VolumeService.js";
+
+/** How one language runs: its image, the file the code goes in, and the command that runs it. */
+interface Runtime {
+  /** Latest stable release, pinned to the minor version (patch updates come with a pull). */
+  image: string;
+  file: string;
+  /** Runs in /tmp/sandbox, where the code was written. */
+  run: string;
+  /** Compilers need more than the 128 MB default. */
+  memory?: number;
+  env?: Record<string, string>;
+}
+
+// The gcc image sets GPG_KEYS and GCC_MIRRORS to lists with tabs in them, and
+// microsandbox 0.4.6's VM builder panics on them (InvalidAscii, SIGABRT at boot).
+// They are only for building the image.
+const GCC_ENV = { GPG_KEYS: "", GCC_MIRRORS: "" };
+
+export const RUNTIMES: Record<SupportedLanguage, Runtime> = {
+  python: { image: "docker.io/library/python:3.15-slim", file: "main.py", run: "python3 main.py" },
+  node: { image: "docker.io/library/node:26-alpine", file: "main.js", run: "node main.js" },
+  bash: { image: "docker.io/library/bash:5.3", file: "main.sh", run: "bash main.sh" },
+  ruby: { image: "docker.io/library/ruby:4.0-alpine", file: "main.rb", run: "ruby main.rb" },
+  go: {
+    image: "docker.io/library/golang:1.27-alpine",
+    file: "main.go",
+    // The build cache goes to the scratch folder; GOTOOLCHAIN=local keeps go from downloading another toolchain.
+    run: "GOCACHE=/tmp/sandbox/.gocache GOTOOLCHAIN=local go run main.go",
+    memory: 512,
+  },
+  rust: { image: "docker.io/library/rust:1.99-alpine", file: "main.rs", run: "rustc -o main main.rs && ./main", memory: 512 },
+  c: { image: "docker.io/library/gcc:16.2", file: "main.c", run: "gcc -o main main.c -lm && ./main", memory: 256, env: GCC_ENV },
+  cpp: {
+    image: "docker.io/library/gcc:16.2",
+    file: "main.cpp",
+    run: "g++ -std=c++23 -o main main.cpp && ./main",
+    memory: 256,
+    env: GCC_ENV,
+  },
+};
+
+/** microsandbox's first pull of an image often fails with "Not authorized" (measured: 1 to 2 tries); a retry gets it. */
+async function withPullRetry<T>(create: () => Promise<T>): Promise<T> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await create();
+    } catch (error) {
+      if (attempt >= 3 || !/Not authorized/i.test(String(error))) throw error;
+      logger.warn({ attempt, error: String(error) }, "Image pull refused; retrying");
+      await new Promise((r) => setTimeout(r, 1000 * attempt));
+    }
+  }
+}
 
 /**
  * SandboxService wraps the microsandbox SDK with error handling,
@@ -19,39 +73,6 @@ export class SandboxService {
     string,
     { info: SandboxInfo; instance: Sandbox }
   > = new Map();
-
-  /**
-   * Get image name for each language runtime
-   */
-  private getImageName(language: string): string {
-    const images: Record<string, string> = {
-      python: "python:3.11-slim",
-      node: "node:20-alpine",
-      bash: "bash:5.2",
-      ruby: "ruby:3.2-alpine",
-    };
-    return images[language] || "python:3.11-slim";
-  }
-
-  /**
-   * Get the execution command and arguments for each language
-   * Uses the proper interpreter with -c or -e flags
-   */
-  private getExecutionCommand(
-    language: string,
-    code: string,
-  ): { cmd: string; args: string[] } {
-    switch (language) {
-      case "python":
-        return { cmd: "python3", args: ["-c", code] };
-      case "node":
-        return { cmd: "node", args: ["-e", code] };
-      case "ruby":
-        return { cmd: "ruby", args: ["-e", code] };
-      default:
-        throw new Error(`Unsupported language: ${language}`);
-    }
-  }
 
   /**
    * Execute code in a new microVM using microsandbox SDK
@@ -85,8 +106,9 @@ export class SandboxService {
     let sandbox: Sandbox | null = null;
 
     try {
-      // Get image for the language
-      const imageName = this.getImageName(params.language);
+      const runtime = RUNTIMES[params.language];
+      if (!runtime) throw new Error(`Unsupported language: ${params.language}`);
+      const imageName = runtime.image;
 
       logger.debug(
         { sandbox_id: sandboxId, image: imageName },
@@ -97,7 +119,7 @@ export class SandboxService {
       let builder = Sandbox.builder(sandboxId)
         .image(imageName)
         .cpus(params.cpu || 1)
-        .memory(params.memory || 128) // MB
+        .memory(Math.max(params.memory || 128, runtime.memory ?? 128)) // MB
         // Allowlist: deny all egress by default, allow DNS + known package registries on 443.
         // This prevents VPS origin IP exposure via outbound traffic while still allowing installs.
         .network((n) => n.policy(
@@ -117,6 +139,9 @@ export class SandboxService {
             .build()
         ));
 
+      for (const [key, value] of Object.entries(runtime.env ?? {})) {
+        builder = builder.env(key, value);
+      }
       // Add environment variables if provided
       if (params.env) {
         for (const [key, value] of Object.entries(params.env)) {
@@ -146,7 +171,8 @@ export class SandboxService {
       // /tmp/sandbox — always ephemeral tmpfs scratch, zero cleanup cost
       builder = builder.volume("/tmp/sandbox", (m) => m.tmpfs().size(256));
 
-      sandbox = await builder.create();
+      const ready = builder;
+      sandbox = await withPullRetry(() => ready.create());
 
       logger.debug(
         { sandbox_id: sandboxId },
@@ -165,18 +191,10 @@ export class SandboxService {
         "Executing code in microsandbox",
       );
 
-      let result;
-      if (params.language === "bash") {
-        // For bash, use shell() to execute directly
-        result = await sandbox.shell(params.code);
-      } else {
-        // For other languages, use exec() with the appropriate interpreter
-        const { cmd, args } = this.getExecutionCommand(
-          params.language,
-          params.code,
-        );
-        result = await sandbox.exec(cmd, args);
-      }
+      // The code goes in a file, not an argument: compilers need one, and
+      // an argument is capped at 128 KB by the kernel.
+      await sandbox.fs().write(`/tmp/sandbox/${runtime.file}`, Buffer.from(params.code));
+      const result = await sandbox.shell(`cd /tmp/sandbox && ${runtime.run}`);
 
       const duration = Date.now() - startTime;
 

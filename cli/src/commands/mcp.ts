@@ -18,8 +18,8 @@ const tools = [
     inputSchema: {
       type: "object",
       properties: {
-        language: { type: "string", enum: ["python", "node", "bash", "ruby"], description: "Programming language" },
-        code: { type: "string", description: "Code to execute" },
+        language: { type: "string", enum: ["python", "node", "bash", "ruby", "go", "rust", "c", "cpp"], description: "Programming language" },
+        code: { type: "string", description: "Code to execute. For go, rust, c and cpp, a complete program (package main with func main, fn main, int main)" },
         timeout: { type: "number", description: "Max execution seconds (default 30)", default: 30 },
       },
       required: ["language", "code"],

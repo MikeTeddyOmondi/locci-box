@@ -39,13 +39,17 @@ export const Route = createFileRoute("/code")({
   component: Page,
 });
 
-type Lang = "python" | "javascript" | "typescript" | "bash" | "ruby";
+type Lang = "python" | "javascript" | "typescript" | "bash" | "ruby" | "go" | "rust" | "c" | "cpp";
 const langExt: Record<Lang, string> = {
   python: "py",
   javascript: "js",
   typescript: "ts",
   bash: "sh",
   ruby: "rb",
+  go: "go",
+  rust: "rs",
+  c: "c",
+  cpp: "cpp",
 };
 
 type FileEntry = { id: string; name: string; lang: Lang; content: string };
@@ -217,11 +221,9 @@ function Page() {
     );
   };
 
-  const apiLang = (l: Lang): "python" | "node" | "bash" | "ruby" => {
+  const apiLang = (l: Lang): "python" | "node" | "bash" | "ruby" | "go" | "rust" | "c" | "cpp" => {
     if (l === "javascript" || l === "typescript") return "node";
-    if (l === "bash") return "bash";
-    if (l === "ruby") return "ruby";
-    return "python";
+    return l;
   };
 
   const run = async () => {
@@ -441,6 +443,10 @@ function Page() {
                       <SelectItem value="typescript">TypeScript</SelectItem>
                       <SelectItem value="bash">Bash</SelectItem>
                       <SelectItem value="ruby">Ruby</SelectItem>
+                      <SelectItem value="go">Go</SelectItem>
+                      <SelectItem value="rust">Rust</SelectItem>
+                      <SelectItem value="c">C</SelectItem>
+                      <SelectItem value="cpp">C++</SelectItem>
                     </SelectContent>
                   </Select>
                   <span className="w-px h-5 bg-slate-200 mx-1" />

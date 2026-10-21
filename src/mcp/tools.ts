@@ -9,6 +9,7 @@ import { sandboxService } from "../services/SandboxService.js";
 import { apiKeyService } from "../services/ApiKeyService.js";
 import { tenantService } from "../services/TenantService.js";
 import { boxService, BoxError, type BoxOwner } from "../services/BoxService.js";
+import { SUPPORTED_LANGUAGES } from "../types/index.js";
 
 const err = (text: string) => ({ isError: true, content: [{ type: "text" as const, text }] });
 
@@ -58,8 +59,8 @@ export const tools = [
     inputSchema: {
       type: "object",
       properties: {
-        language: { type: "string", enum: ["python", "node", "bash", "ruby"], description: "Programming language" },
-        code: { type: "string", description: "Code to execute in the sandbox" },
+        language: { type: "string", enum: [...SUPPORTED_LANGUAGES], description: "Programming language" },
+        code: { type: "string", description: "Code to execute. For go, rust, c and cpp, a complete program (package main with func main, fn main, int main)" },
         timeout: { type: "number", description: "Maximum execution time in seconds (default: 30)" },
         api_key: { type: "string", description: "API key (falls back to LOCCIBOX_API_KEY env var)" },
       },

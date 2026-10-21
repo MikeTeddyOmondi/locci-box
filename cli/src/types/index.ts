@@ -15,7 +15,8 @@ export interface Profile {
 /**
  * Sandbox Types
  */
-export type SupportedLanguage = "python" | "node" | "bash" | "ruby";
+export const SUPPORTED_LANGUAGES = ["python", "node", "bash", "ruby", "go", "rust", "c", "cpp"] as const;
+export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
 
 export interface RunParams {
   language: SupportedLanguage;

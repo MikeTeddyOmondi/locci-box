@@ -48,7 +48,7 @@ Execute code in an isolated sandbox.
 loccibox run [options]
 
 Options:
-  -l, --lang <language>    python | node | bash | ruby  (required)
+  -l, --lang <language>    python | node | bash | ruby | go | rust | c | cpp  (asked for when left out)
   -c, --code <code>        Inline code to execute
   -f, --file <path>        Path to a code file
   -t, --timeout <seconds>  Execution timeout in seconds (default: 30)

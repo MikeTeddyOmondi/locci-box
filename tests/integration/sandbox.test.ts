@@ -53,7 +53,7 @@ describe("POST /api/sandbox/run", () => {
     const res = await request(app)
       .post("/api/sandbox/run")
       .set("Authorization", `Bearer ${ADMIN_KEY}`)
-      .send({ language: "go", code: 'fmt.Println("hi")' });
+      .send({ language: "cobol", code: 'DISPLAY "hi".' });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/invalid language/i);
   });
@@ -81,7 +81,7 @@ describe("POST /api/sandbox/run", () => {
   });
 
   it("accepts all supported languages", async () => {
-    const langs = ["python", "node", "bash", "ruby"];
+    const langs = ["python", "node", "bash", "ruby", "go", "rust", "c", "cpp"];
     for (const language of langs) {
       const res = await request(app)
         .post("/api/sandbox/run")

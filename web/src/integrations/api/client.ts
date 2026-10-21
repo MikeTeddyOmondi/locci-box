@@ -9,7 +9,7 @@ export interface ApiResponse<T = unknown> {
 }
 
 export interface SandboxExecutionParams {
-  language: "python" | "node" | "bash" | "ruby";
+  language: "python" | "node" | "bash" | "ruby" | "go" | "rust" | "c" | "cpp";
   code: string;
   timeout?: number;
   cpu?: number;

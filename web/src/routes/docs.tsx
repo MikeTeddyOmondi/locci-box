@@ -380,7 +380,7 @@ function Page() {
             <Block
               lang="json"
               code={`{
-  "language": "python" | "node" | "bash" | "ruby",
+  "language": "python" | "node" | "bash" | "ruby" | "go" | "rust" | "c" | "cpp",
   "code": "string",
   "timeout": 30
 }`}

@@ -31,14 +31,20 @@ export const Route = createFileRoute("/playground")({
   component: Page,
 });
 
-type Lang = "python" | "node" | "bash" | "ruby";
+type Lang = "python" | "node" | "bash" | "ruby" | "go" | "rust" | "c" | "cpp";
 const monacoLang: Record<Lang, string> = {
   python: "python",
   node: "javascript",
   bash: "shell",
   ruby: "ruby",
+  go: "go",
+  rust: "rust",
+  c: "c",
+  cpp: "cpp",
 };
 
+// Code and tests run as one program (code, then tests), so for the compiled
+// languages the tests side holds main().
 const codeStarter: Record<Lang, string> = {
   python: `def add(a, b):
     """Add two numbers"""
@@ -67,6 +73,38 @@ end
 
 # Test on the right side
 `,
+  go: `package main
+
+import "fmt"
+
+func add(a, b int) int {
+	return a + b
+}
+
+// main() with the tests goes on the right side
+`,
+  rust: `fn add(a: i64, b: i64) -> i64 {
+    a + b
+}
+
+// main() with the tests goes on the right side
+`,
+  c: `#include <stdio.h>
+
+int add(int a, int b) {
+  return a + b;
+}
+
+/* main() with the tests goes on the right side */
+`,
+  cpp: `#include <iostream>
+
+int add(int a, int b) {
+  return a + b;
+}
+
+// main() with the tests goes on the right side
+`,
 };
 
 const testStarter: Record<Lang, string> = {
@@ -94,6 +132,37 @@ fi
 raise "Test failed" unless add(-1, -2) == -3
 
 puts "✓ All tests passed!"
+`,
+  go: `func main() {
+	if add(2, 3) != 5 || add(-1, -2) != -3 || add(0, 0) != 0 {
+		panic("Test failed")
+	}
+	fmt.Println("✓ All tests passed!")
+}
+`,
+  rust: `fn main() {
+    assert_eq!(add(2, 3), 5);
+    assert_eq!(add(-1, -2), -3);
+    assert_eq!(add(0, 0), 0);
+    println!("✓ All tests passed!");
+}
+`,
+  c: `int main(void) {
+  if (add(2, 3) != 5 || add(-1, -2) != -3 || add(0, 0) != 0) {
+    puts("✗ Test failed!");
+    return 1;
+  }
+  puts("✓ All tests passed!");
+  return 0;
+}
+`,
+  cpp: `int main() {
+  if (add(2, 3) != 5 || add(-1, -2) != -3 || add(0, 0) != 0) {
+    std::cout << "✗ Test failed!" << std::endl;
+    return 1;
+  }
+  std::cout << "✓ All tests passed!" << std::endl;
+}
 `,
 };
 
@@ -327,6 +396,10 @@ function Page() {
                   <SelectItem value="node">Node.js</SelectItem>
                   <SelectItem value="bash">Bash</SelectItem>
                   <SelectItem value="ruby">Ruby</SelectItem>
+                  <SelectItem value="go">Go</SelectItem>
+                  <SelectItem value="rust">Rust</SelectItem>
+                  <SelectItem value="c">C</SelectItem>
+                  <SelectItem value="cpp">C++</SelectItem>
                 </SelectContent>
               </Select>
             </div>

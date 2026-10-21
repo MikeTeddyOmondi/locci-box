@@ -23,10 +23,18 @@ A B2B platform that lets businesses and AI agents run untrusted code safely insi
 
 ## Supported Languages
 
-- Python
-- Node.js (JavaScript / TypeScript)
-- Bash
-- Ruby
+| `language` | Runtime (image) | Runs |
+|---|---|---|
+| `python` | Python 3.15 (`python:3.15-slim`) | `python3 main.py` |
+| `node` | Node.js 26 (`node:26-alpine`) | `node main.js` |
+| `bash` | Bash 5.3 (`bash:5.3`) | `bash main.sh` |
+| `ruby` | Ruby 4.0 (`ruby:4.0-alpine`) | `ruby main.rb` |
+| `go` | Go 1.27 (`golang:1.27-alpine`) | `go run main.go` |
+| `rust` | Rust 1.99 (`rust:1.99-alpine`) | `rustc main.rs && ./main` |
+| `c` | GCC 16.2 (`gcc:16.2`) | `gcc main.c -lm && ./main` |
+| `cpp` | GCC 16.2, C++23 (`gcc:16.2`) | `g++ -std=c++23 main.cpp && ./main` |
+
+The code is written to a file in the sandbox's scratch folder and run from there, so Go, Rust, C and C++ take a whole program (`package main` and `func main`, `fn main`, `int main`). Each image is the latest stable release pinned to its minor version. Compilers get at least 512 MB (Go, Rust) or 256 MB (C, C++). Measured on an M-series Mac with the images cached: Python, Node, Bash, Ruby and C in 0.2 to 0.4 s, Rust 0.6 s, C++ 0.9 s, Go 4.6 s (it builds the standard library into a fresh cache each run). The first run of a language pulls its image (gcc is about 1.4 GB).
 
 ---
 
@@ -142,7 +150,7 @@ curl -X POST http://localhost:5757/api/sandbox/run \
 }
 ```
 
-**Parameters:** `language` (`python` | `node` | `bash` | `ruby`), `code` (max 1 MB), `timeout` (seconds, default 30).
+**Parameters:** `language` (`python` | `node` | `bash` | `ruby` | `go` | `rust` | `c` | `cpp`), `code` (max 1 MB), `timeout` (seconds, default 30).
 
 ### Agent boxes
 

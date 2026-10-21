@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import { sandboxService } from "../services/SandboxService.js";
 import { tenantService } from "../services/TenantService.js";
-import { RunSandboxRequest, SupportedLanguage } from "../types/index.js";
+import { RunSandboxRequest, SUPPORTED_LANGUAGES, SupportedLanguage } from "../types/index.js";
 import { logger } from "../utils/logger.js";
 
 const router: Router = Router();
@@ -27,12 +27,7 @@ router.post("/run", async (req: Request, res: Response): Promise<void> => {
     }
 
     // Validate language
-    const validLanguages: SupportedLanguage[] = [
-      "python",
-      "node",
-      "bash",
-      "ruby",
-    ];
+    const validLanguages: readonly SupportedLanguage[] = SUPPORTED_LANGUAGES;
     if (!validLanguages.includes(language)) {
       res.status(400).json({
         success: false,

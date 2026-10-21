@@ -88,6 +88,10 @@ const langLabel: Record<string, string> = {
   node: "Node.js",
   bash: "Bash",
   ruby: "Ruby",
+  go: "Go",
+  rust: "Rust",
+  c: "C",
+  cpp: "C++",
 };
 
 function Page() {

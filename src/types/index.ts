@@ -1,5 +1,6 @@
 // Supported programming languages
-export type SupportedLanguage = "python" | "node" | "bash" | "ruby";
+export const SUPPORTED_LANGUAGES = ["python", "node", "bash", "ruby", "go", "rust", "c", "cpp"] as const;
+export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
 
 // Sandbox execution status
 export type SandboxStatus =

@@ -119,23 +119,26 @@ export class SandboxService {
    * request. microsandbox has no pull on its own: a throwaway sandbox does it.
    */
   async warmImages(): Promise<void> {
-    const missing: Runtime[] = [];
-    const seen = new Set<string>();
+    const missing = new Set<string>();
+    const images: Runtime[] = [];
     for (const runtime of Object.values(RUNTIMES)) {
-      if (seen.has(runtime.image)) continue;
-      seen.add(runtime.image);
+      if (images.some((r) => r.image === runtime.image)) continue;
+      images.push(runtime);
       try {
         await Image.get(runtime.image);
       } catch (error) {
-        if (error instanceof ImageNotFoundError) missing.push(runtime);
+        if (error instanceof ImageNotFoundError) missing.add(runtime.image);
         else logger.warn({ image: runtime.image, error: String(error) }, "Checking a runtime image failed");
       }
     }
-    for (const runtime of missing) this.pulling.add(runtime.image);
-    for (const runtime of missing) {
+    for (const image of missing) this.pulling.add(image);
+    // Cached images are booted once too: the first boot after a microsandbox
+    // upgrade converts the image (Python took 21 s instead of 5 on thanos).
+    for (const runtime of images) {
       const name = `sbox-warmup-${nanoid(6)}`;
       const started = Date.now();
-      logger.info({ image: runtime.image }, "Pulling a runtime image");
+      const cached = !missing.has(runtime.image);
+      logger.info({ image: runtime.image, cached }, cached ? "Booting a runtime image once" : "Pulling a runtime image");
       try {
         const sandbox = await withPullRetry(() => {
           let builder = Sandbox.builder(name).image(runtime.image).memory(256).cpus(1).replace();

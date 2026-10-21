@@ -17,7 +17,7 @@ const vm = vi.hoisted(() => {
     commands: [] as string[],
     running: new Set<string>(),
     imageCached: true,
-    /** Holds create until released, to catch a create mid-pull. */
+    /** Holds a warm-up VM's create until released, to catch requests mid-pull. */
     gate: null as Promise<void> | null,
   };
   const sandbox = (name: string) => ({
@@ -53,7 +53,7 @@ const vm = vi.hoisted(() => {
   const Sandbox = {
     builder: (name: string) =>
       chain(async () => {
-        if (state.gate) await state.gate;
+        if (state.gate && name.startsWith("box-warmup-")) await state.gate;
         state.imageCached = true;
         state.created.push(name);
         state.running.add(name);
@@ -294,9 +294,16 @@ describe("agent boxes", () => {
     expect((await request(app).post("/api/boxes").set("Authorization", alice)).status).toBe(201);
   });
 
-  it("skips the pull when the image is already cached", async () => {
+  it("boots a cached image once (a microsandbox upgrade converts it) without refusing creates", async () => {
+    let release!: () => void;
+    vm.state.gate = new Promise((r) => (release = r));
     const before = vm.state.created.length;
-    await boxService.warmImage();
-    expect(vm.state.created.length).toBe(before);
+    const warming = boxService.warmImage();
+    await new Promise((r) => setTimeout(r, 10));
+    expect((await request(app).post("/api/boxes").set("Authorization", alice)).status).not.toBe(503);
+    vm.state.gate = null;
+    release();
+    await warming;
+    expect(vm.state.created.slice(before).some((n) => n.startsWith("box-warmup-"))).toBe(true);
   });
 });

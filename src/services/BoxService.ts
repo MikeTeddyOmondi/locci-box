@@ -160,19 +160,23 @@ export class BoxService {
    * microsandbox has no pull on its own, so a throwaway sandbox does it.
    */
   async warmImage(): Promise<void> {
+    let cached = true;
     try {
       await Image.get(env.BOX_IMAGE);
-      return;
     } catch (error) {
       if (!(error instanceof ImageNotFoundError)) {
         logger.warn({ error: String(error) }, "Checking the box image failed");
         return;
       }
+      cached = false;
     }
-    this.imageReady = false;
+    // A cached image is booted once too: the first boot after a microsandbox
+    // upgrade converts it (over 90 s for this image on thanos), and a create
+    // that waits for that outlasts the client.
+    if (!cached) this.imageReady = false;
     const name = `box-warmup-${nanoid(6)}`;
     const t0 = Date.now();
-    logger.info({ image: env.BOX_IMAGE }, "Pulling the box image");
+    logger.info({ image: env.BOX_IMAGE, cached }, cached ? "Booting the box image once" : "Pulling the box image");
     try {
       const sandbox = await withPullRetry(() =>
         Sandbox.builder(name).image(env.BOX_IMAGE).memory(256).cpus(1).replace().detached(true).create(),

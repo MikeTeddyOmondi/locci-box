@@ -30,14 +30,14 @@
     "registry": "https://registry.npmjs.org"
   },
   "dependencies": {
-    "@clack/prompts": "^0.7.0",
+    "@clack/prompts": "1.8.1",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "commander": "^12.0.0",
     "picocolors": "^1.0.0"
   },
   "devDependencies": {
-    "typescript": "^5.3.3",
+    "@types/node": "^22.7.10",
     "tsx": "^4.7.0",
-    "@types/node": "^22.7.10"
+    "typescript": "^5.3.3"
   }
 }

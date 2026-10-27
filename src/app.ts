@@ -15,6 +15,7 @@ import metricsRoutes from "./routes/metrics.js";
 import authRoutes from "./routes/auth.js";
 import statsRoutes from "./routes/stats.js";
 import apiKeysRoutes from "./routes/apikeys.js";
+import locciKeysRoutes from "./routes/locciKeys.js";
 import bobRoutes from "./routes/bob.js";
 import boxRoutes from "./routes/boxes.js";
 import mcpHttpRouter from "./mcp/http.js";
@@ -53,6 +54,7 @@ function configureRoutes(app: Express): void {
   app.use("/api/boxes", authenticate, rateLimiter.limit(), boxRoutes);
   app.use("/api/stats", authenticate, statsRoutes);
   app.use("/api/keys", authenticate, apiKeysRoutes);
+  app.use("/api/locci-keys", authenticate, locciKeysRoutes);
   app.use("/api/metrics", metricsRoutes);
   app.use("/api/bob", bobRoutes);
 

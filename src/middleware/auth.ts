@@ -3,6 +3,8 @@ import jwt from "jsonwebtoken";
 import { tenantService } from "../services/TenantService.js";
 import { apiKeyService } from "../services/ApiKeyService.js";
 import { tokenRevocationService } from "../services/TokenRevocationService.js";
+import { userService } from "../services/UserService.js";
+import { exchangeLocciKey, LOCCI_KEY_PREFIX, verifyLocciToken, type LocciUser } from "../services/LocciAuth.js";
 import { logger } from "../utils/logger.js";
 import { env } from "../config/env.js";
 
@@ -10,6 +12,8 @@ import { env } from "../config/env.js";
  * Authentication middleware — supports JWT (web) and API key (CLI/user keys).
  *
  * JWT tokens: decoded to get userId + tenantId (attached by /api/auth/login).
+ * Locci Auth access tokens and Locci API keys (locci_sk_live_*, LOCCI_AUTH_ISSUER): the user
+ * with that email, created on first sight, in tenant_default.
  * Admin API key (lbk_live_*): looked up in tenants table.
  * User API key (lbk_live_*): looked up in api_keys table → maps to tenant_default.
  */
@@ -56,9 +60,34 @@ export async function authenticate(
         next();
         return;
       } catch {
-        res.status(401).json({ success: false, error: "Invalid or expired token" });
+        // Not one of ours: a Locci Auth access token (the web console signs in there).
+        const locci = await verifyLocciToken(token);
+        if (!locci) {
+          res.status(401).json({ success: false, error: "Invalid or expired token" });
+          return;
+        }
+        if (await asLocciUser(req, res, locci, token)) next();
         return;
       }
+    }
+
+    // A Locci API key: traded for an access token at Locci Auth.
+    if (token.startsWith(LOCCI_KEY_PREFIX)) {
+      let access: string | null;
+      try {
+        access = await exchangeLocciKey(token);
+      } catch (error) {
+        logger.error({ error: String(error) }, "Locci Auth unreachable for a key exchange");
+        res.status(503).json({ success: false, error: "Locci Auth is unreachable; retry shortly" });
+        return;
+      }
+      const locci = access ? await verifyLocciToken(access) : null;
+      if (!locci) {
+        res.status(401).json({ success: false, error: "Invalid API key" });
+        return;
+      }
+      if (await asLocciUser(req, res, locci)) next();
+      return;
     }
 
     // Admin/tenant API key — check tenants table first
@@ -94,6 +123,26 @@ export async function authenticate(
     logger.error({ error }, "Authentication error");
     res.status(500).json({ success: false, error: "Internal server error" });
   }
+}
+
+/**
+ * Attach a Locci Auth user: the local user with their email (created on first
+ * sight) in tenant_default. `accessToken` is kept for calls back to Locci Auth
+ * on their behalf (key management). False when the response was already sent.
+ */
+async function asLocciUser(req: Request, res: Response, locci: LocciUser, accessToken?: string): Promise<boolean> {
+  const tenant = await tenantService.getById("tenant_default");
+  if (!tenant) {
+    res.status(500).json({ success: false, error: "Default tenant not found" });
+    return false;
+  }
+  const user = await userService.findOrCreateForLocci(locci.email);
+  (req as any).tenant = tenant;
+  (req as any).tenantId = tenant.id;
+  (req as any).userId = user.id;
+  (req as any).locciAccessToken = accessToken;
+  logger.debug({ user_id: user.id, locci_id: locci.id }, "Locci Auth authenticated");
+  return true;
 }
 
 /**

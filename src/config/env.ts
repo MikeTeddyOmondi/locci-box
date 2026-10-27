@@ -56,6 +56,8 @@ const EnvSchema = v.object({
 
   // JWT Secret for web app authentication
   JWT_SECRET: v.optional(v.string(), "locci-box-dev-secret-change-in-production"),
+  /** Locci Auth (OpenAuth) issuer: its access tokens are accepted as a user's login. Unset: off. */
+  LOCCI_AUTH_ISSUER: v.optional(v.string()),
 
   // Groq API key for BOB code-review assistant
   GROQ_API_KEY: v.optional(v.string()),
@@ -113,6 +115,7 @@ function parseEnv() {
       MCP_HTTP_ENABLED: process.env.MCP_HTTP_ENABLED,
       MCP_HTTP_PORT: process.env.MCP_HTTP_PORT,
       JWT_SECRET: process.env.JWT_SECRET,
+      LOCCI_AUTH_ISSUER: process.env.LOCCI_AUTH_ISSUER || undefined,
       GROQ_API_KEY: process.env.GROQ_API_KEY,
       DATABASE_MODE: process.env.DATABASE_MODE,
       DATABASE_URL: process.env.DATABASE_URL,

@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import { nanoid } from "nanoid";
+import { randomBytes } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { users } from "../db/schema.js";
@@ -52,6 +53,25 @@ class UserService {
 
     logger.info({ user_id: row.id, email: row.email }, "User registered");
     return toUser(row);
+  }
+
+  /**
+   * The local user for someone signed in with Locci Auth, created on first
+   * sight. Matched by email, so an account registered here with a password is
+   * the same user. A new one gets a random password nobody knows: it signs in
+   * through Locci Auth only.
+   */
+  async findOrCreateForLocci(email: string): Promise<User> {
+    const existing = await this.findByEmail(email);
+    if (existing) return existing;
+    try {
+      return await this.create(email, randomBytes(32).toString("base64url"));
+    } catch (error) {
+      // Two first requests at once: the other one created it.
+      const raced = await this.findByEmail(email);
+      if (raced) return raced;
+      throw error;
+    }
   }
 
   async verifyPassword(user: User, password: string): Promise<boolean> {

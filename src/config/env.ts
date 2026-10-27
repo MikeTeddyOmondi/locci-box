@@ -59,6 +59,8 @@ const EnvSchema = v.object({
 
   // Groq API key for BOB code-review assistant
   GROQ_API_KEY: v.optional(v.string()),
+  /** BOB's model on Groq. Groq retires models: llama-3.3-70b-versatile was gone by October 2026. */
+  BOB_MODEL: v.optional(v.string(), "qwen/qwen3.8-27b"),
 
   // Database mode: pglite (dev/embedded) or postgresql (production)
   DATABASE_MODE: v.optional(v.picklist(["pglite", "postgresql"]), "pglite"),
@@ -114,6 +116,7 @@ function parseEnv() {
       MCP_HTTP_PORT: process.env.MCP_HTTP_PORT,
       JWT_SECRET: process.env.JWT_SECRET,
       GROQ_API_KEY: process.env.GROQ_API_KEY,
+      BOB_MODEL: process.env.BOB_MODEL || undefined,
       DATABASE_MODE: process.env.DATABASE_MODE,
       DATABASE_URL: process.env.DATABASE_URL,
       DB_PATH: process.env.DB_PATH,

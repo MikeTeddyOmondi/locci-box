@@ -106,16 +106,3 @@ export async function exchangeLocciKey(key: string): Promise<string | null> {
   exchanged.set(id, { token, until: Date.now() + ttl });
   return token;
 }
-
-/**
- * Manage the caller's Locci API keys at the issuer (`/keys`), with their own
- * access token. Through this API because Locci Auth sends no CORS headers, so
- * the console cannot call it from the browser.
- */
-export async function locciKeysRequest(accessToken: string, path: string, init: RequestInit = {}): Promise<Response> {
-  if (!env.LOCCI_AUTH_ISSUER) throw new Error("LOCCI_AUTH_ISSUER is not set");
-  return fetch(issuerUrl(`/keys${path}`), {
-    ...init,
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}`, ...init.headers },
-  });
-}

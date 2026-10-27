@@ -73,7 +73,7 @@ export async function authenticate(
           res.status(401).json({ success: false, error: "Invalid or expired token" });
           return;
         }
-        if (await asLocciUser(req, res, locci, token)) next();
+        if (await asLocciUser(req, res, locci)) next();
         return;
       }
     }
@@ -143,10 +143,9 @@ function unavailable(res: Response) {
 
 /**
  * Attach a Locci Auth user: the local user with their email (created on first
- * sight) in tenant_default. `accessToken` is kept for calls back to Locci Auth
- * on their behalf (key management). False when the response was already sent.
+ * sight) in tenant_default. False when the response was already sent.
  */
-async function asLocciUser(req: Request, res: Response, locci: LocciUser, accessToken?: string): Promise<boolean> {
+async function asLocciUser(req: Request, res: Response, locci: LocciUser): Promise<boolean> {
   const tenant = await tenantService.getById("tenant_default");
   if (!tenant) {
     res.status(500).json({ success: false, error: "Default tenant not found" });
@@ -156,7 +155,6 @@ async function asLocciUser(req: Request, res: Response, locci: LocciUser, access
   (req as any).tenant = tenant;
   (req as any).tenantId = tenant.id;
   (req as any).userId = user.id;
-  (req as any).locciAccessToken = accessToken;
   logger.debug({ user_id: user.id, locci_id: locci.id }, "Locci Auth authenticated");
   return true;
 }

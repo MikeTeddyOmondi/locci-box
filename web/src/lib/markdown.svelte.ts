@@ -10,6 +10,7 @@
  */
 import DOMPurify from 'dompurify';
 import { Marked, type Tokens } from 'marked';
+import { browser } from '$app/environment';
 import type { HighlighterCore } from 'shiki/core';
 
 const THEMES = { light: 'github-light', dark: 'github-dark' } as const;
@@ -59,7 +60,8 @@ function escapeHtml(s: string) {
 function codeToHtml(code: string, lang: string): string {
 	const plain = `<pre class="shiki"><code>${escapeHtml(code)}</code></pre>`;
 	if (!highlighter || !langIds) {
-		startHighlighter();
+		// Server renders stay plain: Shiki loads in the browser only.
+		if (browser) startHighlighter();
 		return plain;
 	}
 	const id = langIds.get(lang.toLowerCase());

@@ -56,7 +56,11 @@ All variables have defaults. The only ones you **must** set for production:
 | `DEFAULT_MAX_CONCURRENT_SANDBOXES` | No | `5` | Per-tenant sandbox limit |
 | `DEFAULT_SANDBOX_TIMEOUT_SECONDS` | No | `30` | Max execution time |
 | `DEFAULT_RATE_LIMIT_PER_MINUTE` | No | `60` | Per-tenant request rate |
-| `VITE_API_URL` | No | `http://localhost:5757` | Browser → API URL (build-time arg) |
+| `LOCCI_AUTH_ISSUER` | No | unset | Locci Auth issuer: the API accepts its tokens and keys, the console signs in there |
+| `LOCCI_AUTH_INTERNAL_ORIGIN` | No | unset | Where containers reach the issuer, when its address is the host's localhost |
+| `WEB_ORIGIN` | No | `http://localhost:4173` | The console's public address (SvelteKit's `ORIGIN`) |
+| `PUBLIC_LOCCI_BOX_API_URL` | No | `http://localhost:5757` | API address shown in the console's examples |
+| `OPENAUTH_CLIENT_ID` | No | `locci-box` | The console's client id at Locci Auth |
 
 Generate secure values:
 
@@ -83,16 +87,14 @@ docker compose build
 # API
 docker build -t locci/box-api -f Dockerfile .
 
-# Web (pass the public API URL at build time)
-docker build -t locci/box-web \
-  --build-arg VITE_API_URL=https://api.yourdomain.com \
-  -f web/Dockerfile .
+# Web console (settings are read at runtime, see web/.env.example)
+docker build -t locci/box-web -f web/Dockerfile .
 
 # CLI
 docker build -t locci/box-cli -f cli/Dockerfile .
 ```
 
-> `VITE_API_URL` is a **build-time** arg baked into the browser bundle. If you need to change the API URL after building, rebuild the web image.
+> The console reads its settings at runtime, so one image serves any deployment.
 
 ---
 
@@ -171,7 +173,7 @@ docker inspect locci-box-api --format='{{.State.Health.Status}}'
    ```
    Add this under the `api` service in a `compose.override.yaml`.
 
-2. **Reverse proxy** — put Nginx or Caddy in front and terminate TLS there. Set `VITE_API_URL` to your public API domain at image build time.
+2. **Reverse proxy**: put Nginx or Caddy in front and terminate TLS there. Set `WEB_ORIGIN` to the console's public address and `PUBLIC_LOCCI_BOX_API_URL` to the API's.
 
 3. **Persistent storage** — the current implementation uses in-memory state. For production, mount a volume or switch to PostgreSQL + Redis.
 
@@ -183,7 +185,7 @@ docker inspect locci-box-api --format='{{.State.Health.Status}}'
 
 | Symptom | Fix |
 |---------|-----|
-| Web shows CORS error | Ensure `VITE_API_URL` matches the actual API origin the browser uses |
+| Sign-in loops back to /login | `WEB_ORIGIN` must match the address in the browser, and Locci Auth must accept that redirect URI |
 | `service "web" is not healthy` | API didn't pass healthcheck — check `docker compose logs api` |
 | CLI can't reach API | Use `http://api:5757` (Docker service name), not `localhost` |
 | `bun install --frozen-lockfile` fails | Run `bun install` locally inside `web/` or `cli/` to regenerate lockfile |

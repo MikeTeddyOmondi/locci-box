@@ -7,7 +7,7 @@ A B2B platform that lets businesses and AI agents run untrusted code safely insi
 | Package | Description |
 |---------|-------------|
 | `src/` | Express API — sandbox execution, JWT + API-key auth, multi-tenancy, MCP |
-| `web/` | TanStack Start web app — playground, code editor, auth UI |
+| `web/` | SvelteKit console: overview, code editor, playground, boxes, BOB, API keys, docs; signs in with Locci Auth |
 | `cli/` | `loccibox` CLI — compiled binary, API-key authenticated |
 | `.bob_sessions/` | Contains all the IBM Bob chat sessions |
 
@@ -87,9 +87,21 @@ docker compose up -d
 
 ## Authentication
 
-### Web App (JWT)
+### Web console (Locci Auth)
 
-The web app authenticates via `POST /api/auth/login` or `POST /api/auth/register` and receives a 24-hour JWT stored in `localStorage`. A demo account (`demo@loccibox.dev` / `demo1234`) is seeded automatically.
+The console signs in with Locci Auth, the OpenAuth issuer locci-platform uses, with the same
+settings (`PUBLIC_OPENAUTH_ISSUER`, `PUBLIC_OPENAUTH_CLIENT_ID`). The session lives in httpOnly
+cookies; the console's server verifies it in `hooks.server.ts` and calls this API with the
+user's access token. Pages reach the API through SvelteKit remote functions; `/api/*` on the
+console passes through to this API, for the BOB chat stream and for scripts.
+
+With `LOCCI_AUTH_ISSUER` set, the API accepts Locci Auth access tokens and Locci API keys
+(`locci_sk_live_...`, created on the console's API keys page or in locci-platform), trading a key
+for a token at the issuer's `/keys/token` as locci-registry does. Either maps to the local user
+with that email, created on first sight. An issuer that cannot be reached answers `503`, not
+`401` (as locci-storage does), and `LOCCI_AUTH_INTERNAL_ORIGIN` redirects its key fetches when
+the issuer's address is not reachable from a container. The API's own `/api/auth/login` and
+`lbk_live_` keys keep working.
 
 ### CLI / API (API Key)
 
@@ -275,8 +287,8 @@ DEFAULT_SANDBOX_TIMEOUT_SECONDS=30
 DEFAULT_RATE_LIMIT_PER_MINUTE=60
 LOG_LEVEL=info
 
-# Web app (browser)
-VITE_API_URL=http://localhost:5757
+# Locci Auth (the API accepts its tokens and Locci API keys)
+LOCCI_AUTH_ISSUER=http://localhost:8787
 
 # Docker Compose
 WEB_PORT=4173
@@ -307,7 +319,7 @@ locci-box/
 │   │   └── errorHandler.ts
 │   ├── mcp/server.ts
 │   └── config/env.ts
-├── web/                    # TanStack Start web app
+├── web/                    # SvelteKit console (adapter-node)
 │   ├── src/
 │   │   ├── routes/
 │   │   │   ├── index.tsx   # Landing page

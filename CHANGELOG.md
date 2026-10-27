@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **BOB answers again**: Groq retired `llama-3.3-70b-versatile` ("does not exist or you do not have access to it"), so every BOB reply failed. The model is now `BOB_MODEL`, default `openai/gpt-oss-120b`.
 - **Valkey starts again after a host crash**: an unclean shutdown left zeros at the end of its append-only file, so valkey refused to start and restarted in a loop (JuiceFS lost its metadata store). The `valkey` service now checks the AOF before starting and truncates a broken tail (at most the last second of writes), and gets 30 s to stop cleanly.
 - **`loccibox run` prompts take input again**: with `@clack/prompts` 0.7 under Bun 1.4 the prompts drew twice, typed text landed under them and Enter answered "Code is required". Upgraded to 1.8.1 (pinned), as in the locci-compute CLI. Tables (`sandboxes`, `box ls`) pad by visible width, so the header and coloured columns line up.
 - **Web Docker image builds again**: `web/` has no lockfile, so the image's `bun install` took the newest version in every `^` range, and with `@lovable.dev/vite-tanstack-config` 1.8.0 the build skipped TanStack Start and failed on a missing `index.html`. `web/Dockerfile` now installs from the workspace's `pnpm-lock.yaml` (pnpm 10.33.0, hoisted).

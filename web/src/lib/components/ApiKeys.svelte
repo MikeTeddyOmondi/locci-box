@@ -32,6 +32,7 @@
 		DialogTitle
 	} from '$lib/components/ui/dialog';
 	import { Select, SelectContent, SelectItem, SelectTrigger } from '$lib/components/ui/select';
+	import CopyBlock from '$lib/components/CopyBlock.svelte';
 	import { confirmDialog } from '$lib/confirm.svelte';
 	import { errMessage } from '$lib/utils';
 	import { getApiKeys, createApiKey, revokeApiKey } from '../../routes/keys.remote';
@@ -214,18 +215,10 @@
 		<CardDescription>Locci Box takes the key itself; other Locci services take a token traded for it</CardDescription>
 	</CardHeader>
 	<CardContent class="space-y-3">
-		<pre class="overflow-x-auto rounded-md border bg-muted/40 p-4 text-xs"><code
-				>curl -X POST {apiUrl}/api/sandbox/run \
-  -H "Authorization: Bearer $LOCCI_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{'{'}"language": "python", "code": "print(42)"{'}'}'
-
-loccibox mcp config      # the MCP server reads LOCCIBOX_API_KEY</code
-			></pre>
-		<pre class="overflow-x-auto rounded-md border bg-muted/40 p-4 text-xs"><code
-				>TOKEN=$(curl -s -X POST {issuer}/keys/token \
-  -H "x-locci-api-key: $LOCCI_API_KEY" | jq -r .token)</code
-			></pre>
+		<CopyBlock
+			code={`curl -X POST ${apiUrl}/api/sandbox/run \\\n  -H "Authorization: Bearer $LOCCI_API_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{"language": "python", "code": "print(42)"}'\n\nloccibox mcp config      # the MCP server reads LOCCIBOX_API_KEY`}
+		/>
+		<CopyBlock code={`TOKEN=$(curl -s -X POST ${issuer}/keys/token \\\n  -H "x-locci-api-key: $LOCCI_API_KEY" | jq -r .token)`} />
 		<p class="text-sm text-muted-foreground">
 			A traded token lasts five minutes, so trade once per run rather than storing it. Keep the key
 			itself in your CI secret store, never in the repository.

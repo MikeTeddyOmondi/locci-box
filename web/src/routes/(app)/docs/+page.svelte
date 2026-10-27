@@ -65,6 +65,7 @@
 			/>
 			<CopyBlock
 				code={`{ "success": true, "data": { "sandbox_id": "sbox_...", "status": "completed",\n  "stdout": "42\\n", "stderr": "", "exit_code": 0, "duration_ms": 3612 } }`}
+				lang="json"
 				label="Copy response"
 			/>
 		</section>

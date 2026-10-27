@@ -103,6 +103,15 @@ marked.use({
 	}
 });
 
+/**
+ * One code sample as highlighted HTML (escaped by Shiki, so safe for {@html}).
+ * Plain until the grammar arrives; reading `highlight.version` re-renders then.
+ */
+export function highlightCode(code: string, lang: string): string {
+	void highlight.version;
+	return codeToHtml(code.replace(/\n$/, ''), lang);
+}
+
 export function renderMarkdown(text: string): string {
 	// Read the version so callers re-render once a grammar finishes loading.
 	void highlight.version;

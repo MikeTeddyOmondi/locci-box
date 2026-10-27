@@ -118,7 +118,7 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
 
   try {
     const groq = createGroq({ apiKey: groqApiKey });
-    const model = groq("llama-3.3-70b-versatile");
+    const model = groq(env.BOB_MODEL);
 
     const result = streamText({
       model,

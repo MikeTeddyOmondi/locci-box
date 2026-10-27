@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { Check, Copy } from '@lucide/svelte';
+	import { highlightCode } from '$lib/markdown.svelte';
 
-	/** A command or code sample with a copy button. */
-	let { code, label = 'Copy' }: { code: string; label?: string } = $props();
+	/** A command or code sample, highlighted as `lang` (Shiki, as in BOB's replies), with a copy button. */
+	let { code, lang = 'bash', label = 'Copy' }: { code: string; lang?: string; label?: string } = $props();
 	let copied = $state(false);
 
 	async function copy() {
@@ -12,8 +13,9 @@
 	}
 </script>
 
-<div class="group relative">
-	<pre class="overflow-x-auto rounded-md border bg-muted/40 p-4 pr-12 font-mono text-xs leading-relaxed"><code>{code}</code></pre>
+<div class="group relative overflow-hidden rounded-md border bg-muted/40 text-xs leading-relaxed [&_pre]:overflow-x-auto [&_pre]:!bg-transparent [&_pre]:p-4 [&_pre]:pr-12 [&_pre]:font-mono">
+	<!-- eslint-disable-next-line svelte/no-at-html-tags -- Shiki escapes the code -->
+	{@html highlightCode(code, lang)}
 	<button
 		type="button"
 		onclick={copy}

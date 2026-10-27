@@ -5,8 +5,8 @@ import { defineConfig } from 'vite';
 export default defineConfig({
 	plugins: [tailwindcss(), sveltekit()],
 	build: {
-		// The biggest chunks are single Shiki grammars (C++, Emacs Lisp), fetched
-		// only when a reply contains that language; the app shell stays small.
-		chunkSizeWarningLimit: 1000
+		// The biggest chunks are Monaco (loaded only by the Code and Playground
+		// pages) and single Shiki grammars, fetched when a reply needs them.
+		chunkSizeWarningLimit: 5000
 	}
 });

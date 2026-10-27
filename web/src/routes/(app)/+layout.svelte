@@ -64,9 +64,10 @@
 				sidebarOpen ? 'translate-x-0' : '-translate-x-full'
 			]}
 		>
-			<a href="/dashboard" class="flex h-14 items-center gap-2 border-b px-4">
-				<Logo class="h-6" />
-				<span class="text-sm font-semibold tracking-tight text-muted-foreground">Box</span>
+			<!-- The wordmark with the product beside it, as locci-ai-inference's sidebar does it. -->
+			<a href="/dashboard" class="flex h-14 items-center gap-1.5 border-b px-4" aria-label="Locci Box, overview">
+				<Logo class="h-5" />
+				<span class="text-[15px] font-semibold tracking-tight text-muted-foreground">Box</span>
 			</a>
 
 			<nav class="flex-1 space-y-1 overflow-y-auto p-3">

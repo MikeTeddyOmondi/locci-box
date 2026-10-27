@@ -101,7 +101,19 @@ services:
     image: valkey/valkey:8.0.2
     container_name: locci-box-valkey
     restart: unless-stopped
-    command: valkey-server --appendonly yes --appendfsync everysec
+    # A host crash can leave zeros at the end of the AOF, and valkey then refuses
+    # to start. Cut that broken tail (at most the last second of writes) first.
+    command:
+      - sh
+      - -c
+      - |
+        m=appendonlydir/appendonly.aof.manifest
+        if [ -f "$$m" ] && ! valkey-check-aof "$$m" >/dev/null 2>&1; then
+          echo "[valkey] AOF damaged, truncating its broken tail"
+          echo y | valkey-check-aof --fix "$$m"
+        fi
+        exec docker-entrypoint.sh valkey-server --appendonly yes --appendfsync everysec
+    stop_grace_period: 30s
     volumes:
       - valkey-data:/data
     networks:

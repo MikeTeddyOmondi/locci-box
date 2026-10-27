@@ -8,6 +8,7 @@
 	import * as Select from '$lib/components/ui/select';
 	import { EXTENSION, HELLO, languageOf, MONACO_LANGUAGE } from '$lib/languages';
 	import { LANGUAGE_LABELS, LANGUAGES, type Language } from '$lib/types';
+	import { confirmDialog } from '$lib/confirm.svelte';
 	import { errMessage } from '$lib/utils';
 	import { runCode } from '../../sandbox.remote';
 
@@ -87,9 +88,27 @@
 		file.language = languageOf(trimmed) ?? file.language;
 	}
 
-	function setLanguage(language: Language) {
-		active.language = language;
-		active.name = active.name.replace(/\.[^.]*$/, '') + `.${EXTENSION[language]}`;
+	/**
+	 * Switch the open file's language and load that language's sample. Code
+	 * someone wrote (anything but an untouched sample or nothing) is only
+	 * replaced after asking; kept, the file just changes language.
+	 */
+	async function setLanguage(language: Language) {
+		if (language === active.language) return;
+		const file = active;
+		const untouched = !file.content.trim() || Object.values(HELLO).some((sample) => sample.trim() === file.content.trim());
+		const replace =
+			untouched ||
+			(await confirmDialog({
+				title: `Load the ${LANGUAGE_LABELS[language]} sample?`,
+				description: `This replaces the code in ${file.name}. Keep it to change only the language.`,
+				confirmLabel: 'Load sample',
+				cancelLabel: 'Keep my code'
+			}));
+		file.language = language;
+		file.name = file.name.replace(/\.[^.]*$/, '') + `.${EXTENSION[language]}`;
+		if (replace) file.content = HELLO[language];
+		result = null;
 	}
 
 	function download() {

@@ -14,7 +14,7 @@ export const runCode = command(
 	v.object({
 		language: v.picklist(LANGUAGES),
 		code: v.pipe(v.string(), v.nonEmpty('Write some code first')),
-		timeout: v.optional(v.pipe(v.number(), v.minValue(1), v.maxValue(300)))
+		timeout: v.optional(v.pipe(v.number(), v.minValue(1))) // the API enforces its own maximum
 	}),
 	async (params) => boxApi<SandboxResult>('/api/sandbox/run', { method: 'POST', json: params })
 );

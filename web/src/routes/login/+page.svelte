@@ -36,8 +36,12 @@
 <div class="flex min-h-dvh items-center justify-center bg-background p-4">
 	<Card.Root class="w-full max-w-md">
 		<Card.Header class="items-center text-center">
-			<div class="mb-2 flex justify-center"><Logo class="h-8" /></div>
-			<Card.Title class="text-2xl">Locci Box</Card.Title>
+			<!-- The wordmark with the product beside it, as locci-ai-inference's web does it. -->
+			<div class="mb-1 flex items-center justify-center gap-2">
+				<Logo class="h-8" />
+				<span class="text-2xl font-semibold tracking-tight text-muted-foreground">Box</span>
+			</div>
+			<Card.Title class="sr-only">Locci Box</Card.Title>
 			<Card.Description>Isolated microVMs for code, people and AI agents</Card.Description>
 		</Card.Header>
 		<Card.Content class="space-y-4">

@@ -3,7 +3,6 @@ import { createClient } from "@openauthjs/openauth/client";
 import { createSubjects } from "@openauthjs/openauth/subject";
 import * as v from "valibot";
 import { env } from "../config/env.js";
-import { logger } from "../utils/logger.js";
 
 /**
  * Locci Auth: the OpenAuth issuer locci-platform signs in with, and the issuer
@@ -34,19 +33,51 @@ let client: ReturnType<typeof createClient> | null = null;
 
 export const locciAuthEnabled = () => Boolean(env.LOCCI_AUTH_ISSUER);
 
-/** The signed-in Locci user, or null for a token that is not a valid Locci Auth one. */
+/** Verification failed because the issuer could not be reached, not because the token is bad. */
+export class AuthUnavailableError extends Error {
+  constructor(cause: unknown) {
+    super("Could not reach Locci Auth to verify the token");
+    this.name = "AuthUnavailableError";
+    this.cause = cause;
+  }
+}
+
+/** The issuer's URL, with requests sent to LOCCI_AUTH_INTERNAL_ORIGIN when set. */
+function issuerUrl(path: string): string {
+  return `${env.LOCCI_AUTH_INTERNAL_ORIGIN ?? env.LOCCI_AUTH_ISSUER}${path}`;
+}
+
+/**
+ * `issuer` is both the expected `iss` claim and where the keys are fetched
+ * from; in a container those differ, so only the fetches are redirected.
+ */
+const internalFetch: typeof fetch = (input, init) => {
+  const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+  const issuer = env.LOCCI_AUTH_ISSUER!;
+  if (env.LOCCI_AUTH_INTERNAL_ORIGIN && url.startsWith(issuer)) {
+    return fetch(env.LOCCI_AUTH_INTERNAL_ORIGIN + url.slice(issuer.length), init);
+  }
+  return fetch(input, init);
+};
+
+/**
+ * The signed-in Locci user, or null for a token that is not a valid Locci Auth
+ * one. Throws AuthUnavailableError when the issuer's keys cannot be fetched: the
+ * token may be fine, so that is a 503, not a 401 (OpenAuth's verify throws
+ * there rather than returning an error). Once fetched, the keys are kept.
+ */
 export async function verifyLocciToken(token: string): Promise<LocciUser | null> {
   if (!env.LOCCI_AUTH_ISSUER) return null;
   // The client id only matters for authorize and exchange, which the console does.
-  client ??= createClient({ clientID: "locci-box-api", issuer: env.LOCCI_AUTH_ISSUER });
+  client ??= createClient({ clientID: "locci-box-api", issuer: env.LOCCI_AUTH_ISSUER, fetch: internalFetch });
+  let verified;
   try {
-    const verified = await client.verify(subjects, token);
-    if (verified.err || verified.subject.type !== "user") return null;
-    return verified.subject.properties;
+    verified = await client.verify(subjects, token);
   } catch (error) {
-    logger.warn({ error: String(error) }, "Locci Auth verification failed");
-    return null;
+    throw new AuthUnavailableError(error);
   }
+  if (verified.err || verified.subject.type !== "user") return null;
+  return verified.subject.properties;
 }
 
 /** Tokens traded for keys, by the key's hash, until a minute before they expire. */
@@ -60,12 +91,14 @@ export async function exchangeLocciKey(key: string): Promise<string | null> {
   if (cached && cached.until > Date.now()) return cached.token;
   exchanged.delete(id);
 
-  const res = await fetch(`${env.LOCCI_AUTH_ISSUER}/keys/token`, {
-    method: "POST",
-    headers: { "x-locci-api-key": key },
-  });
+  let res: Response;
+  try {
+    res = await fetch(issuerUrl("/keys/token"), { method: "POST", headers: { "x-locci-api-key": key } });
+  } catch (error) {
+    throw new AuthUnavailableError(error);
+  }
   if (res.status === 401) return null;
-  if (!res.ok) throw new Error(`Locci Auth answered ${res.status} to a key exchange`);
+  if (!res.ok) throw new AuthUnavailableError(new Error(`Locci Auth answered ${res.status} to a key exchange`));
   const body = (await res.json()) as { token?: string; access_token?: string; expiresIn?: number };
   const token = body.token ?? body.access_token;
   if (!token) return null;
@@ -81,7 +114,7 @@ export async function exchangeLocciKey(key: string): Promise<string | null> {
  */
 export async function locciKeysRequest(accessToken: string, path: string, init: RequestInit = {}): Promise<Response> {
   if (!env.LOCCI_AUTH_ISSUER) throw new Error("LOCCI_AUTH_ISSUER is not set");
-  return fetch(`${env.LOCCI_AUTH_ISSUER}/keys${path}`, {
+  return fetch(issuerUrl(`/keys${path}`), {
     ...init,
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}`, ...init.headers },
   });

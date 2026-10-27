@@ -58,6 +58,12 @@ const EnvSchema = v.object({
   JWT_SECRET: v.optional(v.string(), "locci-box-dev-secret-change-in-production"),
   /** Locci Auth (OpenAuth) issuer: its access tokens are accepted as a user's login. Unset: off. */
   LOCCI_AUTH_ISSUER: v.optional(v.string()),
+  /**
+   * Where to fetch the issuer's keys from when LOCCI_AUTH_ISSUER is not reachable
+   * from here (in a container, the issuer's localhost is the host's). Tokens
+   * still have to say LOCCI_AUTH_ISSUER. As in locci-storage.
+   */
+  LOCCI_AUTH_INTERNAL_ORIGIN: v.optional(v.string()),
 
   // Groq API key for BOB code-review assistant
   GROQ_API_KEY: v.optional(v.string()),
@@ -116,6 +122,7 @@ function parseEnv() {
       MCP_HTTP_PORT: process.env.MCP_HTTP_PORT,
       JWT_SECRET: process.env.JWT_SECRET,
       LOCCI_AUTH_ISSUER: process.env.LOCCI_AUTH_ISSUER || undefined,
+      LOCCI_AUTH_INTERNAL_ORIGIN: process.env.LOCCI_AUTH_INTERNAL_ORIGIN || undefined,
       GROQ_API_KEY: process.env.GROQ_API_KEY,
       DATABASE_MODE: process.env.DATABASE_MODE,
       DATABASE_URL: process.env.DATABASE_URL,

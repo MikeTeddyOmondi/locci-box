@@ -10,13 +10,20 @@ const locci = vi.hoisted(() => {
     token: "eyJlocci.alice.token",
     key: "locci_sk_live_alicekey",
     keyCalls: [] as { accessToken: string; path: string; method: string; body?: string }[],
+    /** The issuer unreachable. */
+    down: false,
+    AuthUnavailableError: class AuthUnavailableError extends Error {},
   };
 });
 
 vi.mock("../../src/services/LocciAuth.js", () => ({
   LOCCI_KEY_PREFIX: "locci_sk_live_",
+  AuthUnavailableError: locci.AuthUnavailableError,
   locciAuthEnabled: () => true,
-  verifyLocciToken: async (token: string) => (token === locci.token ? { id: "user:alice", email: locci.email } : null),
+  verifyLocciToken: async (token: string) => {
+    if (locci.down) throw new locci.AuthUnavailableError(new Error("ECONNREFUSED"));
+    return token === locci.token ? { id: "user:alice", email: locci.email } : null;
+  },
   exchangeLocciKey: async (key: string) => (key === locci.key ? locci.token : null),
   locciKeysRequest: async (accessToken: string, path: string, init: RequestInit = {}) => {
     locci.keyCalls.push({ accessToken, path, method: init.method ?? "GET", body: init.body as string | undefined });
@@ -73,5 +80,17 @@ describe("Locci Auth", () => {
   it("does not let an API key manage keys", async () => {
     const res = await request(app).get("/api/locci-keys").set("Authorization", `Bearer ${locci.key}`);
     expect(res.status).toBe(403);
+  });
+
+  it("answers 503, not 401, when Locci Auth cannot be reached", async () => {
+    locci.down = true;
+    try {
+      const res = await request(app).get("/api/boxes").set("Authorization", `Bearer ${locci.token}`);
+      expect(res.status).toBe(503);
+      expect((await request(app).get("/api/boxes").set("Authorization", `Bearer ${locci.key}`)).status).toBe(503);
+    } finally {
+      locci.down = false;
+    }
+    expect((await request(app).get("/api/boxes").set("Authorization", `Bearer ${locci.token}`)).status).toBe(200);
   });
 });

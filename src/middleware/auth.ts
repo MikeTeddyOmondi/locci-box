@@ -4,7 +4,13 @@ import { tenantService } from "../services/TenantService.js";
 import { apiKeyService } from "../services/ApiKeyService.js";
 import { tokenRevocationService } from "../services/TokenRevocationService.js";
 import { userService } from "../services/UserService.js";
-import { exchangeLocciKey, LOCCI_KEY_PREFIX, verifyLocciToken, type LocciUser } from "../services/LocciAuth.js";
+import {
+  AuthUnavailableError,
+  exchangeLocciKey,
+  LOCCI_KEY_PREFIX,
+  verifyLocciToken,
+  type LocciUser,
+} from "../services/LocciAuth.js";
 import { logger } from "../utils/logger.js";
 import { env } from "../config/env.js";
 
@@ -61,7 +67,8 @@ export async function authenticate(
         return;
       } catch {
         // Not one of ours: a Locci Auth access token (the web console signs in there).
-        const locci = await verifyLocciToken(token);
+        const locci = await verifyLocciToken(token).catch(unavailable(res));
+        if (locci === undefined) return;
         if (!locci) {
           res.status(401).json({ success: false, error: "Invalid or expired token" });
           return;
@@ -73,15 +80,10 @@ export async function authenticate(
 
     // A Locci API key: traded for an access token at Locci Auth.
     if (token.startsWith(LOCCI_KEY_PREFIX)) {
-      let access: string | null;
-      try {
-        access = await exchangeLocciKey(token);
-      } catch (error) {
-        logger.error({ error: String(error) }, "Locci Auth unreachable for a key exchange");
-        res.status(503).json({ success: false, error: "Locci Auth is unreachable; retry shortly" });
-        return;
-      }
-      const locci = access ? await verifyLocciToken(access) : null;
+      const access = await exchangeLocciKey(token).catch(unavailable(res));
+      if (access === undefined) return;
+      const locci = access ? await verifyLocciToken(access).catch(unavailable(res)) : null;
+      if (locci === undefined) return;
       if (!locci) {
         res.status(401).json({ success: false, error: "Invalid API key" });
         return;
@@ -123,6 +125,20 @@ export async function authenticate(
     logger.error({ error }, "Authentication error");
     res.status(500).json({ success: false, error: "Internal server error" });
   }
+}
+
+/**
+ * Locci Auth could not be reached: answer 503 (the credential may be fine, and
+ * a 401 would send the caller to replace one that is not the problem) and
+ * resolve to undefined. Anything else is rethrown.
+ */
+function unavailable(res: Response) {
+  return (error: unknown): undefined => {
+    if (!(error instanceof AuthUnavailableError)) throw error;
+    logger.error({ error: String(error.cause) }, "Locci Auth unreachable");
+    res.status(503).json({ success: false, error: "Could not verify the credential right now; retry shortly" });
+    return undefined;
+  };
 }
 
 /**

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Download, FilePlus, FileCode2, Play, Trash2 } from '@lucide/svelte';
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import CodeEditor from '$lib/components/CodeEditor.svelte';
 	import RunOutput, { type RunResult } from '$lib/components/RunOutput.svelte';
@@ -88,26 +88,38 @@
 		file.language = languageOf(trimmed) ?? file.language;
 	}
 
+	/** What the language dropdown shows; put back when a switch is cancelled. */
+	let picked = $state<Language>('python');
+	$effect(() => {
+		picked = active.language;
+	});
+
 	/**
-	 * Switch the open file's language and load that language's sample. Code
-	 * someone wrote (anything but an untouched sample or nothing) is only
-	 * replaced after asking; kept, the file just changes language.
+	 * Switch the open file to another language and load that language's sample.
+	 * When the file holds code someone wrote (anything but an untouched sample
+	 * or nothing), ask first; keeping the code cancels the switch entirely.
 	 */
 	async function setLanguage(language: Language) {
-		if (language === active.language) return;
 		const file = active;
+		if (language === file.language) return;
 		const untouched = !file.content.trim() || Object.values(HELLO).some((sample) => sample.trim() === file.content.trim());
-		const replace =
+		const go =
 			untouched ||
 			(await confirmDialog({
-				title: `Load the ${LANGUAGE_LABELS[language]} sample?`,
-				description: `This replaces the code in ${file.name}. Keep it to change only the language.`,
-				confirmLabel: 'Load sample',
+				title: `Switch to ${LANGUAGE_LABELS[language]}?`,
+				description: `This loads the ${LANGUAGE_LABELS[language]} sample and replaces the code in ${file.name}.`,
+				confirmLabel: `Switch to ${LANGUAGE_LABELS[language]}`,
 				cancelLabel: 'Keep my code'
 			}));
+		if (!go) {
+			// The dropdown already shows the new choice: put it back.
+			await tick();
+			picked = file.language;
+			return;
+		}
 		file.language = language;
 		file.name = file.name.replace(/\.[^.]*$/, '') + `.${EXTENSION[language]}`;
-		if (replace) file.content = HELLO[language];
+		file.content = HELLO[language];
 		result = null;
 	}
 
@@ -194,8 +206,8 @@
 		<div class="flex flex-wrap items-center gap-2 border-b px-3 py-2">
 			<span class="font-mono text-sm">{active.name}</span>
 			<div class="flex-1"></div>
-			<Select.Root type="single" value={active.language} onValueChange={(v) => setLanguage(v as Language)}>
-				<Select.Trigger class="h-8 w-32" aria-label="Language">{LANGUAGE_LABELS[active.language]}</Select.Trigger>
+			<Select.Root type="single" bind:value={picked} onValueChange={(v) => setLanguage(v as Language)}>
+				<Select.Trigger class="h-8 w-32" aria-label="Language">{LANGUAGE_LABELS[picked]}</Select.Trigger>
 				<Select.Content>
 					{#each LANGUAGES as l (l)}
 						<Select.Item value={l}>{LANGUAGE_LABELS[l]}</Select.Item>

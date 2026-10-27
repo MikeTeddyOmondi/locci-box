@@ -68,7 +68,7 @@ const EnvSchema = v.object({
   // Groq API key for BOB code-review assistant
   GROQ_API_KEY: v.optional(v.string()),
   /** BOB's model on Groq. Groq retires models: llama-3.3-70b-versatile was gone by October 2026. */
-  BOB_MODEL: v.optional(v.string(), "openai/gpt-oss-120b"),
+  BOB_MODEL: v.optional(v.string(), "qwen/qwen3.8-27b"),
 
   // Database mode: pglite (dev/embedded) or postgresql (production)
   DATABASE_MODE: v.optional(v.picklist(["pglite", "postgresql"]), "pglite"),

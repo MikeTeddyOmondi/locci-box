@@ -5,7 +5,7 @@ import pc from "picocolors";
 import { getProfile } from "../lib/config.js";
 import { createAPIClient, type LocciBoxAPI } from "../lib/api.js";
 import { formatDuration, formatTimestamp, printError, printMetadata, printTable } from "../lib/output.js";
-import type { BoxInfo } from "../types/index.js";
+import { SUPPORTED_LANGUAGES, type BoxInfo } from "../types/index.js";
 
 /**
  * `loccibox box`: agent boxes from the terminal, the same operations as the
@@ -20,11 +20,12 @@ export function createBoxCommand(): Command {
   box
     .command("create")
     .description("Create a box (or reattach to one with --attach) and print its id")
+    .option("-l, --language <language>", `Toolchain to come with: ${SUPPORTED_LANGUAGES.join(", ")} (default node)`)
     .option("--attach <box_id>", "Start or reattach to an existing box instead")
     .option("--profile <name>", "Use a specific profile")
-    .action(async (opts: { attach?: string; profile?: string }) =>
+    .action(async (opts: { language?: string; attach?: string; profile?: string }) =>
       run(opts.profile, async (api) => {
-        const info = await api.createBox(opts.attach);
+        const info = await api.createBox(opts.attach, opts.language);
         if (!process.stdout.isTTY) return console.log(info.box_id);
         console.log("");
         console.log(pc.green(`✓ Box ${opts.attach ? "attached" : "created"}: `) + pc.bold(info.box_id));

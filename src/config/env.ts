@@ -81,7 +81,9 @@ const EnvSchema = v.object({
   JFS_QUOTA_MIB: v.optional(v.pipe(v.string(), v.transform(Number)), "512"),
 
   // Agent boxes: long-lived microVMs an AI works in across calls (src/services/BoxService.ts)
-  BOX_IMAGE: v.optional(v.string(), "docker.io/library/node:22-bookworm"),
+  BOX_IMAGE: v.optional(v.string(), "docker.io/library/node:26"),
+  /** Language box images at startup: all, default (on first use), or auto (all on a large host). */
+  BOX_IMAGE_WARMUP: v.optional(v.picklist(["auto", "all", "default"]), "auto"),
   BOX_MEMORY_MIB: v.optional(v.pipe(v.string(), v.transform(Number), v.minValue(256)), "1024"),
   BOX_CPUS: v.optional(v.pipe(v.string(), v.transform(Number), v.minValue(1)), "2"),
   BOX_IDLE_MINUTES: v.optional(v.pipe(v.string(), v.transform(Number), v.minValue(1)), "15"),
@@ -119,6 +121,7 @@ function parseEnv() {
       JFS_ROOT: process.env.JFS_ROOT,
       JFS_QUOTA_MIB: process.env.JFS_QUOTA_MIB,
       BOX_IMAGE: process.env.BOX_IMAGE,
+      BOX_IMAGE_WARMUP: process.env.BOX_IMAGE_WARMUP,
       BOX_MEMORY_MIB: process.env.BOX_MEMORY_MIB,
       BOX_CPUS: process.env.BOX_CPUS,
       BOX_IDLE_MINUTES: process.env.BOX_IDLE_MINUTES,

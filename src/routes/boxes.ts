@@ -33,11 +33,11 @@ const handle =
     }
   };
 
-/** POST /api/boxes  {box_id?}: create a box, or reattach to one. */
+/** POST /api/boxes  {language?, box_id?}: create a box, or reattach to one. */
 router.post(
   "/",
   handle(async (req, res) => {
-    const box = await boxService.create(ownerOf(req), req.body?.box_id);
+    const box = await boxService.create(ownerOf(req), req.body?.box_id, req.body?.language);
     res.status(req.body?.box_id ? 200 : 201);
     return box;
   }),

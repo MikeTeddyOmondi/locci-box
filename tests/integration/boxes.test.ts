@@ -17,6 +17,10 @@ const vm = vi.hoisted(() => {
     commands: [] as string[],
     running: new Set<string>(),
     imageCached: true,
+    /** Images not cached, on top of imageCached; pulled by a create of that image. */
+    missing: new Set<string>(),
+    /** The image of each created sandbox, by name. */
+    images: new Map<string, string>(),
     /** Holds a warm-up VM's create until released, to catch requests mid-pull. */
     gate: null as Promise<void> | null,
   };
@@ -48,13 +52,18 @@ const vm = vi.hoisted(() => {
     },
     kill: async () => state.running.delete(name),
   });
-  const chain = (onCreate: () => any): any =>
-    new Proxy({}, { get: (_t, key) => (key === "create" ? onCreate : () => chain(onCreate)) });
+  const chain = (onCreate: (image?: string) => any, image?: string): any =>
+    new Proxy({}, {
+      get: (_t, key) =>
+        key === "create" ? () => onCreate(image) : (...a: any[]) => chain(onCreate, key === "image" ? a[0] : image),
+    });
   const Sandbox = {
     builder: (name: string) =>
-      chain(async () => {
+      chain(async (image?: string) => {
         if (state.gate && name.startsWith("box-warmup-")) await state.gate;
         state.imageCached = true;
+        if (image) state.missing.delete(image);
+        if (image) state.images.set(name, image);
         state.created.push(name);
         state.running.add(name);
         return sandbox(name);
@@ -74,7 +83,7 @@ const vm = vi.hoisted(() => {
   const NetworkPolicy = { builder: () => chain(async () => ({})) };
   const Image = {
     get: async (ref: string) => {
-      if (!state.imageCached) throw new ImageNotFoundError(`image not found: ${ref}`);
+      if (!state.imageCached || state.missing.has(ref)) throw new ImageNotFoundError(`image not found: ${ref}`);
       return { reference: ref };
     },
   };
@@ -102,7 +111,8 @@ vi.mock("microsandbox", () => ({
 }));
 
 const { createApp } = await import("../../src/app.js");
-const { boxService } = await import("../../src/services/BoxService.js");
+const { boxService, boxImages } = await import("../../src/services/BoxService.js");
+const { env } = await import("../../src/config/env.js");
 const { tenantService } = await import("../../src/services/TenantService.js");
 const { db } = await import("../../src/db/index.js");
 const { boxes } = await import("../../src/db/schema.js");
@@ -279,7 +289,7 @@ describe("agent boxes", () => {
     vm.state.imageCached = false;
     let release!: () => void;
     vm.state.gate = new Promise((r) => (release = r));
-    const warming = boxService.warmImage();
+    const warming = boxService.warmImages("default");
     await new Promise((r) => setTimeout(r, 10));
 
     const early = await request(app).post("/api/boxes").set("Authorization", alice);
@@ -298,12 +308,70 @@ describe("agent boxes", () => {
     let release!: () => void;
     vm.state.gate = new Promise((r) => (release = r));
     const before = vm.state.created.length;
-    const warming = boxService.warmImage();
+    const warming = boxService.warmImages("default");
     await new Promise((r) => setTimeout(r, 10));
     expect((await request(app).post("/api/boxes").set("Authorization", alice)).status).not.toBe(503);
     vm.state.gate = null;
     release();
     await warming;
     expect(vm.state.created.slice(before).some((n) => n.startsWith("box-warmup-"))).toBe(true);
+  });
+  it("boots the image of the language asked for, and keeps it on reattach", async () => {
+    const res = await request(app).post("/api/boxes").set("Authorization", alice).send({ language: "go" });
+    expect(res.status).toBe(201);
+    expect(res.body.data.image).toBe("docker.io/library/golang:1.27");
+    expect(vm.state.images.get(res.body.data.box_id)).toBe("docker.io/library/golang:1.27");
+    const again = await request(app)
+      .post("/api/boxes")
+      .set("Authorization", alice)
+      .send({ box_id: res.body.data.box_id, language: "rust" });
+    expect(again.body.data.image).toBe("docker.io/library/golang:1.27");
+
+    const plain = await request(app).post("/api/boxes").set("Authorization", alice);
+    expect(plain.body.data.image).toBe(env.BOX_IMAGE);
+  });
+
+  it("refuses an unknown language", async () => {
+    const res = await request(app).post("/api/boxes").set("Authorization", alice).send({ language: "cobol" });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/Unsupported language/);
+    expect(await activeCount()).toBe(0);
+  });
+
+  it("fetches a language's image on first use: 503 while it downloads, then the box", async () => {
+    const image = "docker.io/library/ruby:4.0";
+    vm.state.missing.add(image);
+    let release!: () => void;
+    vm.state.gate = new Promise((r) => (release = r));
+
+    const early = await request(app).post("/api/boxes").set("Authorization", alice).send({ language: "ruby" });
+    expect(early.status).toBe(503);
+    expect(early.body.error).toMatch(/ruby box image is still downloading/);
+    const again = await request(app).post("/api/boxes").set("Authorization", alice).send({ language: "ruby" });
+    expect(again.status).toBe(503);
+    expect(await activeCount()).toBe(0);
+
+    vm.state.gate = null;
+    release();
+    await vi.waitFor(() => expect(vm.state.missing.has(image)).toBe(false));
+    await vi.waitFor(async () =>
+      expect((await request(app).post("/api/boxes").set("Authorization", alice).send({ language: "ruby" })).status).toBe(201),
+    );
+    // One pull for both early creates.
+    expect([...vm.state.images.entries()].filter(([n, i]) => n.startsWith("box-warmup-") && i === image)).toHaveLength(1);
+  });
+
+  it("with BOX_IMAGE_WARMUP all, pulls every box image in its own background task", async () => {
+    const before = vm.state.created.length;
+    await boxService.warmImages("all");
+    await vi.waitFor(() => {
+      const warmed = new Set(
+        vm.state.created
+          .slice(before)
+          .filter((n) => n.startsWith("box-warmup-"))
+          .map((n) => vm.state.images.get(n)),
+      );
+      expect(warmed).toEqual(new Set(boxImages()));
+    });
   });
 });

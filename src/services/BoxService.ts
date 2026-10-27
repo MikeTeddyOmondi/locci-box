@@ -1,6 +1,8 @@
 import { nanoid } from "nanoid";
 import { and, eq } from "drizzle-orm";
 import { posix } from "node:path";
+import { statfs } from "node:fs/promises";
+import { homedir, totalmem } from "node:os";
 import {
   ExecTimeoutError,
   Image,
@@ -21,8 +23,9 @@ import { withPullRetry } from "./SandboxService.js";
 /**
  * Agent boxes: a microVM an AI works in the way a person works in a VM. Unlike
  * run_sandbox (one snippet, then gone), a box keeps running between calls, has
- * room to work (BOX_MEMORY_MIB, a Debian image with apt, git, curl, build tools,
- * Python and Node) and open egress with the host's networks blocked.
+ * room to work (BOX_MEMORY_MIB, a Debian image with apt, git, curl and build
+ * tools, plus the toolchain of the language asked for) and open egress with the
+ * host's networks blocked.
  *
  * A box stops after BOX_IDLE_MINUTES without a call, or BOX_MAX_HOURS after it
  * started. Its row stays: a later call with the same id starts it again with
@@ -36,6 +39,52 @@ const MAX_OUTPUT_CHARS = 100_000;
 const MAX_READ_BYTES = 1024 * 1024;
 const MAX_WRITE_BYTES = 5 * 1024 * 1024;
 const STOP_WAIT_MS = 15_000;
+
+/** Languages a box can be created for; each has its own image (no one image with every toolchain). */
+export const BOX_LANGUAGES = ["node", "python", "go", "rust", "ruby", "c", "cpp", "bash"] as const;
+export type BoxLanguage = (typeof BOX_LANGUAGES)[number];
+
+/**
+ * The official full images: Debian with apt, git, curl and build tools. All but
+ * gcc are built on buildpack-deps:trixie, so microsandbox stores that base once
+ * and each extra language costs only its toolchain. node and bash use BOX_IMAGE.
+ */
+const LANGUAGE_IMAGES: Record<Exclude<BoxLanguage, "node" | "bash">, string> = {
+  python: "docker.io/library/python:3.15",
+  go: "docker.io/library/golang:1.27",
+  rust: "docker.io/library/rust:1.99",
+  ruby: "docker.io/library/ruby:4.0",
+  c: "docker.io/library/gcc:16.2",
+  cpp: "docker.io/library/gcc:16.2",
+};
+
+/** The image a box for `language` boots (BOX_IMAGE when none is given). */
+export function boxImage(language?: string): string {
+  if (language === undefined || language === null || language === "") return env.BOX_IMAGE;
+  if (!(BOX_LANGUAGES as readonly string[]).includes(language)) {
+    throw new BoxError(`Unsupported language: ${language}. Supported: ${BOX_LANGUAGES.join(", ")}`, 400);
+  }
+  return LANGUAGE_IMAGES[language as keyof typeof LANGUAGE_IMAGES] ?? env.BOX_IMAGE;
+}
+
+/** Every box image, BOX_IMAGE first. */
+export function boxImages(): string[] {
+  return [...new Set([env.BOX_IMAGE, ...Object.values(LANGUAGE_IMAGES)])];
+}
+
+/**
+ * Room to download every box image at startup (about 2.5 GB with shared
+ * layers): 8 GB of memory and 40 GB free where microsandbox keeps images.
+ * A smaller host fetches a language's image the first time a box asks for it.
+ */
+async function roomyHost(): Promise<boolean> {
+  try {
+    const fs = await statfs(process.env.MSB_HOME ?? `${homedir()}/.microsandbox`);
+    return totalmem() >= 8 * 2 ** 30 && fs.bavail * fs.bsize >= 40e9;
+  } catch {
+    return false;
+  }
+}
 
 export interface BoxOwner {
   tenantId: string;
@@ -150,56 +199,86 @@ export class BoxService {
   /** Calls in flight per box; the idle sweep leaves a busy box alone. */
   private busy = new Map<string, number>();
   private sweeper: NodeJS.Timeout | null = null;
-  /** False while warmImage() is pulling BOX_IMAGE into microsandbox's cache. */
-  private imageReady = true;
+  /** Box images known to be in microsandbox's cache (or whose pull failed: a create then reports why). */
+  private ready = new Set<string>();
+  /** Pulls in flight, one background task per image. */
+  private pulling = new Map<string, Promise<void>>();
 
   /**
-   * Pull BOX_IMAGE when this host has not cached it. The first pull is minutes
-   * (about 1 GB; measured on thanos), longer than a client waits for a create,
-   * so it happens at startup and creates answer 503 until it is done.
-   * microsandbox has no pull on its own, so a throwaway sandbox does it.
+   * Startup: BOX_IMAGE always; the language images too when BOX_IMAGE_WARMUP
+   * is `all`, or `auto` on a host with room (see roomyHost), each pulled in its
+   * own background task. Otherwise a language's image is pulled the first time
+   * a box asks for it, and that create answers 503 until it is cached.
    */
-  async warmImage(): Promise<void> {
+  async warmImages(mode = env.BOX_IMAGE_WARMUP): Promise<void> {
+    const all = mode === "all" || (mode === "auto" && (await roomyHost()));
+    const others = boxImages().slice(1);
+    if (all) for (const image of others) void this.warm(image);
+    else logger.info({ images: others.length }, "Language box images are fetched on first use");
+    await this.warm(env.BOX_IMAGE);
+  }
+
+  /**
+   * Pull an image this host has not cached. A pull is minutes (about 1 GB;
+   * measured on thanos), longer than a client waits for a create, so it runs in
+   * the background and creates answer 503 until it is done. microsandbox has no
+   * pull on its own, so a throwaway sandbox does it. One task per image.
+   */
+  private warm(image: string): Promise<void> {
+    const pending = this.pulling.get(image);
+    if (pending) return pending;
+    const task = this.pull(image).finally(() => this.pulling.delete(image));
+    this.pulling.set(image, task);
+    return task;
+  }
+
+  private async pull(image: string): Promise<void> {
     let cached = true;
     try {
-      await Image.get(env.BOX_IMAGE);
+      await Image.get(image);
     } catch (error) {
       if (!(error instanceof ImageNotFoundError)) {
-        logger.warn({ error: String(error) }, "Checking the box image failed");
+        logger.warn({ image, error: String(error) }, "Checking a box image failed");
+        this.ready.add(image);
         return;
       }
       cached = false;
+      this.ready.delete(image); // gone from the cache since it was seen (pruned)
     }
-    // A cached image is booted once too: the first boot after a microsandbox
-    // upgrade converts it (over 90 s for this image on thanos), and a create
-    // that waits for that outlasts the client.
-    if (!cached) this.imageReady = false;
+    // A cached image is booted once too, without holding creates back: the
+    // first boot after a microsandbox upgrade converts it (over 90 s for the
+    // default image on thanos), and a create that waits for that outlasts the client.
+    if (cached) this.ready.add(image);
     const name = `box-warmup-${nanoid(6)}`;
     const t0 = Date.now();
-    logger.info({ image: env.BOX_IMAGE, cached }, cached ? "Booting the box image once" : "Pulling the box image");
+    logger.info({ image, cached }, cached ? "Booting a box image once" : "Pulling a box image");
     try {
       const sandbox = await withPullRetry(() =>
-        Sandbox.builder(name).image(env.BOX_IMAGE).memory(256).cpus(1).replace().detached(true).create(),
+        Sandbox.builder(name).image(image).memory(256).cpus(1).replace().detached(true).create(),
       );
       await sandbox.stopWithTimeout(STOP_WAIT_MS).catch(() => sandbox.kill().catch(() => {}));
-      logger.info({ image: env.BOX_IMAGE, ms: Date.now() - t0 }, "Box image ready");
+      logger.info({ image, ms: Date.now() - t0 }, "Box image ready");
     } catch (error) {
-      logger.error({ image: env.BOX_IMAGE, error: String(error) }, "Pulling the box image failed");
+      logger.error({ image, error: String(error) }, "Pulling a box image failed");
     } finally {
       // A failed pull is retried by the next create, which then reports the error.
-      this.imageReady = true;
+      this.ready.add(image);
       await this.removeVm(name);
     }
   }
 
-  /** Create a box, or with `boxId`, reattach to one the caller owns (starting it if stopped). */
-  async create(owner: BoxOwner, boxId?: string): Promise<BoxInfo> {
+  /**
+   * Create a box for `language` (BOX_IMAGE when none), or with `boxId`,
+   * reattach to one the caller owns (starting it if stopped; it keeps its image).
+   */
+  async create(owner: BoxOwner, boxId?: string, language?: string): Promise<BoxInfo> {
     if (boxId) {
       await this.ensureRunning(owner, boxId);
       return this.info(await this.row(owner, boxId));
     }
 
-    this.assertImageReady();
+    const image = boxImage(language);
+    await this.assertImageReady(image, language);
     await this.reserve(owner.tenantId);
     const id = `box_${nanoid(12)}`;
     try {
@@ -210,7 +289,7 @@ export class BoxService {
         tenantId: owner.tenantId,
         ownerId: owner.ownerId,
         status: "running",
-        image: env.BOX_IMAGE,
+        image,
         memoryMib: env.BOX_MEMORY_MIB,
         workspacePath,
         createdAt: at,
@@ -396,10 +475,22 @@ export class BoxService {
     return row;
   }
 
-  private assertImageReady(): void {
-    if (!this.imageReady) {
-      throw new BoxError("The box image is still downloading on this host; retry in a minute", 503);
+  /** 503 while `image` is being pulled; an image not cached yet starts its pull here. */
+  private async assertImageReady(image: string, language?: string): Promise<void> {
+    if (this.ready.has(image)) return;
+    if (!this.pulling.has(image)) {
+      try {
+        await Image.get(image);
+        this.ready.add(image);
+        return;
+      } catch (error) {
+        // Unsure: let the create try, and report what it hits.
+        if (!(error instanceof ImageNotFoundError)) return;
+      }
+      void this.warm(image);
     }
+    const what = language ? `The ${language} box image` : "The box image";
+    throw new BoxError(`${what} is still downloading on this host; retry in a minute`, 503);
   }
 
   /** Count a box against the tenant's sandbox limit, as run_sandbox does. */
@@ -477,7 +568,7 @@ export class BoxService {
       }
     }
     if (!sandbox) {
-      this.assertImageReady();
+      await this.assertImageReady(row.image);
       const workspace = row.workspacePath ?? (await volumeService.provisionBox(row.ownerId, row.id));
       const makeBuilder = () =>
         Sandbox.builder(row.id)

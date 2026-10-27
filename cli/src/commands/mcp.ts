@@ -8,6 +8,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { getProfile } from "../lib/config.js";
 import { printError, printInfo } from "../lib/output.js";
+import { SUPPORTED_LANGUAGES } from "../types/index.js";
 
 // ── MCP tool definitions (mirrors the API server) ────────────────────────────
 
@@ -50,12 +51,14 @@ const tools = [
   {
     name: "box_create",
     description:
-      "Create an agent box: a Debian microVM (apt, git, curl, build tools, Python, Node) that keeps running between calls, " +
-      "with internet access (the host's networks are blocked). Work happens in /workspace. Pass box_id to reattach to a box " +
-      "you created before: a box stopped after idling starts again with its files and installed packages. Store the id.",
+      "Create an agent box: a Debian microVM (apt, git, curl, build tools) that keeps running between calls, " +
+      "with internet access (the host's networks are blocked). Pass language to get that toolchain ready (default node). " +
+      "Work happens in /workspace. Pass box_id to reattach to a box you created before: a box stopped after idling starts " +
+      "again with its files and installed packages. Store the id. A 503 means the language's image is still downloading: retry in a minute.",
     inputSchema: {
       type: "object",
       properties: {
+        language: { type: "string", enum: [...SUPPORTED_LANGUAGES], description: "Toolchain the box comes with: node (default), python, go, rust, ruby, c, cpp (gcc and g++), bash" },
         box_id: { type: "string", description: "Reattach to this box instead of creating one" },
       },
       required: [],
@@ -150,7 +153,7 @@ async function boxTool(apiBase: string, apiKey: string, name: string, args: any)
   const post = (body: unknown) => ({ method: "POST", body: JSON.stringify(body) });
   switch (name) {
     case "box_create":
-      return apiRequest(apiBase, apiKey, "/api/boxes", post(args.box_id ? { box_id: args.box_id } : {}));
+      return apiRequest(apiBase, apiKey, "/api/boxes", post(args.box_id ? { box_id: args.box_id } : { language: args.language }));
     case "box_exec":
       return apiRequest(apiBase, apiKey, `/api/boxes/${id}/exec`, post({ command: args.command, timeout: args.timeout }));
     case "box_write_file":

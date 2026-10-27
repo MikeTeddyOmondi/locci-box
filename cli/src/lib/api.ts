@@ -63,10 +63,10 @@ export class LocciBoxAPI {
   }
 
   /** Create a box, or with `boxId` reattach to one (starting it if stopped). */
-  async createBox(boxId?: string): Promise<BoxInfo> {
+  async createBox(boxId?: string, language?: string): Promise<BoxInfo> {
     return this.request<BoxInfo>("/api/boxes", {
       method: "POST",
-      body: JSON.stringify(boxId ? { box_id: boxId } : {}),
+      body: JSON.stringify(boxId ? { box_id: boxId } : { language }),
     });
   }
 

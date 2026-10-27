@@ -147,7 +147,20 @@ curl -X POST http://localhost:5757/api/sandbox/run \
 ### Agent boxes
 
 A box is a microVM an AI works in across calls, the way a person works in a VM: a Debian image
-(`docker.io/library/node:22-bookworm`: apt, git, curl, gcc and make, Python 3.11, Node 22),
+with apt, git, curl, gcc and make, plus the toolchain of the `language` asked for. Each language
+has its own official image rather than one image with every toolchain:
+
+| `language` | Image |
+|---|---|
+| `node` (default), `bash` | `BOX_IMAGE`, `docker.io/library/node:26` |
+| `python` | `docker.io/library/python:3.15` |
+| `go` | `docker.io/library/golang:1.27` |
+| `rust` | `docker.io/library/rust:1.99` |
+| `ruby` | `docker.io/library/ruby:4.0` |
+| `c`, `cpp` | `docker.io/library/gcc:16.2` |
+
+All but gcc are built on `buildpack-deps:trixie`, so microsandbox stores that base once and each
+extra language costs only its toolchain. A box has
 1 GB of memory and 2 vCPUs by default, work in `/workspace`. It keeps running between calls,
 stops after 15 minutes without one (or 8 hours after it started), and starts again under the
 same id on the next call with its disk as it was: files, apt and npm installs. Egress is open to
@@ -159,7 +172,7 @@ owner's box id answers `404`.
 
 | Method | Path | Body / query | Description |
 |--------|------|--------------|-------------|
-| POST | `/api/boxes` | `{box_id?}` | Create a box (`201`), or reattach to one, starting it if stopped (`200`) |
+| POST | `/api/boxes` | `{language?, box_id?}` | Create a box (`201`), or reattach to one, starting it if stopped (`200`; it keeps its image) |
 | GET | `/api/boxes` | | Your boxes, running and stopped |
 | GET | `/api/boxes/:id` | | One box |
 | POST | `/api/boxes/:id/exec` | `{command, timeout?}` | `sh -c` in `/workspace`; `timeout` seconds (default 120, max 600); a timeout answers `exit_code` 124, `timed_out: true` |
@@ -176,7 +189,11 @@ POST /api/boxes/box_mG6f118Otufb/exec  {"command": "apt-get install -y -qq jq >/
 
 On a host that has not cached `BOX_IMAGE`, the API pulls it in the background at startup (about
 1 GB unpacked; over 10 minutes on a busy host) and answers `503` to box creates until it is done,
-so a client is told to retry instead of waiting out its own timeout.
+so a client is told to retry instead of waiting out its own timeout. The language images follow
+`BOX_IMAGE_WARMUP`: `auto` (the default) pulls them all at startup, each in its own background
+task, on a host with 8 GB of memory and 40 GB free where microsandbox keeps images; a smaller
+host pulls a language's image the first time a box asks for it, answering `503` to that create
+(and to others for the same language) until it is cached. `all` and `default` force either way.
 
 Measured on an M-series Mac (microsandbox's darwin-arm64 build): a box boots in ~0.3 s once
 the image is cached, restarts after a stop in

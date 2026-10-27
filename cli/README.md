@@ -65,6 +65,7 @@ loccibox run -l node -f index.js -t 60
 Agent boxes from the terminal, the same operations as the `box_*` MCP tools. A box is a Debian microVM (apt, git, curl, gcc, Python 3, Node 22) that keeps running between calls and keeps its disk after a stop; work happens in `/workspace`.
 ```bash
 loccibox box create                          # prints the new box id
+loccibox box create --language go            # with Go ready (python, go, rust, ruby, c, cpp, ...)
 loccibox box create --attach <box_id>        # start or reattach to one
 loccibox box ls                              # your boxes, running and stopped
 loccibox box info <box_id>

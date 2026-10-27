@@ -8,7 +8,7 @@ import { env } from "../config/env.js";
 import { sandboxService } from "../services/SandboxService.js";
 import { apiKeyService } from "../services/ApiKeyService.js";
 import { tenantService } from "../services/TenantService.js";
-import { boxService, BoxError, type BoxOwner } from "../services/BoxService.js";
+import { boxService, BoxError, BOX_LANGUAGES, type BoxOwner } from "../services/BoxService.js";
 import { SUPPORTED_LANGUAGES } from "../types/index.js";
 
 const err = (text: string) => ({ isError: true, content: [{ type: "text" as const, text }] });
@@ -105,12 +105,14 @@ export const tools = [
   {
     name: "box_create",
     description:
-      "Create an agent box: a Debian microVM (apt, git, curl, build tools, Python, Node) that keeps running between calls, " +
-      "with internet access (the host's networks are blocked). Work happens in /workspace. Pass box_id to reattach to a box " +
-      "you created before: a box stopped after idling starts again with its files and installed packages. Store the id.",
+      "Create an agent box: a Debian microVM (apt, git, curl, build tools) that keeps running between calls, " +
+      "with internet access (the host's networks are blocked). Pass language to get that toolchain ready (default node). " +
+      "Work happens in /workspace. Pass box_id to reattach to a box you created before: a box stopped after idling starts " +
+      "again with its files and installed packages. Store the id. A 503 means the language's image is still downloading: retry in a minute.",
     inputSchema: {
       type: "object",
       properties: {
+        language: { type: "string", enum: [...BOX_LANGUAGES], description: "Toolchain the box comes with: node (default), python, go, rust, ruby, c, cpp (gcc and g++), bash" },
         box_id: { type: "string", description: "Reattach to this box instead of creating one" },
         api_key: apiKeyProp,
       },
@@ -259,8 +261,8 @@ export function createMCPServer(): Server {
           return { content: [{ type: "text" as const, text: JSON.stringify(sandboxes, null, 2) }] };
         }
         case "box_create": {
-          const { box_id, api_key } = args as any;
-          return json(await boxService.create(await resolveOwner(resolveKey(api_key)), box_id));
+          const { box_id, language, api_key } = args as any;
+          return json(await boxService.create(await resolveOwner(resolveKey(api_key)), box_id, language));
         }
         case "box_exec": {
           const { box_id, command, timeout, api_key } = args as any;

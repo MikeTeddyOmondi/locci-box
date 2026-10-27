@@ -16,7 +16,7 @@ async function startServer() {
     );
     boxService.startSweeper();
     // Then the run_sandbox runtimes, one pull at a time.
-    void boxService.warmImage().then(() => sandboxService.warmImages());
+    void boxService.warmImages().then(() => sandboxService.warmImages());
 
     const app = createApp();
 

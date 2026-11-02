@@ -8,7 +8,7 @@
 	/**
 	 * A box's terminal over the whole page, after iaas-service's
 	 * vm-terminal-modal.svelte. The header follows the console's light or dark
-	 * theme; the terminal keeps a dark one, picked here and remembered in this
+	 * theme; the terminal's own theme is picked here and remembered in this
 	 * browser.
 	 */
 

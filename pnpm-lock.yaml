@@ -182,6 +182,9 @@ importers:
       '@types/dompurify':
         specifier: 3.2.0
         version: 3.2.0
+      '@wterm/dom':
+        specifier: 0.5.7
+        version: 0.5.7
       '@wterm/ghostty':
         specifier: 0.5.7
         version: 0.5.7

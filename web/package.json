@@ -27,6 +27,7 @@
 		"@tailwindcss/typography": "0.5.20",
 		"@tailwindcss/vite": "4.3.3",
 		"@types/dompurify": "3.2.0",
+		"@wterm/dom": "0.5.7",
 		"@wterm/ghostty": "0.5.7",
 		"@wterm/svelte": "0.5.7",
 		"ai": "6.0.316",

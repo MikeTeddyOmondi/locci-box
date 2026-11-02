@@ -1,6 +1,38 @@
+<script lang="ts" module>
+	/**
+	 * Terminal themes (wterm ships Solarized Dark, Monokai and Light). Applied
+	 * with WTerm.setThemeColors, which recolors a live session: Ghostty reads a
+	 * CSS theme class once, at start.
+	 */
+	export const TERMINAL_THEMES = {
+		'one-dark': {
+			label: 'One Dark',
+			foreground: 0xabb2bf,
+			background: 0x282c34,
+			cursor: 0x528bff,
+			palette: [
+				0x282c34, 0xe06c75, 0x98c379, 0xe5c07b, 0x61afef, 0xc678dd, 0x56b6c2, 0xabb2bf,
+				0x5c6370, 0xe06c75, 0x98c379, 0xd19a66, 0x61afef, 0xc678dd, 0x56b6c2, 0xffffff
+			]
+		},
+		'gruvbox-dark': {
+			label: 'Gruvbox Dark',
+			foreground: 0xebdbb2,
+			background: 0x282828,
+			cursor: 0xebdbb2,
+			palette: [
+				0x282828, 0xcc241d, 0x98971a, 0xd79921, 0x458588, 0xb16286, 0x689d6a, 0xa89984,
+				0x928374, 0xfb4934, 0xb8bb26, 0xfabd2f, 0x83a598, 0xd3869b, 0x8ec07c, 0xebdbb2
+			]
+		}
+	} as const;
+	export type TerminalTheme = keyof typeof TERMINAL_THEMES;
+</script>
+
 <script lang="ts">
 	import { GhosttyCore } from '@wterm/ghostty';
 	import ghosttyWasmUrl from '@wterm/ghostty/ghostty-vt.wasm?url';
+	import type { WTerm } from '@wterm/dom';
 	import { Terminal, type TerminalHandle } from '@wterm/svelte';
 	import '@wterm/svelte/css';
 	import { onMount } from 'svelte';
@@ -18,10 +50,15 @@
 	 * anything outside ISO-8859-1 (accents, box drawing, emoji).
 	 */
 
-	let { boxId, onClose }: { boxId: string; onClose?: () => void } = $props();
+	let {
+		boxId,
+		theme = 'one-dark',
+		onClose
+	}: { boxId: string; theme?: TerminalTheme; onClose?: () => void } = $props();
 
 	let core = $state<GhosttyCore | null>(null);
 	let term = $state<TerminalHandle>();
+	let wt = $state.raw<WTerm | null>(null);
 	let status = $state<'loading' | 'connecting' | 'open' | 'closed' | 'error'>('loading');
 	let socket: WebSocket | undefined;
 	let size = { cols: 0, rows: 0 };
@@ -107,6 +144,12 @@
 		};
 	});
 
+	// The theme, now and whenever it is changed.
+	$effect(() => {
+		const { foreground, background, cursor, palette } = TERMINAL_THEMES[theme];
+		wt?.setThemeColors({ foreground, background, cursor, palette: [...palette] });
+	});
+
 	function handleResize(cols: number, rows: number) {
 		size = { cols, rows };
 		sendResize();
@@ -114,7 +157,7 @@
 </script>
 
 {#if !core}
-	<div class="flex h-full min-h-[300px] w-full items-center justify-center bg-black">
+	<div class="flex h-full min-h-[300px] w-full items-center justify-center bg-zinc-900">
 		<span class="text-sm text-zinc-500">Loading the terminal...</span>
 	</div>
 {:else}
@@ -122,11 +165,13 @@
 		<Terminal
 			bind:this={term}
 			{core}
-			theme="solarized-dark"
 			cursorBlink
 			autoResize
 			class="h-full w-full"
-			onReady={() => void connect()}
+			onReady={(instance: WTerm) => {
+				wt = instance;
+				void connect();
+			}}
 			onData={(data: string) => send({ type: 'stdin', data: toBase64(encoder.encode(data)) })}
 			onBinary={(data: Uint8Array) => send({ type: 'stdin', data: toBase64(data) })}
 			onResize={handleResize}

@@ -1,9 +1,16 @@
 <script lang="ts">
 	import { RotateCcw, Terminal, X } from '@lucide/svelte';
+	import { onMount } from 'svelte';
 	import * as Dialog from '$lib/components/ui/dialog';
-	import BoxTerminal from './BoxTerminal.svelte';
+	import * as Select from '$lib/components/ui/select';
+	import BoxTerminal, { TERMINAL_THEMES, type TerminalTheme } from './BoxTerminal.svelte';
 
-	/** A box's terminal over the whole page, after iaas-service's vm-terminal-modal.svelte. */
+	/**
+	 * A box's terminal over the whole page, after iaas-service's
+	 * vm-terminal-modal.svelte. The header follows the console's light or dark
+	 * theme; the terminal keeps a dark one, picked here and remembered in this
+	 * browser.
+	 */
 
 	let {
 		box,
@@ -17,6 +24,27 @@
 	$effect(() => {
 		if (box) closed = false;
 	});
+
+	const THEME_KEY = 'locci-box.terminal-theme';
+	let theme = $state<TerminalTheme>('one-dark');
+
+	onMount(() => {
+		try {
+			const saved = localStorage.getItem(THEME_KEY);
+			if (saved && saved in TERMINAL_THEMES) theme = saved as TerminalTheme;
+		} catch {
+			// storage blocked: the default theme
+		}
+	});
+
+	function setTheme(value: string) {
+		theme = value as TerminalTheme;
+		try {
+			localStorage.setItem(THEME_KEY, theme);
+		} catch {
+			// storage blocked: the choice lasts until reload
+		}
+	}
 
 	const language = $derived(box ? (box.image.split('/').at(-1) ?? box.image).replace('golang', 'go') : '');
 </script>
@@ -35,20 +63,20 @@
 		escapeKeydownBehavior="ignore"
 		interactOutsideBehavior="ignore"
 		trapFocus={false}
-		class="bg-[#0a0a0a]"
+		class="bg-background text-foreground"
 	>
-		<Dialog.Header class="flex shrink-0 flex-row items-center justify-between border-b border-zinc-800 px-4 py-3">
-			<Dialog.Title class="flex items-center gap-2 font-mono text-sm font-medium text-zinc-300">
+		<Dialog.Header class="flex shrink-0 flex-row items-center justify-between border-b px-4 py-2">
+			<Dialog.Title class="flex items-center gap-2 font-mono text-sm font-medium">
 				<Terminal class="size-4" />
 				{box?.box_id}
-				<span class="text-zinc-500">{language}</span>
+				<span class="text-muted-foreground">{language}</span>
 			</Dialog.Title>
 			<Dialog.Description class="sr-only">An interactive shell in the box, in /workspace</Dialog.Description>
 			<div class="flex items-center gap-3">
 				{#if closed}
 					<button
 						type="button"
-						class="flex cursor-pointer items-center gap-1 text-xs text-zinc-400 transition-colors hover:text-zinc-200"
+						class="flex cursor-pointer items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
 						onclick={() => {
 							closed = false;
 							session++;
@@ -57,10 +85,18 @@
 						<RotateCcw class="size-3.5" /> Reconnect
 					</button>
 				{/if}
+				<Select.Root type="single" value={theme} onValueChange={setTheme}>
+					<Select.Trigger size="sm" class="h-7 w-36 text-xs" aria-label="Terminal theme">{TERMINAL_THEMES[theme].label}</Select.Trigger>
+					<Select.Content>
+						{#each Object.entries(TERMINAL_THEMES) as [value, { label }] (value)}
+							<Select.Item {value} class="text-xs">{label}</Select.Item>
+						{/each}
+					</Select.Content>
+				</Select.Root>
 				<button
 					type="button"
 					onclick={() => onOpenChange(false)}
-					class="cursor-pointer text-zinc-500 transition-colors hover:text-zinc-300"
+					class="cursor-pointer text-muted-foreground transition-colors hover:text-foreground"
 					aria-label="Close terminal"
 				>
 					<X class="size-4" />
@@ -70,7 +106,7 @@
 		<div class="flex-1 overflow-hidden p-1">
 			{#if box}
 				{#key `${box.box_id}:${session}`}
-					<BoxTerminal boxId={box.box_id} onClose={() => (closed = true)} />
+					<BoxTerminal boxId={box.box_id} {theme} onClose={() => (closed = true)} />
 				{/key}
 			{/if}
 		</div>

@@ -133,8 +133,8 @@
 										<Table.Cell class="text-muted-foreground">{formatDate(box.last_used_at)}</Table.Cell>
 										<Table.Cell>
 											<div class="flex justify-end gap-1">
-												<Button size="sm" variant="outline" onclick={() => (terminal = box)}>
-													<Terminal class="size-4" /> Terminal
+												<Button size="icon" variant="ghost" aria-label="Terminal" title="Terminal" onclick={() => (terminal = box)}>
+													<Terminal class="size-4" />
 												</Button>
 												{#if box.status === 'running'}
 													<Button size="icon" variant="ghost" aria-label="Stop" disabled={busy === box.box_id} onclick={() => act(box, 'stop')}>

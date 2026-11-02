@@ -191,7 +191,7 @@ owner's box id answers `404`.
 | PUT | `/api/boxes/:id/files` | `{path, content, encoding?}` | Write a file (up to 5 MB; `encoding: "base64"` for binary); relative paths are under `/workspace` |
 | GET | `/api/boxes/:id/files` | `?path=` | Read a file (up to 1 MB; binary comes back base64) |
 | POST | `/api/boxes/:id/terminal` | | A one-time ticket for the box's terminal, good for 30 s: `{ticket, expires_in}` |
-| GET (websocket) | `/api/boxes/:id/terminal` | `?ticket=` | A login shell on a terminal in the box, until it exits; see below |
+| GET (websocket) | `/api/boxes/:id/terminal` | `?ticket=` | An interactive shell on a terminal in the box, until it exits; see below |
 | POST | `/api/boxes/:id/stop` | | Stop it, keeping its disk and `/workspace` |
 | DELETE | `/api/boxes/:id` | | Delete the box and its `/workspace` |
 

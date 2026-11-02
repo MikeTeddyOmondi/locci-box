@@ -23,7 +23,7 @@
 		{ method: 'PUT', path: '/api/boxes/:id/files', body: '{path, content, encoding?}', what: 'Write a file (up to 5 MB)' },
 		{ method: 'GET', path: '/api/boxes/:id/files?path=', body: '', what: 'Read a file (up to 1 MB)' },
 		{ method: 'POST', path: '/api/boxes/:id/terminal', body: '', what: 'A one-time ticket for the terminal, good for 30 s' },
-		{ method: 'GET (ws)', path: '/api/boxes/:id/terminal?ticket=', body: '', what: 'A login shell on a terminal in the box, until it exits' },
+		{ method: 'GET (ws)', path: '/api/boxes/:id/terminal?ticket=', body: '', what: 'An interactive shell on a terminal in the box, until it exits' },
 		{ method: 'POST', path: '/api/boxes/:id/stop', body: '', what: 'Stop it, keeping its disk' },
 		{ method: 'DELETE', path: '/api/boxes/:id', body: '', what: 'Delete the box and its /workspace' }
 	];

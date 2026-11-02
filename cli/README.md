@@ -78,7 +78,7 @@ loccibox box read <box_id> app.py [-o ./app.py]
 loccibox box stop <box_id> [--rm]            # stop keeps the disk; --rm deletes it
 loccibox box rm <box_id>
 ```
-`exec` prints the command's stdout and stderr as they are and exits with its exit code, so it works in scripts and pipes. `shell` is a login shell on a terminal in the box, as over ssh: variables, `cd`, background jobs, `top` and Tab completion work, Ctrl+C goes to the box, and `exit` or Ctrl+D leaves with the shell's exit code. It needs Node 22 or later. With piped input (or `--lines`) each line instead runs as its own `sh -c`, with the folder remembered.
+`exec` prints the command's stdout and stderr as they are and exits with its exit code, so it works in scripts and pipes. `shell` is an interactive shell on a terminal in the box, as over ssh: variables, `cd`, background jobs, `top` and Tab completion work, Ctrl+C goes to the box, and `exit` or Ctrl+D leaves with the shell's exit code. It needs Node 22 or later. With piped input (or `--lines`) each line instead runs as its own `sh -c`, with the folder remembered.
 
 ### `sandboxes`
 List all currently running sandboxes — recover IDs when a response was lost.

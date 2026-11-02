@@ -368,7 +368,7 @@ export class BoxService {
   }
 
   /**
-   * An interactive login shell in the box on a pseudo-terminal, for the
+   * An interactive shell in the box on a pseudo-terminal, for the
    * console's terminal and `loccibox box shell`. The box counts as busy for the
    * whole session, so the idle sweep leaves it running; the caller closes the
    * session after BOX_IDLE_MINUTES without input instead. Resolves with the
@@ -378,8 +378,10 @@ export class BoxService {
     return this.using(owner, boxId, async (sandbox) => {
       const handle = await sandbox.execStreamWith("/bin/sh", (b) =>
         b
-          // stderr must stay on the terminal: bash is only interactive (prompt, job control) when it is.
-          .args(["-c", "if command -v bash >/dev/null 2>&1; then exec bash -l; else exec sh -l; fi"])
+          // Interactive, not a login shell: Debian's /etc/profile resets PATH, which drops the
+          // toolchain the image put on it (/usr/local/cargo/bin, /usr/local/go/bin). stderr
+          // must stay on the terminal: bash is only interactive (prompt, job control) when it is.
+          .args(["-c", "if command -v bash >/dev/null 2>&1; then exec bash -i; else exec sh -i; fi"])
           .cwd(WORKDIR)
           .env("TERM", "xterm-256color")
           .stdinPipe()

@@ -50,7 +50,7 @@
 	import { errMessage } from '$lib/utils';
 
 	/**
-	 * A login shell in a box over the API's terminal websocket, after
+	 * An interactive shell in a box over the API's terminal websocket, after
 	 * iaas-service's vm-terminal.svelte (the same protocol):
 	 *   server -> client  {"type":"stdout","data":<base64 bytes>}, {"type":"exit","code":n}
 	 *   client -> server  {"type":"stdin","data":<base64 bytes>}

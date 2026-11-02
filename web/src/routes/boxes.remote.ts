@@ -1,7 +1,8 @@
 import { command, query } from '$app/server';
+import { env as publicEnv } from '$env/dynamic/public';
 import * as v from 'valibot';
 import { boxApi } from '$lib/server/box-api';
-import { LANGUAGES, type BoxExecResult, type BoxInfo } from '$lib/types';
+import { LANGUAGES, type BoxInfo } from '$lib/types';
 
 /** Agent boxes: long-lived microVMs, the same operations as the box_* MCP tools. */
 
@@ -20,18 +21,19 @@ export const startBox = command(v.string(), async (id) => {
 	return box;
 });
 
-export const execInBox = command(
-	v.object({
-		id: v.string(),
-		command: v.pipe(v.string(), v.nonEmpty()),
-		timeout: v.optional(v.pipe(v.number(), v.minValue(1), v.maxValue(600)))
-	}),
-	async ({ id, command: cmd, timeout }) =>
-		boxApi<BoxExecResult>(`/api/boxes/${encodeURIComponent(id)}/exec`, {
-			method: 'POST',
-			json: { command: cmd, timeout }
-		})
-);
+/**
+ * Where the browser opens a box's terminal: the API's websocket with a
+ * one-time ticket (good for 30 s). The browser connects to the API itself,
+ * since adapter-node cannot proxy websockets, and the ticket stands in for the
+ * access token, which stays in this server.
+ */
+export const terminalSession = command(v.string(), async (id) => {
+	const { ticket } = await boxApi<{ ticket: string }>(`/api/boxes/${encodeURIComponent(id)}/terminal`, { method: 'POST' });
+	const url = new URL(`/api/boxes/${encodeURIComponent(id)}/terminal`, publicEnv.PUBLIC_LOCCI_BOX_API_URL || 'http://localhost:5757');
+	url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+	url.searchParams.set('ticket', ticket);
+	return { url: url.toString() };
+});
 
 export const stopBox = command(v.string(), async (id) => {
 	await boxApi(`/api/boxes/${encodeURIComponent(id)}/stop`, { method: 'POST' });

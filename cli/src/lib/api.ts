@@ -87,6 +87,19 @@ export class LocciBoxAPI {
     });
   }
 
+  /**
+   * Where to open the box's terminal websocket: the API's terminal path with a
+   * one-time ticket (good for 30 s), since a WebSocket carries no header.
+   */
+  async terminalUrl(boxId: string): Promise<string> {
+    const path = `/api/boxes/${encodeURIComponent(boxId)}/terminal`;
+    const { ticket } = await this.request<{ ticket: string }>(path, { method: "POST" });
+    const url = new URL(`${this.baseUrl}${path}`);
+    url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+    url.searchParams.set("ticket", ticket);
+    return url.toString();
+  }
+
   async writeBoxFile(
     boxId: string,
     path: string,

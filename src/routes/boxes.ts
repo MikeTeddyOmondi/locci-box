@@ -1,5 +1,6 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { boxService, BoxError, type BoxOwner } from "../services/BoxService.js";
+import { terminalService } from "../services/TerminalService.js";
 import { logger } from "../utils/logger.js";
 
 /**
@@ -81,6 +82,19 @@ router.get(
 router.post("/:id/stop", handle(async (req) => boxService.stop(ownerOf(req), req.params.id as string)));
 
 /** DELETE /api/boxes/:id: stop and delete the box and its /workspace. */
+/**
+ * POST /api/boxes/:id/terminal: a one-time ticket for the box's terminal
+ * websocket, GET /api/boxes/:id/terminal?ticket=... (see routes/terminal.ts).
+ */
+router.post(
+  "/:id/terminal",
+  handle(async (req) => {
+    const owner = ownerOf(req);
+    await boxService.get(owner, req.params.id as string); // 404 unless it is the caller's
+    return terminalService.issue(owner, req.params.id as string);
+  }),
+);
+
 router.delete(
   "/:id",
   handle(async (req) => {

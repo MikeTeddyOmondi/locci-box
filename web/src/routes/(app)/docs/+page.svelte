@@ -22,6 +22,8 @@
 		{ method: 'POST', path: '/api/boxes/:id/exec', body: '{command, timeout?}', what: 'sh -c in /workspace; timeout in seconds (default 120, max 600)' },
 		{ method: 'PUT', path: '/api/boxes/:id/files', body: '{path, content, encoding?}', what: 'Write a file (up to 5 MB)' },
 		{ method: 'GET', path: '/api/boxes/:id/files?path=', body: '', what: 'Read a file (up to 1 MB)' },
+		{ method: 'POST', path: '/api/boxes/:id/terminal', body: '', what: 'A one-time ticket for the terminal, good for 30 s' },
+		{ method: 'GET (ws)', path: '/api/boxes/:id/terminal?ticket=', body: '', what: 'A login shell on a terminal in the box, until it exits' },
 		{ method: 'POST', path: '/api/boxes/:id/stop', body: '', what: 'Stop it, keeping its disk' },
 		{ method: 'DELETE', path: '/api/boxes/:id', body: '', what: 'Delete the box and its /workspace' }
 	];
@@ -76,6 +78,14 @@
 				A microVM that keeps running between calls: Debian with apt, git and the toolchain of the language asked for, 1 GB
 				and 2 vCPUs, work in /workspace. It stops after 15 idle minutes and starts again under the same id with its files.
 			</p>
+			<p class="text-sm text-muted-foreground">
+				The terminal websocket sends and takes JSON frames with bytes in base64: send
+				<span class="font-mono">{'{"type":"stdin","data":...}'}</span> and
+				<span class="font-mono">{'{"type":"resize","width":cols,"height":rows}'}</span>; it sends
+				<span class="font-mono">{'{"type":"stdout","data":...}'}</span> and, when the shell ends,
+				<span class="font-mono">{'{"type":"exit","code":n}'}</span>. From a terminal:
+			</p>
+			<CopyBlock code="loccibox box shell <box_id>" />
 			<Card.Root>
 				<Card.Content class="overflow-x-auto pt-6">
 					<Table.Root>

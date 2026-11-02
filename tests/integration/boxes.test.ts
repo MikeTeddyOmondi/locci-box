@@ -15,6 +15,8 @@ const vm = vi.hoisted(() => {
     removed: [] as string[],
     stopped: [] as string[],
     commands: [] as string[],
+    ttys: [] as boolean[],
+    resized: [] as number[][],
     running: new Set<string>(),
     imageCached: true,
     /** Images not cached, on top of imageCached; pulled by a create of that image. */
@@ -39,6 +41,39 @@ const vm = vi.hoisted(() => {
       if (line.includes("sleep 999")) throw new ExecTimeoutError("exec timed out");
       const out = line.includes("echo hi") ? "hi\n" : "";
       return { code: line.includes("false") ? 1 : 0, stdout: () => out, stderr: () => "" };
+    },
+    // A terminal: echoes what is typed, exits 3 on "exit", 137 when killed.
+    execStreamWith: async (cmd: string, configure: (b: any) => any) => {
+      const b: any = new Proxy({}, { get: (_t, key) => (...a: any[]) => (key === "tty" && state.ttys.push(a[0]), b) });
+      configure(b);
+      state.commands.push(`${cmd} (stream)`);
+      const queue: any[] = [{ kind: "started", pid: 1 }];
+      let wake: (() => void) | null = null;
+      const push = (event: any) => {
+        queue.push(event);
+        wake?.();
+      };
+      return {
+        takeStdin: async () => ({
+          write: async (data: Uint8Array) => {
+            const text = Buffer.from(data).toString();
+            push(text.startsWith("exit") ? { kind: "exited", code: 3 } : { kind: "stdout", data: Buffer.from(`echo:${text}`) });
+          },
+        }),
+        resize: async (rows: number, cols: number) => void state.resized.push([rows, cols]),
+        kill: async () => push({ kind: "exited", code: 137 }),
+        async *[Symbol.asyncIterator]() {
+          for (;;) {
+            while (queue.length) {
+              const event = queue.shift();
+              yield event;
+              if (event.kind === "exited") return;
+            }
+            await new Promise<void>((r) => (wake = r));
+            wake = null;
+          }
+        },
+      };
     },
     fs: () => ({
       write: async (p: string, data: Buffer) => void files.set(p, Buffer.from(data)),
@@ -117,6 +152,9 @@ const { tenantService } = await import("../../src/services/TenantService.js");
 const { db } = await import("../../src/db/index.js");
 const { boxes } = await import("../../src/db/schema.js");
 const { eq } = await import("drizzle-orm");
+
+const { attachTerminals } = await import("../../src/routes/terminal.js");
+const { WebSocket } = await import("ws");
 
 const app = createApp();
 const ADMIN = `Bearer ${process.env.ADMIN_API_KEY}`;
@@ -359,6 +397,56 @@ describe("agent boxes", () => {
     );
     // One pull for both early creates.
     expect([...vm.state.images.entries()].filter(([n, i]) => n.startsWith("box-warmup-") && i === image)).toHaveLength(1);
+  });
+
+  it("gives a terminal ticket only for the caller's own box", async () => {
+    const { body } = await request(app).post("/api/boxes").set("Authorization", alice);
+    const id = body.data.box_id;
+    expect((await request(app).post(`/api/boxes/${id}/terminal`).set("Authorization", bob)).status).toBe(404);
+    const res = await request(app).post(`/api/boxes/${id}/terminal`).set("Authorization", alice);
+    expect(res.status).toBe(200);
+    expect(res.body.data.ticket).toMatch(/^[\w-]{40,}$/);
+    expect(res.body.data.expires_in).toBe(30);
+  });
+
+  it("runs an interactive shell over the terminal websocket, once per ticket", async () => {
+    const server = app.listen(0);
+    attachTerminals(server);
+    const port = (server.address() as { port: number }).port;
+    try {
+      const { body } = await request(app).post("/api/boxes").set("Authorization", alice);
+      const id = body.data.box_id;
+      const { ticket } = (await request(app).post(`/api/boxes/${id}/terminal`).set("Authorization", alice)).body.data;
+      const url = `ws://localhost:${port}/api/boxes/${id}/terminal?ticket=${ticket}`;
+
+      const ws = new WebSocket(url);
+      const seen: string[] = [];
+      let exit: number | undefined;
+      ws.on("message", (raw) => {
+        const msg = JSON.parse(raw.toString());
+        if (msg.type === "stdout") seen.push(Buffer.from(msg.data, "base64").toString());
+        if (msg.type === "exit") exit = msg.code;
+      });
+      const closed = new Promise((r) => ws.on("close", r));
+      await new Promise((r) => ws.on("open", r));
+      const stdin = (text: string) => ws.send(JSON.stringify({ type: "stdin", data: Buffer.from(text).toString("base64") }));
+      ws.send(JSON.stringify({ type: "resize", width: 120, height: 40 }));
+      stdin("ls\r");
+      await vi.waitFor(() => expect(seen.join("")).toContain("echo:ls\r"));
+      stdin("exit\r");
+      await closed;
+      expect(exit).toBe(3);
+      expect(vm.state.ttys.at(-1)).toBe(true);
+      expect(vm.state.resized).toContainEqual([40, 120]);
+
+      // The ticket is spent; a made-up one never worked.
+      for (const bad of [url, url.replace(ticket, "nope")]) {
+        const status = await new Promise((r) => new WebSocket(bad).on("unexpected-response", (_req, res) => r(res.statusCode)));
+        expect(status).toBe(401);
+      }
+    } finally {
+      server.close();
+    }
   });
 
   it("with BOX_IMAGE_WARMUP all, pulls every box image in its own background task", async () => {

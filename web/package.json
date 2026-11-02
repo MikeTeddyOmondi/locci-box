@@ -27,6 +27,8 @@
 		"@tailwindcss/typography": "0.5.20",
 		"@tailwindcss/vite": "4.3.3",
 		"@types/dompurify": "3.2.0",
+		"@wterm/ghostty": "0.5.7",
+		"@wterm/svelte": "0.5.7",
 		"ai": "6.0.316",
 		"bits-ui": "2.19.5",
 		"clsx": "2.1.1",

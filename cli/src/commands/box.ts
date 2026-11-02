@@ -101,12 +101,18 @@ export function createBoxCommand(): Command {
 
   box
     .command("shell")
-    .description("An interactive shell in a box: each line runs there; cd is remembered; exit to leave")
+    .description(
+      "A shell in a box that lasts until you exit (vi, top, Tab, Ctrl+C work); piped input runs line by line",
+    )
     .argument("<box_id>")
-    .option("-t, --timeout <seconds>", "Per-command timeout (default 120, max 600)")
+    .option("--lines", "Run each line as its own command, as for piped input")
+    .option("-t, --timeout <seconds>", "With --lines or piped input: per-command timeout (default 120, max 600)")
     .option("--profile <name>", "Use a specific profile")
-    .action(async (id: string, opts: { timeout?: string; profile?: string }) =>
-      run(opts.profile, async (api) => shell(api, id, seconds(opts.timeout))),
+    .action(async (id: string, opts: { lines?: boolean; timeout?: string; profile?: string }) =>
+      run(opts.profile, async (api) => {
+        if (opts.lines || !process.stdin.isTTY || !process.stdout.isTTY) return shell(api, id, seconds(opts.timeout));
+        process.exit(await terminal(api, id));
+      }),
     );
 
   box
@@ -228,13 +234,70 @@ async function readStdin(): Promise<Buffer> {
   return Buffer.concat(chunks);
 }
 
+/**
+ * A login shell in the box on a pseudo-terminal, over the API's terminal
+ * websocket (the protocol the console's terminal speaks): this terminal is put
+ * in raw mode so every key, Ctrl+C included, goes to the box, as with ssh.
+ * Resolves with the shell's exit code, after putting the terminal back.
+ */
+async function terminal(api: LocciBoxAPI, id: string): Promise<number> {
+  const info = await api.createBox(id); // starts it if it was stopped
+  const ws = new WebSocket(await api.terminalUrl(id));
+  const { stdin, stdout } = process;
+  let code: number | null = null;
+  let opened = false;
+
+  const send = (message: object) => {
+    if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(message));
+  };
+  const resize = () => send({ type: "resize", width: stdout.columns, height: stdout.rows });
+  const input = (chunk: Buffer) => send({ type: "stdin", data: chunk.toString("base64") });
+  const hangUp = () => ws.close();
+  const restore = () => {
+    stdin.off("data", input);
+    stdout.off("resize", resize);
+    process.off("SIGHUP", hangUp).off("SIGTERM", hangUp);
+    if (stdin.isTTY) stdin.setRawMode(false);
+    stdin.pause();
+  };
+
+  return new Promise((resolve) => {
+    ws.addEventListener("open", () => {
+      opened = true;
+      process.stderr.write(pc.dim(`Connected to ${id} (${info.image}). "exit" or Ctrl+D leaves.\n`));
+      stdin.setRawMode(true);
+      stdin.resume();
+      stdin.on("data", input);
+      stdout.on("resize", resize);
+      process.on("SIGHUP", hangUp).on("SIGTERM", hangUp);
+      resize();
+    });
+    ws.addEventListener("message", (event) => {
+      try {
+        const msg = JSON.parse(String(event.data)) as { type?: string; data?: string; code?: number };
+        if (msg.type === "stdout" && msg.data) stdout.write(Buffer.from(msg.data, "base64"));
+        if (msg.type === "exit" && typeof msg.code === "number") code = msg.code;
+      } catch {
+        stdout.write(String(event.data));
+      }
+    });
+    ws.addEventListener("close", () => {
+      restore();
+      if (!opened) printError("Could not open the terminal (the API refused the connection)");
+      else if (code === null) process.stderr.write(pc.dim("\n[session closed]\n"));
+      resolve(code ?? 1);
+    });
+  });
+}
+
 /** Printed after each command so the shell knows the box's working folder. */
 const PWD_MARK = "__LOCCIBOX_PWD__";
 
 /**
- * Each line runs as its own `sh -c` in the box, so the shell itself does not
- * persist; the folder does: every command starts with a cd to where the last
- * one ended. Files and installs persist, as in any box call.
+ * Line mode, for piped input and --lines: each line runs as its own `sh -c` in
+ * the box, so the shell itself does not persist; the folder does: every
+ * command starts with a cd to where the last one ended. Files and installs
+ * persist, as in any box call.
  */
 async function shell(api: LocciBoxAPI, id: string, timeout: number | undefined): Promise<void> {
   const info = await api.createBox(id); // starts it if it was stopped

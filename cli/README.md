@@ -71,14 +71,14 @@ loccibox box ls                              # your boxes, running and stopped
 loccibox box info <box_id>
 loccibox box exec <box_id> -- ls -la         # put -- before a command with flags
 loccibox box exec <box_id> 'apt-get install -y jq' -t 300
-loccibox box shell <box_id>                  # interactive: each line runs in the box, cd is remembered
+loccibox box shell <box_id>                  # a real shell in the box, until you exit
 loccibox box write <box_id> app.py -f ./app.py
 echo 'print(1)' | loccibox box write <box_id> one.py
 loccibox box read <box_id> app.py [-o ./app.py]
 loccibox box stop <box_id> [--rm]            # stop keeps the disk; --rm deletes it
 loccibox box rm <box_id>
 ```
-`exec` prints the command's stdout and stderr as they are and exits with its exit code, so it works in scripts and pipes. In `shell` each line is its own `sh -c` (variables and background jobs do not carry over; the folder, files and installs do).
+`exec` prints the command's stdout and stderr as they are and exits with its exit code, so it works in scripts and pipes. `shell` is a login shell on a terminal in the box, as over ssh: variables, `cd`, background jobs, `top` and Tab completion work, Ctrl+C goes to the box, and `exit` or Ctrl+D leaves with the shell's exit code. It needs Node 22 or later. With piped input (or `--lines`) each line instead runs as its own `sh -c`, with the folder remembered.
 
 ### `sandboxes`
 List all currently running sandboxes — recover IDs when a response was lost.

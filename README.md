@@ -190,6 +190,8 @@ owner's box id answers `404`.
 | POST | `/api/boxes/:id/exec` | `{command, timeout?}` | `sh -c` in `/workspace`; `timeout` seconds (default 120, max 600); a timeout answers `exit_code` 124, `timed_out: true` |
 | PUT | `/api/boxes/:id/files` | `{path, content, encoding?}` | Write a file (up to 5 MB; `encoding: "base64"` for binary); relative paths are under `/workspace` |
 | GET | `/api/boxes/:id/files` | `?path=` | Read a file (up to 1 MB; binary comes back base64) |
+| POST | `/api/boxes/:id/terminal` | | A one-time ticket for the box's terminal, good for 30 s: `{ticket, expires_in}` |
+| GET (websocket) | `/api/boxes/:id/terminal` | `?ticket=` | A login shell on a terminal in the box, until it exits; see below |
 | POST | `/api/boxes/:id/stop` | | Stop it, keeping its disk and `/workspace` |
 | DELETE | `/api/boxes/:id` | | Delete the box and its `/workspace` |
 
@@ -198,6 +200,8 @@ POST /api/boxes/box_mG6f118Otufb/exec  {"command": "apt-get install -y -qq jq >/
 { "success": true, "data": { "box_id": "box_mG6f118Otufb", "exit_code": 0, "stdout": "jq-1.6\n",
   "stderr": "", "duration_ms": 9131, "timed_out": false, "truncated": false } }
 ```
+
+The terminal websocket speaks JSON frames, with bytes in base64: the client sends `{"type":"stdin","data":...}` and `{"type":"resize","width":cols,"height":rows}`; the API sends `{"type":"stdout","data":...}` and, when the shell ends, `{"type":"exit","code":n}`. A stopped box starts first. An open terminal keeps the box from the idle stop; one nobody types in for `BOX_IDLE_MINUTES` closes. At most 4 terminals are open per user. The console's Boxes page and `loccibox box shell` use it.
 
 On a host that has not cached `BOX_IMAGE`, the API pulls it in the background at startup (about
 1 GB unpacked; over 10 minutes on a busy host) and answers `503` to box creates until it is done,
@@ -242,7 +246,7 @@ loccibox run -l python -c "print('hello')"        # run code
 loccibox run -l node   -f script.js               # run file
 loccibox status <sandbox-id>                      # check status
 loccibox box create                               # an agent box (prints its id)
-loccibox box shell <box-id>                       # work in it interactively
+loccibox box shell <box-id>                       # a shell in it, until you exit
 loccibox box exec <box-id> -- python3 --version   # one command, its exit code
 loccibox metrics                                  # view usage
 ```

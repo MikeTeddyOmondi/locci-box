@@ -92,6 +92,21 @@ export interface BoxOwner {
   ownerId: string;
 }
 
+/** A running BoxService.terminal shell. */
+export interface BoxShell {
+  write(data: Uint8Array): Promise<void>;
+  resize(rows: number, cols: number): Promise<void>;
+  kill(): Promise<void>;
+}
+
+/** The two ends of a BoxService.terminal session. */
+export interface BoxTerminalSession {
+  /** Called once the shell runs, with what drives it. */
+  attach(shell: BoxShell): void;
+  /** What the shell printed (stdout and stderr together, as on a terminal). */
+  output(data: Uint8Array): void;
+}
+
 export type BoxStatus = "running" | "stopped";
 
 export interface BoxInfo {
@@ -349,6 +364,42 @@ export class BoxService {
           truncated: false,
         };
       }
+    });
+  }
+
+  /**
+   * An interactive login shell in the box on a pseudo-terminal, for the
+   * console's terminal and `loccibox box shell`. The box counts as busy for the
+   * whole session, so the idle sweep leaves it running; the caller closes the
+   * session after BOX_IDLE_MINUTES without input instead. Resolves with the
+   * shell's exit code once it ends (exit, or `session.kill()`).
+   */
+  async terminal(owner: BoxOwner, boxId: string, session: BoxTerminalSession): Promise<number> {
+    return this.using(owner, boxId, async (sandbox) => {
+      const handle = await sandbox.execStreamWith("/bin/sh", (b) =>
+        b
+          // stderr must stay on the terminal: bash is only interactive (prompt, job control) when it is.
+          .args(["-c", "if command -v bash >/dev/null 2>&1; then exec bash -l; else exec sh -l; fi"])
+          .cwd(WORKDIR)
+          .env("TERM", "xterm-256color")
+          .stdinPipe()
+          .tty(true),
+      );
+      const stdin = await handle.takeStdin();
+      session.attach({
+        write: async (data) => {
+          await stdin?.write(data);
+        },
+        resize: (rows, cols) => handle.resize(rows, cols),
+        kill: () => handle.kill(),
+      });
+      let code = -1;
+      for await (const event of handle) {
+        if (event.kind === "stdout" || event.kind === "stderr") session.output(event.data);
+        else if (event.kind === "exited") code = event.code;
+      }
+      if (code === -1) code = (await handle.wait().catch(() => null))?.code ?? -1;
+      return code;
     });
   }
 

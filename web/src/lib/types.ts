@@ -76,16 +76,6 @@ export interface BoxInfo {
 	idle_stop_at: string | null;
 }
 
-export interface BoxExecResult {
-	box_id: string;
-	exit_code: number;
-	stdout: string;
-	stderr: string;
-	duration_ms: number;
-	timed_out: boolean;
-	truncated: boolean;
-}
-
 export interface BobThread {
 	id: string;
 	title: string;

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { RotateCcw, Terminal, X } from '@lucide/svelte';
+	import { mode } from 'mode-watcher';
 	import { onMount } from 'svelte';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import * as Select from '$lib/components/ui/select';
@@ -9,7 +10,7 @@
 	 * A box's terminal over the whole page, after iaas-service's
 	 * vm-terminal-modal.svelte. The header follows the console's light or dark
 	 * theme; the terminal's own theme is picked here and remembered in this
-	 * browser.
+	 * browser, for each mode.
 	 */
 
 	let {
@@ -25,22 +26,31 @@
 		if (box) closed = false;
 	});
 
-	const THEME_KEY = 'locci-box.terminal-theme';
-	let theme = $state<TerminalTheme>('one-dark');
+	/**
+	 * The terminal theme for each console mode: Gruvbox Light in light mode and
+	 * One Dark in dark mode, unless one was picked in that mode.
+	 */
+	const DEFAULT_THEME = { light: 'gruvbox-light', dark: 'one-dark' } as const satisfies Record<string, TerminalTheme>;
+	const themeKey = (m: keyof typeof DEFAULT_THEME) => `locci-box.terminal-theme.${m}`;
+	let picked = $state<Partial<Record<keyof typeof DEFAULT_THEME, TerminalTheme>>>({});
+	const current = $derived(mode.current === 'light' ? 'light' : 'dark');
+	const theme = $derived(picked[current] ?? DEFAULT_THEME[current]);
 
 	onMount(() => {
 		try {
-			const saved = localStorage.getItem(THEME_KEY);
-			if (saved && saved in TERMINAL_THEMES) theme = saved as TerminalTheme;
+			for (const m of ['light', 'dark'] as const) {
+				const saved = localStorage.getItem(themeKey(m));
+				if (saved && saved in TERMINAL_THEMES) picked[m] = saved as TerminalTheme;
+			}
 		} catch {
-			// storage blocked: the default theme
+			// storage blocked: the defaults
 		}
 	});
 
 	function setTheme(value: string) {
-		theme = value as TerminalTheme;
+		picked[current] = value as TerminalTheme;
 		try {
-			localStorage.setItem(THEME_KEY, theme);
+			localStorage.setItem(themeKey(current), value);
 		} catch {
 			// storage blocked: the choice lasts until reload
 		}

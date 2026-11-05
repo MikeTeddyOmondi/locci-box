@@ -124,7 +124,8 @@
 </script>
 
 <div class={['relative min-h-0', className]}>
-	<div bind:this={host} class="absolute inset-0"></div>
+	<!-- monaco-component carries the theme's colours to what Monaco draws beside the editor, such as the right-click menu. -->
+	<div bind:this={host} class="monaco-component absolute inset-0"></div>
 	{#if !ready}
 		<p class="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">Loading the editor...</p>
 	{/if}

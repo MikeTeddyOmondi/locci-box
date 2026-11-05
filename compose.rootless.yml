@@ -27,6 +27,9 @@ services:
       PORT: 5757
       ADMIN_API_KEY: ${ADMIN_API_KEY}
       JWT_SECRET: ${JWT_SECRET}
+      # Locci Auth: its access tokens and Locci API keys are accepted as a login.
+      LOCCI_AUTH_ISSUER: ${LOCCI_AUTH_ISSUER:-}
+      LOCCI_AUTH_INTERNAL_ORIGIN: ${LOCCI_AUTH_INTERNAL_ORIGIN:-}
       GROQ_API_KEY: ${GROQ_API_KEY}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       DEFAULT_MAX_CONCURRENT_SANDBOXES: ${DEFAULT_MAX_CONCURRENT_SANDBOXES:-5}
@@ -78,8 +81,6 @@ services:
     build:
       context: .
       dockerfile: web/Dockerfile
-      args:
-        VITE_API_URL: ${VITE_API_URL:-http://localhost:5757}
     image: locci/box-web
     container_name: locci-box-web
     restart: unless-stopped
@@ -90,7 +91,15 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
-      VITE_API_URL: http://api:5757
+      # The console's public address: SvelteKit checks it on form and remote calls.
+      ORIGIN: ${WEB_ORIGIN:-http://localhost:4173}
+      LOCCI_BOX_API_URL: http://api:5757
+      PUBLIC_LOCCI_BOX_API_URL: ${PUBLIC_LOCCI_BOX_API_URL:-http://localhost:5757}
+      # Locci Auth, as locci-platform names it. INTERNAL_ORIGIN when the issuer's
+      # address (localhost in development) is not reachable from the container.
+      PUBLIC_OPENAUTH_ISSUER: ${LOCCI_AUTH_ISSUER:-http://localhost:8787}
+      PUBLIC_OPENAUTH_CLIENT_ID: ${OPENAUTH_CLIENT_ID:-locci-box}
+      LOCCI_AUTH_INTERNAL_ORIGIN: ${LOCCI_AUTH_INTERNAL_ORIGIN:-}
     networks:
       - proxy-network
       - default

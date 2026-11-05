@@ -4,6 +4,7 @@ import { logger } from "./utils/logger.js";
 import { env, isDevelopment } from "./config/env.js";
 import { boxService } from "./services/BoxService.js";
 import { sandboxService } from "./services/SandboxService.js";
+import { attachTerminals } from "./routes/terminal.js";
 
 async function startServer() {
   try {
@@ -20,7 +21,7 @@ async function startServer() {
 
     const app = createApp();
 
-    app.listen(env.PORT, () => {
+    const server = app.listen(env.PORT, () => {
       logger.info({ port: env.PORT, env: env.NODE_ENV }, "Locci Box API server started");
 
       if (isDevelopment) {
@@ -29,6 +30,8 @@ async function startServer() {
         logger.info(`API endpoint: http://localhost:${env.PORT}/api/sandbox/run`);
       }
     });
+    // Box terminals: websockets on the same port.
+    attachTerminals(server);
   } catch (error) {
     logger.error({ error }, "Failed to start server");
     process.exit(1);

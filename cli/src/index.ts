@@ -19,7 +19,7 @@ const program = new Command();
 program
   .name("loccibox")
   .description("CLI for Locci Box - Execute code in isolated sandboxes")
-  .version("1.4.0");
+  .version("1.5.0");
 
 // Init command (special - doesn't require config)
 program

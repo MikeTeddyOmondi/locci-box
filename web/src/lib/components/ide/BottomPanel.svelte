@@ -137,6 +137,8 @@
 				<!-- One chip per shell: its number, an X to kill it; an ended one is struck through. -->
 				<div class="flex min-w-0 items-center gap-0.5 overflow-x-auto">
 					{#each sessions as s, i (s.id)}
+						<!-- A running command shows as a pulsing dot, and by name on a wide screen. -->
+						{@const command = s.ended ? null : (terminals[s.id]?.runningCommand() ?? null)}
 						<div
 							class={[
 								'flex shrink-0 items-center rounded font-mono text-[11px]',
@@ -146,11 +148,15 @@
 							<button
 								type="button"
 								class={['flex cursor-pointer items-center gap-1 py-1 pl-1.5', s.ended && 'line-through opacity-60']}
-								aria-label="Terminal {i + 1}{s.ended ? ', ended' : ''}"
-								title="bash {i + 1}{s.ended ? ' (ended)' : ''}"
+								aria-label="Terminal {i + 1}{s.ended ? ', ended' : command != null ? `, running ${command || 'a command'}` : ''}"
+								title="bash {i + 1}{s.ended ? ' (ended)' : command != null ? `: ${command || 'running'}` : ''}"
 								onclick={() => (activeId = s.id)}
 							>
 								<SquareTerminal class="size-3.5" />{i + 1}
+								{#if command != null}
+									<span class="size-1.5 shrink-0 animate-pulse rounded-full bg-sky-500"></span>
+									{#if command}<span class="hidden max-w-28 truncate md:inline">{command}</span>{/if}
+								{/if}
 							</button>
 							<button type="button" class="cursor-pointer px-1 py-1 opacity-60 hover:opacity-100" aria-label="Kill terminal {i + 1}" title="Kill terminal {i + 1}" onclick={() => closeTerminal(s.id)}>
 								<X class="size-3" />

@@ -34,6 +34,8 @@ temp/
 data/locci-box
 # Agent box workspaces when JuiceFS is off (BOX_LOCAL_ROOT)
 data/boxes/
+# Prebuilt Go standard library for run_sandbox, rebuilt when missing (RUNTIME_CACHE_ROOT)
+data/runtime-cache/
 
 # JuiceFS local dev mount point (FUSE-mounted at runtime; never committed)
 juicefs/

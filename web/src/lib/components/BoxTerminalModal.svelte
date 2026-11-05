@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import * as Select from '$lib/components/ui/select';
+	import { confirmDialog } from '$lib/confirm.svelte';
 	import { terminalTheme } from '$lib/terminal-theme.svelte';
 	import BoxTerminal, { TERMINAL_THEMES } from './BoxTerminal.svelte';
 
@@ -28,6 +29,23 @@
 
 	onMount(() => terminalTheme.load());
 	const theme = $derived(terminalTheme.current);
+
+	let shell = $state<ReturnType<typeof BoxTerminal>>();
+
+	/** Closing ends the shell, so a command still running in it is asked about first. */
+	async function close() {
+		const command = shell?.runningCommand();
+		if (command != null) {
+			const ok = await confirmDialog({
+				title: 'Close the terminal?',
+				description: `${command ? `"${command}"` : 'A command'} is still running in it. Closing the terminal stops it.`,
+				confirmLabel: 'Close terminal',
+				destructive: true
+			});
+			if (!ok) return;
+		}
+		onOpenChange(false);
+	}
 
 	const language = $derived(box ? (box.image.split('/').at(-1) ?? box.image).replace('golang', 'go') : '');
 </script>
@@ -83,7 +101,7 @@
 				</Select.Root>
 				<button
 					type="button"
-					onclick={() => onOpenChange(false)}
+					onclick={close}
 					class="cursor-pointer text-muted-foreground transition-colors hover:text-foreground"
 					aria-label="Close terminal"
 				>
@@ -94,7 +112,7 @@
 		<div class="flex-1 overflow-hidden p-1">
 			{#if box}
 				{#key `${box.box_id}:${session}`}
-					<BoxTerminal boxId={box.box_id} {theme} onClose={() => (closed = true)} />
+					<BoxTerminal bind:this={shell} boxId={box.box_id} {theme} onClose={() => (closed = true)} />
 				{/key}
 			{/if}
 		</div>

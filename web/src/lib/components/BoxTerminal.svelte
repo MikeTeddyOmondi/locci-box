@@ -126,6 +126,32 @@
 		return status === 'open';
 	}
 
+	/**
+	 * The command running in the shell ('' when bash did not say which), or
+	 * null at the prompt. From the shell integration markers the API's bash
+	 * prints (OSC 633;C;<command> when a command starts, OSC 633;D when its
+	 * prompt is back); a shell without them always reads as at the prompt.
+	 */
+	let running = $state<string | null>(null);
+	export function runningCommand(): string | null {
+		return status === 'open' ? running : null;
+	}
+
+	const MARKER = /\x1b\]633;([CD])(?:;([^\x07\x1b]*))?(?:\x07|\x1b\\)/g;
+	/** The start of a marker split across two messages. */
+	let pending = '';
+
+	function readMarkers(bytes: Uint8Array) {
+		const text = pending + new TextDecoder().decode(bytes);
+		let end = 0;
+		for (const m of text.matchAll(MARKER)) {
+			running = m[1] === 'C' ? (m[2] ?? '').trim() : null;
+			end = m.index + m[0].length;
+		}
+		const open = text.lastIndexOf('\x1b]633;');
+		pending = open >= end && text.length - open < 512 ? text.slice(open) : '';
+	}
+
 	async function connect() {
 		status = 'connecting';
 		let url: string;
@@ -153,7 +179,9 @@
 			try {
 				const msg = JSON.parse(text) as { type?: string; data?: string; code?: number };
 				if (msg.type === 'stdout' && msg.data) {
-					term?.write(fromBase64(msg.data));
+					const bytes = fromBase64(msg.data);
+					term?.write(bytes);
+					readMarkers(bytes);
 					onOutput?.();
 				}
 				if (msg.type === 'exit') term?.write(`\r\n\x1b[90m[shell exited with ${msg.code}]\x1b[0m`);

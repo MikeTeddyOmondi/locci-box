@@ -34,6 +34,21 @@ import { withPullRetry } from "./SandboxService.js";
  */
 
 const WORKDIR = "/workspace";
+
+/**
+ * Shell integration for the terminal, as VS Code does it: bash marks when a
+ * command starts (OSC 633;C, with the command line) and when its prompt is
+ * back (OSC 633;D). Terminals ignore these; the console reads them to know a
+ * command is still running before it kills a shell. The user's ~/.bashrc runs first.
+ */
+const SHELL_RC = "/tmp/.locci-bashrc";
+const SHELL_INTEGRATION = [
+  "[ -f ~/.bashrc ] && . ~/.bashrc",
+  '__locci_cmd() { local c; c=$(HISTTIMEFORMAT= builtin history 1); [[ $c =~ ^[[:space:]]*[0-9]+[*]?[[:space:]]+(.*)$ ]] && c=${BASH_REMATCH[1]}; c=${c//[[:cntrl:]]/ }; printf %s "${c:0:120}"; }',
+  '__locci_prompt() { printf "\\033]633;D\\007"; }',
+  'PROMPT_COMMAND="__locci_prompt${PROMPT_COMMAND:+; $PROMPT_COMMAND}"',
+  "PS0='\\e]633;C;$(__locci_cmd)\\a'",
+].join("\n");
 /** Output kept per stream; the end is kept, where errors are. */
 const MAX_OUTPUT_CHARS = 100_000;
 const MAX_READ_BYTES = 1024 * 1024;
@@ -401,7 +416,7 @@ export class BoxService {
           // Interactive, not a login shell: Debian's /etc/profile resets PATH, which drops the
           // toolchain the image put on it (/usr/local/cargo/bin, /usr/local/go/bin). stderr
           // must stay on the terminal: bash is only interactive (prompt, job control) when it is.
-          .args(["-c", "if command -v bash >/dev/null 2>&1; then exec bash -i; else exec sh -i; fi"])
+          .args(["-c", `if command -v bash >/dev/null 2>&1; then\ncat > ${SHELL_RC} <<'EOF'\n${SHELL_INTEGRATION}\nEOF\nexec bash --rcfile ${SHELL_RC} -i; else exec sh -i; fi`])
           .cwd(WORKDIR)
           .env("TERM", "xterm-256color")
           .stdinPipe()

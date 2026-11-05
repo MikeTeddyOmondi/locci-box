@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	import BoxTerminal, { TERMINAL_THEMES } from '$lib/components/BoxTerminal.svelte';
 	import * as Select from '$lib/components/ui/select';
+	import { confirmDialog } from '$lib/confirm.svelte';
 	import { terminalTheme } from '$lib/terminal-theme.svelte';
 	import type { Diagnostic } from '$lib/types';
 
@@ -47,9 +48,21 @@
 		return id;
 	}
 
-	function closeTerminal(id: number) {
-		const i = sessions.findIndex((s) => s.id === id);
+	async function closeTerminal(id: number) {
+		let i = sessions.findIndex((s) => s.id === id);
 		if (i < 0) return;
+		// A command still running is stopped with its shell, so that is asked first.
+		const command = terminals[id]?.runningCommand();
+		if (command != null) {
+			const ok = await confirmDialog({
+				title: `Kill terminal ${i + 1}?`,
+				description: `${command ? `"${command}"` : 'A command'} is still running in it. Killing the terminal stops it.`,
+				confirmLabel: 'Kill terminal',
+				destructive: true
+			});
+			i = sessions.findIndex((s) => s.id === id);
+			if (!ok || i < 0) return;
+		}
 		sessions.splice(i, 1);
 		delete terminals[id];
 		if (activeId === id) activeId = sessions.at(Math.max(0, i - 1))?.id ?? null;

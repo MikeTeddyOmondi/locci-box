@@ -280,16 +280,31 @@
 	const keys = (key: string) => (mac ? `⌘${key}` : `Ctrl+${key}`);
 
 	/**
-	 * Cmd/Ctrl+X, C and V in the tree, as in VS Code's Explorer: on the row that
-	 * has the focus, and a paste lands in that folder (or the file's folder).
-	 * With no row focused, a paste goes in the folder last clicked.
+	 * Keys in the tree, as in VS Code's Explorer, on the row that has the focus:
+	 * F2 renames, Delete (or Cmd+Backspace on a Mac) deletes after the same
+	 * confirmation as the bin button, and Cmd/Ctrl+X, C and V cut, copy and
+	 * paste. A paste lands in the focused folder (or the file's folder), and with
+	 * no row focused, in the folder last clicked.
 	 */
 	function treeKey(e: KeyboardEvent) {
-		if (!(mac ? e.metaKey : e.ctrlKey) || e.altKey || e.shiftKey) return;
 		if ((e.target as Element).closest('input')) return;
+		const t = targetOf(e.target);
+		const plain = !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey;
+		if (plain && e.key === 'F2') {
+			if (!t.row || inSkipped(t.path)) return;
+			e.preventDefault();
+			editing = { kind: 'rename', path: t.path };
+			return;
+		}
+		if ((plain && e.key === 'Delete') || (mac && e.metaKey && !e.shiftKey && !e.altKey && e.key === 'Backspace')) {
+			if (!t.row) return;
+			e.preventDefault();
+			onDelete(t.path, t.folder);
+			return;
+		}
+		if (!(mac ? e.metaKey : e.ctrlKey) || e.altKey || e.shiftKey) return;
 		const key = e.key.toLowerCase();
 		if (key !== 'x' && key !== 'c' && key !== 'v') return;
-		const t = targetOf(e.target);
 		if (key === 'v') {
 			if (!clip) return;
 			paste(!t.row ? selectedDir : t.folder ? t.path : parentOf(t.path));
@@ -654,9 +669,13 @@
 				<DropdownMenu.Item onSelect={() => copyText(path)}><ClipboardCopy />Copy relative path</DropdownMenu.Item>
 				<DropdownMenu.Separator />
 				{#if !skipped}
-					<DropdownMenu.Item onSelect={later(() => (editing = { kind: 'rename', path }))}><Pencil />Rename</DropdownMenu.Item>
+					<DropdownMenu.Item onSelect={later(() => (editing = { kind: 'rename', path }))}>
+						<Pencil />Rename<DropdownMenu.Shortcut class="hidden md:inline">F2</DropdownMenu.Shortcut>
+					</DropdownMenu.Item>
 				{/if}
-				<DropdownMenu.Item variant="destructive" onSelect={() => onDelete(path, folder)}><Trash2 />Delete</DropdownMenu.Item>
+				<DropdownMenu.Item variant="destructive" onSelect={() => onDelete(path, folder)}>
+					<Trash2 />Delete<DropdownMenu.Shortcut class="hidden md:inline">{mac ? '⌘⌫' : 'Delete'}</DropdownMenu.Shortcut>
+				</DropdownMenu.Item>
 			{:else}
 				<DropdownMenu.Separator />
 				<DropdownMenu.Item onSelect={onRefresh}><RefreshCw />Refresh</DropdownMenu.Item>

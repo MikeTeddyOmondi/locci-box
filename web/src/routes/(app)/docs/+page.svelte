@@ -17,8 +17,9 @@
 	];
 
 	const BOX_ROUTES = [
-		{ method: 'POST', path: '/api/boxes', body: '{language?, box_id?}', what: 'Create a box (201), or start and reattach to one (200)' },
+		{ method: 'POST', path: '/api/boxes', body: '{language?, name?, box_id?}', what: 'Create a box (201), or start and reattach to one (200)' },
 		{ method: 'GET', path: '/api/boxes', body: '', what: 'Your boxes, running and stopped' },
+		{ method: 'PATCH', path: '/api/boxes/:id', body: '{name}', what: 'Rename a box (a Code project)' },
 		{ method: 'POST', path: '/api/boxes/:id/exec', body: '{command, timeout?}', what: 'sh -c in /workspace; timeout in seconds (default 120, max 600)' },
 		{ method: 'PUT', path: '/api/boxes/:id/files', body: '{path, content, encoding?}', what: 'Write a file (up to 5 MB)' },
 		{ method: 'GET', path: '/api/boxes/:id/files?path=', body: '', what: 'Read a file (up to 1 MB)' },

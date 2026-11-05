@@ -65,6 +65,9 @@ export interface StatsData {
 
 export interface BoxInfo {
 	box_id: string;
+	/** Set for a box that holds a Code project. */
+	name: string | null;
+	language: Language | null;
 	status: 'running' | 'stopped';
 	image: string;
 	memory_mib: number;
@@ -75,6 +78,23 @@ export interface BoxInfo {
 	stopped_at: string | null;
 	idle_stop_at: string | null;
 }
+
+/** An error or warning in a file, from Monaco's TypeScript worker or a project's checker. */
+export interface Diagnostic {
+	/** Relative to /workspace (or the Scratch file's name). */
+	path: string;
+	line: number;
+	column: number;
+	endLine?: number;
+	endColumn?: number;
+	severity: 'error' | 'warning' | 'info';
+	message: string;
+	/** What reported it: tsc, python, gcc, cargo... */
+	source: string;
+}
+
+/** A path in a project's /workspace; folders end in "/". */
+export type TreeEntry = string;
 
 export interface BobThread {
 	id: string;

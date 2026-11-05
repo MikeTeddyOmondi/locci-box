@@ -7,6 +7,7 @@
 	import * as Card from '$lib/components/ui/card';
 	import * as Select from '$lib/components/ui/select';
 	import { CODE_STARTER, MONACO_LANGUAGE, TEST_STARTER } from '$lib/languages';
+	import { PLAIN_JAVASCRIPT } from '$lib/monaco';
 	import { LANGUAGE_LABELS, LANGUAGES, type Language } from '$lib/types';
 	import { errMessage } from '$lib/utils';
 	import { runCode } from '../../sandbox.remote';
@@ -26,6 +27,8 @@
 	}
 
 	let language = $state<Language>('python');
+	/** Code and tests are one program split over two editors, so JavaScript is coloured but not checked. */
+	const editorLanguage = $derived(language === 'node' ? PLAIN_JAVASCRIPT : MONACO_LANGUAGE[language]);
 
 	const pair = (l: Language): Pair => ({
 		id: crypto.randomUUID(),
@@ -105,13 +108,13 @@
 				<div class="border-b lg:border-r lg:border-b-0">
 					<p class="px-4 pt-2 text-xs font-medium text-muted-foreground">Code</p>
 					{#key language}
-						<CodeEditor bind:value={p.code} language={MONACO_LANGUAGE[language]} onRun={() => run(p)} class="h-72" ariaLabel="Code, pair {i + 1}" />
+						<CodeEditor bind:value={p.code} language={editorLanguage} onRun={() => run(p)} class="h-72" ariaLabel="Code, pair {i + 1}" />
 					{/key}
 				</div>
 				<div>
 					<p class="px-4 pt-2 text-xs font-medium text-muted-foreground">Tests</p>
 					{#key language}
-						<CodeEditor bind:value={p.tests} language={MONACO_LANGUAGE[language]} onRun={() => run(p)} class="h-72" ariaLabel="Tests, pair {i + 1}" />
+						<CodeEditor bind:value={p.tests} language={editorLanguage} onRun={() => run(p)} class="h-72" ariaLabel="Tests, pair {i + 1}" />
 					{/key}
 				</div>
 			</div>

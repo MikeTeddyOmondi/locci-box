@@ -34,11 +34,11 @@ const handle =
     }
   };
 
-/** POST /api/boxes  {language?, box_id?}: create a box, or reattach to one. */
+/** POST /api/boxes  {language?, name?, box_id?}: create a box, or reattach to one. */
 router.post(
   "/",
   handle(async (req, res) => {
-    const box = await boxService.create(ownerOf(req), req.body?.box_id, req.body?.language);
+    const box = await boxService.create(ownerOf(req), req.body?.box_id, req.body?.language, req.body?.name);
     res.status(req.body?.box_id ? 200 : 201);
     return box;
   }),
@@ -49,6 +49,12 @@ router.get("/", handle(async (req) => boxService.list(ownerOf(req))));
 
 /** GET /api/boxes/:id */
 router.get("/:id", handle(async (req) => boxService.get(ownerOf(req), req.params.id as string)));
+
+/** PATCH /api/boxes/:id  {name}: rename the box. */
+router.patch(
+  "/:id",
+  handle(async (req) => boxService.rename(ownerOf(req), req.params.id as string, req.body?.name)),
+);
 
 /** POST /api/boxes/:id/exec  {command, timeout?} */
 router.post(
@@ -81,7 +87,6 @@ router.get(
 /** POST /api/boxes/:id/stop: stop, keeping its disk and files. */
 router.post("/:id/stop", handle(async (req) => boxService.stop(ownerOf(req), req.params.id as string)));
 
-/** DELETE /api/boxes/:id: stop and delete the box and its /workspace. */
 /**
  * POST /api/boxes/:id/terminal: a one-time ticket for the box's terminal
  * websocket, GET /api/boxes/:id/terminal?ticket=... (see routes/terminal.ts).
@@ -95,6 +100,7 @@ router.post(
   }),
 );
 
+/** DELETE /api/boxes/:id: stop and delete the box and its /workspace. */
 router.delete(
   "/:id",
   handle(async (req) => {

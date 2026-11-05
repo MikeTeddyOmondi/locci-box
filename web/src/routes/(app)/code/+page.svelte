@@ -1,234 +1,189 @@
 <script lang="ts">
-	import { Download, FilePlus, FileCode2, Play, Trash2 } from '@lucide/svelte';
-	import { onMount, tick } from 'svelte';
+	import { FileCode2, FolderCode, LoaderCircle, NotebookPen, Plus, Trash2 } from '@lucide/svelte';
 	import { toast } from 'svelte-sonner';
-	import CodeEditor from '$lib/components/CodeEditor.svelte';
-	import RunOutput, { type RunResult } from '$lib/components/RunOutput.svelte';
+	import { goto } from '$app/navigation';
+	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
+	import * as Card from '$lib/components/ui/card';
+	import * as Dialog from '$lib/components/ui/dialog';
+	import { Input } from '$lib/components/ui/input';
+	import { Label } from '$lib/components/ui/label';
 	import * as Select from '$lib/components/ui/select';
-	import { EXTENSION, HELLO, languageOf, MONACO_LANGUAGE } from '$lib/languages';
-	import { LANGUAGE_LABELS, LANGUAGES, type Language } from '$lib/types';
 	import { confirmDialog } from '$lib/confirm.svelte';
-	import { errMessage } from '$lib/utils';
-	import { runCode } from '../../sandbox.remote';
+	import { RUN_COMMAND } from '$lib/languages';
+	import { LANGUAGE_LABELS, LANGUAGES, type BoxInfo, type Language } from '$lib/types';
+	import { errMessage, formatDate } from '$lib/utils';
+	import { createProject, deleteProject, getProjects } from '../../projects.remote';
 
 	/**
-	 * A small editor: files kept in this browser, Monaco, and Run, which sends
-	 * the open file to a fresh microVM (run_sandbox) and shows what it printed.
+	 * Code: projects, each in a box of its own (files, installs and a terminal
+	 * kept between visits), and Scratch for one-off snippets.
 	 */
 
-	interface FileEntry {
-		id: string;
-		name: string;
-		language: Language;
-		content: string;
-	}
+	const projectsQuery = getProjects();
 
-	const STORAGE_KEY = 'locci-box.files';
+	let open = $state(false);
+	let name = $state('');
+	let language = $state<Language>('node');
+	let creating = $state(false);
+	let busy = $state<string | null>(null);
 
-	const starter = (language: Language, name = `main.${EXTENSION[language]}`): FileEntry => ({
-		id: crypto.randomUUID(),
-		name,
-		language,
-		content: HELLO[language]
-	});
+	/** What a new project starts with, by language. */
+	const STARTS_WITH: Record<Language, string> = {
+		node: 'npm init, index.js importing lib/math.js',
+		python: 'main.py importing mathutils.py, requirements.txt',
+		go: 'go mod init, main.go and fib.go',
+		rust: 'cargo init, src/main.rs with a math module',
+		c: 'Makefile, src/main.c, fib.c and fib.h',
+		cpp: 'Makefile, src/main.cpp, fib.cpp and fib.h',
+		ruby: 'main.rb requiring lib/fib.rb, a Gemfile',
+		bash: 'main.sh sourcing lib.sh'
+	};
 
-	const first = starter('python');
-	let files = $state<FileEntry[]>([first]);
-	let activeId = $state(first.id);
-	let running = $state(false);
-	let result = $state<RunResult | null>(null);
-	let renaming = $state<string | null>(null);
-
-	const active = $derived(files.find((f) => f.id === activeId) ?? files[0]);
-
-	onMount(() => {
+	async function create(e: SubmitEvent) {
+		e.preventDefault();
+		if (!name.trim()) return;
+		creating = true;
 		try {
-			const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null') as FileEntry[] | null;
-			if (saved?.length) {
-				files = saved;
-				activeId = saved[0].id;
-			}
-		} catch {
-			// nothing saved, or unreadable: keep the starter
-		}
-	});
-
-	// Kept as you type, in this browser only.
-	$effect(() => {
-		const snapshot = JSON.stringify(files);
-		try {
-			localStorage.setItem(STORAGE_KEY, snapshot);
-		} catch {
-			// storage full or blocked: the files still live until the tab closes
-		}
-	});
-
-	function newFile(language: Language = active.language) {
-		const taken = new Set(files.map((f) => f.name));
-		let n = 1;
-		while (taken.has(`untitled-${n}.${EXTENSION[language]}`)) n++;
-		const file = starter(language, `untitled-${n}.${EXTENSION[language]}`);
-		files.push(file);
-		activeId = file.id;
-	}
-
-	function removeFile(id: string) {
-		if (files.length === 1) return toast.error('Keep at least one file');
-		const i = files.findIndex((f) => f.id === id);
-		files.splice(i, 1);
-		if (activeId === id) activeId = files[Math.max(0, i - 1)].id;
-	}
-
-	function rename(file: FileEntry, name: string) {
-		renaming = null;
-		const trimmed = name.trim();
-		if (!trimmed || trimmed === file.name) return;
-		file.name = trimmed;
-		file.language = languageOf(trimmed) ?? file.language;
-	}
-
-	/** What the language dropdown shows; put back when a switch is cancelled. */
-	let picked = $state<Language>('python');
-	$effect(() => {
-		picked = active.language;
-	});
-
-	/**
-	 * Switch the open file to another language and load that language's sample.
-	 * When the file holds code someone wrote (anything but an untouched sample
-	 * or nothing), ask first; keeping the code cancels the switch entirely.
-	 */
-	async function setLanguage(language: Language) {
-		const file = active;
-		if (language === file.language) return;
-		const untouched = !file.content.trim() || Object.values(HELLO).some((sample) => sample.trim() === file.content.trim());
-		const go =
-			untouched ||
-			(await confirmDialog({
-				title: `Switch to ${LANGUAGE_LABELS[language]}?`,
-				description: `This loads the ${LANGUAGE_LABELS[language]} sample and replaces the code in ${file.name}.`,
-				confirmLabel: `Switch to ${LANGUAGE_LABELS[language]}`,
-				cancelLabel: 'Keep my code'
-			}));
-		if (!go) {
-			// The dropdown already shows the new choice: put it back.
-			await tick();
-			picked = file.language;
-			return;
-		}
-		file.language = language;
-		file.name = file.name.replace(/\.[^.]*$/, '') + `.${EXTENSION[language]}`;
-		file.content = HELLO[language];
-		result = null;
-	}
-
-	function download() {
-		const url = URL.createObjectURL(new Blob([active.content], { type: 'text/plain' }));
-		const a = Object.assign(document.createElement('a'), { href: url, download: active.name });
-		a.click();
-		URL.revokeObjectURL(url);
-	}
-
-	async function run() {
-		if (running || !active.content.trim()) return;
-		running = true;
-		result = null;
-		try {
-			const r = await runCode({ language: active.language, code: active.content, timeout: 30 });
-			result = { stdout: r.stdout, stderr: r.stderr, exit: r.exit_code, ms: r.duration_ms };
+			const { box, initError } = await createProject({ name: name.trim(), language });
+			if (initError) toast.warning(`The project is ready, but its setup reported: ${initError}`);
+			open = false;
+			name = '';
+			await goto(`/code/${box.box_id}`);
 		} catch (err) {
-			result = { stdout: '', stderr: '', exit: 1, ms: 0, error: errMessage(err, 'The run failed') };
+			toast.error(errMessage(err, 'The project could not be created'));
 		} finally {
-			running = false;
+			creating = false;
+		}
+	}
+
+	async function remove(project: BoxInfo) {
+		const ok = await confirmDialog({
+			title: `Delete ${project.name}?`,
+			description: 'Its box and every file in it are deleted.',
+			confirmLabel: 'Delete project',
+			destructive: true
+		});
+		if (!ok) return;
+		busy = project.box_id;
+		try {
+			await deleteProject(project.box_id);
+			toast.success(`${project.name} deleted`);
+		} catch (err) {
+			toast.error(errMessage(err, 'The project could not be deleted'));
+		} finally {
+			busy = null;
 		}
 	}
 </script>
 
 <svelte:head><title>Code · Locci Box</title></svelte:head>
 
-<div class="flex min-h-0 flex-1 flex-col lg:flex-row">
-	<!-- Files -->
-	<aside class="flex shrink-0 flex-col border-b lg:w-56 lg:border-r lg:border-b-0">
-		<div class="flex items-center justify-between px-3 py-2">
-			<span class="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Files</span>
-			<Button size="icon" variant="ghost" aria-label="New file" onclick={() => newFile()}>
-				<FilePlus class="size-4" />
-			</Button>
+<div class="mx-auto w-full max-w-6xl space-y-6 p-4 lg:p-6">
+	<div class="flex flex-wrap items-end justify-between gap-4">
+		<div>
+			<h1 class="text-3xl font-bold">Code</h1>
+			<p class="mt-1 text-muted-foreground">
+				Projects live in a box of their own: files import each other, packages you install stay, and the terminal is a real shell.
+			</p>
 		</div>
-		<ul class="flex gap-1 overflow-x-auto px-2 pb-2 lg:flex-col lg:overflow-y-auto">
-			{#each files as file (file.id)}
-				<li
-					class={[
-						'group flex shrink-0 items-center gap-2 rounded-md px-2 py-1.5 font-mono text-xs',
-						file.id === activeId ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:bg-accent/50'
-					]}
-				>
-					<FileCode2 class="size-3.5 shrink-0" />
-					{#if renaming === file.id}
-						<input
-							class="min-w-0 flex-1 rounded border bg-background px-1"
-							value={file.name}
-							aria-label="File name"
-							{@attach (node: HTMLInputElement) => node.select()}
-							onblur={(e) => rename(file, e.currentTarget.value)}
-							onkeydown={(e) => {
-								if (e.key === 'Enter') rename(file, e.currentTarget.value);
-								if (e.key === 'Escape') renaming = null;
-							}}
-						/>
-					{:else}
-						<button
-							type="button"
-							class="min-w-0 flex-1 cursor-pointer truncate text-left"
-							title="Double-click to rename"
-							onclick={() => (activeId = file.id)}
-							ondblclick={() => (renaming = file.id)}
-						>
-							{file.name}
-						</button>
-					{/if}
-					<button
-						type="button"
-						class="cursor-pointer opacity-0 group-hover:opacity-100 hover:text-destructive focus:opacity-100"
-						aria-label="Delete {file.name}"
-						onclick={() => removeFile(file.id)}
-					>
-						<Trash2 class="size-3.5" />
-					</button>
-				</li>
-			{/each}
-		</ul>
-	</aside>
-
-	<!-- Editor and output -->
-	<div class="flex min-h-0 min-w-0 flex-1 flex-col">
-		<div class="flex flex-wrap items-center gap-2 border-b px-3 py-2">
-			<span class="font-mono text-sm">{active.name}</span>
-			<div class="flex-1"></div>
-			<Select.Root type="single" bind:value={picked} onValueChange={(v) => setLanguage(v as Language)}>
-				<Select.Trigger class="h-8 w-32" aria-label="Language">{LANGUAGE_LABELS[picked]}</Select.Trigger>
-				<Select.Content>
-					{#each LANGUAGES as l (l)}
-						<Select.Item value={l}>{LANGUAGE_LABELS[l]}</Select.Item>
-					{/each}
-				</Select.Content>
-			</Select.Root>
-			<Button size="icon" variant="ghost" aria-label="Download {active.name}" onclick={download}>
-				<Download class="size-4" />
+		<div class="flex items-center gap-2">
+			<Button variant="outline" href="/code/scratch">
+				<NotebookPen class="size-4" /> Scratch
 			</Button>
-			<Button size="sm" onclick={run} disabled={running} title="Run (Cmd/Ctrl + Enter)">
-				<Play class="size-4" />
-				{running ? 'Running...' : 'Run'}
+			<Button onclick={() => (open = true)}>
+				<Plus class="size-4" /> New project
 			</Button>
-		</div>
-		<div class="grid min-h-0 flex-1 grid-rows-[minmax(16rem,1fr)_minmax(10rem,40%)] xl:grid-cols-[1fr_24rem] xl:grid-rows-1">
-			{#key active.id}
-				<CodeEditor bind:value={active.content} language={MONACO_LANGUAGE[active.language]} onRun={run} class="h-full" />
-			{/key}
-			<div class="min-h-0 border-t xl:border-t-0 xl:border-l">
-				<RunOutput {result} {running} />
-			</div>
 		</div>
 	</div>
+
+	{#await projectsQuery}
+		<p class="py-6 text-center text-sm text-muted-foreground">Loading...</p>
+	{:then projects}
+		{#if projects.length === 0}
+			<Card.Root>
+				<Card.Content class="flex flex-col items-center gap-2 py-10 text-center">
+					<FolderCode class="size-8 text-muted-foreground" />
+					<p class="font-medium">No projects yet</p>
+					<p class="text-sm text-muted-foreground">Start one with npm init, cargo init or go mod init done for you, or try a snippet in Scratch.</p>
+					<Button class="mt-2" onclick={() => (open = true)}><Plus class="size-4" /> New project</Button>
+				</Card.Content>
+			</Card.Root>
+		{:else}
+			<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+				{#each projects as project (project.box_id)}
+					<Card.Root class="group relative transition-colors hover:border-primary/50">
+						<a href="/code/{project.box_id}" class="absolute inset-0 z-0" aria-label="Open {project.name}"></a>
+						<Card.Header class="pb-2">
+							<Card.Title class="flex items-center gap-2 text-base">
+								<FileCode2 class="size-4 text-muted-foreground" />
+								<span class="truncate">{project.name}</span>
+							</Card.Title>
+						</Card.Header>
+						<Card.Content class="space-y-2 text-sm">
+							<div class="flex items-center gap-2">
+								<Badge variant="secondary">{project.language ? LANGUAGE_LABELS[project.language] : 'Node.js'}</Badge>
+								<Badge variant={project.status === 'running' ? 'default' : 'outline'}>{project.status}</Badge>
+							</div>
+							<p class="font-mono text-xs text-muted-foreground">{project.box_id}</p>
+							<p class="text-xs text-muted-foreground">Last used {formatDate(project.last_used_at)}</p>
+						</Card.Content>
+						<Button
+							size="icon"
+							variant="ghost"
+							class="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 focus:opacity-100"
+							aria-label="Delete {project.name}"
+							disabled={busy === project.box_id}
+							onclick={() => remove(project)}
+						>
+							<Trash2 class="size-4" />
+						</Button>
+					</Card.Root>
+				{/each}
+			</div>
+		{/if}
+	{:catch err}
+		<p class="py-6 text-center text-sm text-destructive">{errMessage(err, 'Projects could not be loaded')}</p>
+	{/await}
 </div>
+
+<Dialog.Root bind:open>
+	<Dialog.Content class="sm:max-w-md">
+		<Dialog.Header>
+			<Dialog.Title>New project</Dialog.Title>
+			<Dialog.Description>A box of its own, set up as the language's tools would set it up.</Dialog.Description>
+		</Dialog.Header>
+		<form class="space-y-4" onsubmit={create}>
+			<div class="space-y-2">
+				<Label for="project-name">Name</Label>
+				<Input id="project-name" bind:value={name} placeholder="my-app" maxlength={64} autocomplete="off" required />
+			</div>
+			<div class="space-y-2">
+				<Label for="project-language">Language</Label>
+				<Select.Root type="single" bind:value={language}>
+					<Select.Trigger id="project-language" class="w-full">{LANGUAGE_LABELS[language]}</Select.Trigger>
+					<Select.Content>
+						{#each LANGUAGES as l (l)}
+							<Select.Item value={l}>{LANGUAGE_LABELS[l]}</Select.Item>
+						{/each}
+					</Select.Content>
+				</Select.Root>
+				<p class="text-xs text-muted-foreground">
+					Starts with {STARTS_WITH[language]}. Run: <span class="font-mono">{RUN_COMMAND[language]}</span>
+				</p>
+			</div>
+			{#if creating}
+				<p class="flex items-center gap-2 text-xs text-muted-foreground">
+					<LoaderCircle class="size-3.5 shrink-0 animate-spin" />
+					Setting up the box. A language's first project downloads its image, which can take a minute.
+				</p>
+			{/if}
+			<Dialog.Footer>
+				<Button type="button" variant="ghost" disabled={creating} onclick={() => (open = false)}>Cancel</Button>
+				<Button type="submit" disabled={creating || !name.trim()}>
+					{creating ? 'Creating...' : 'Create project'}
+				</Button>
+			</Dialog.Footer>
+		</form>
+	</Dialog.Content>
+</Dialog.Root>

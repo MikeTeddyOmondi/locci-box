@@ -63,8 +63,15 @@
 	let {
 		boxId,
 		theme = 'one-dark',
+		focusOnOpen = true,
 		onClose
-	}: { boxId: string; theme?: TerminalTheme; onClose?: () => void } = $props();
+	}: {
+		boxId: string;
+		theme?: TerminalTheme;
+		/** Take the keyboard once connected (off for a terminal opened alongside an editor). */
+		focusOnOpen?: boolean;
+		onClose?: () => void;
+	} = $props();
 
 	let core = $state<GhosttyCore | null>(null);
 	let term = $state<TerminalHandle>();
@@ -85,12 +92,25 @@
 		return Uint8Array.from(atob(data), (c) => c.charCodeAt(0));
 	}
 
-	function send(message: Record<string, unknown>) {
+	function post(message: Record<string, unknown>) {
 		if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message));
 	}
 
 	function sendResize() {
-		if (size.cols > 0 && size.rows > 0) send({ type: 'resize', width: size.cols, height: size.rows });
+		if (size.cols > 0 && size.rows > 0) post({ type: 'resize', width: size.cols, height: size.rows });
+	}
+
+	/** Type `text` into the shell as if from the keyboard (Run sends a command and "\r"). False until it is open. */
+	export function send(text: string): boolean {
+		if (status !== 'open') return false;
+		post({ type: 'stdin', data: toBase64(encoder.encode(text)) });
+		term?.focus();
+		return true;
+	}
+
+	/** True once the shell takes input. */
+	export function isOpen(): boolean {
+		return status === 'open';
 	}
 
 	async function connect() {
@@ -112,7 +132,7 @@
 			status = 'open';
 			// The shell starts at a default size; tell it the real one straight away.
 			sendResize();
-			term?.focus();
+			if (focusOnOpen) term?.focus();
 		};
 
 		socket.onmessage = (event) => {
@@ -144,8 +164,12 @@
 	 */
 	const SCROLLBACK_BYTES = 16 * 1024 * 1024;
 
+	/** What had the keyboard before wterm took it (it focuses itself on start, with no option not to). */
+	let focusedBefore: Element | null = null;
+
 	onMount(() => {
 		void GhosttyCore.load({ wasmPath: ghosttyWasmUrl, scrollbackLimit: SCROLLBACK_BYTES }).then((loaded) => {
+			focusedBefore = document.activeElement;
 			core = loaded;
 		});
 		return () => {
@@ -180,10 +204,14 @@
 			class="h-full w-full"
 			onReady={(instance: WTerm) => {
 				wt = instance;
+				if (!focusOnOpen) {
+					if (focusedBefore instanceof HTMLElement && focusedBefore !== document.body) focusedBefore.focus();
+					else (document.activeElement as HTMLElement | null)?.blur();
+				}
 				void connect();
 			}}
-			onData={(data: string) => send({ type: 'stdin', data: toBase64(encoder.encode(data)) })}
-			onBinary={(data: Uint8Array) => send({ type: 'stdin', data: toBase64(data) })}
+			onData={(data: string) => post({ type: 'stdin', data: toBase64(encoder.encode(data)) })}
+			onBinary={(data: Uint8Array) => post({ type: 'stdin', data: toBase64(data) })}
 			onResize={handleResize}
 		/>
 		{#if status === 'connecting'}

@@ -24,6 +24,69 @@ export const EXTENSION: Record<Language, string> = {
 	cpp: 'cpp'
 };
 
+/** What Run types into a project's terminal, in /workspace. */
+export const RUN_COMMAND: Record<Language, string> = {
+	python: 'python3 main.py',
+	node: 'npm start',
+	bash: 'bash main.sh',
+	ruby: 'ruby main.rb',
+	go: 'go run .',
+	rust: 'cargo run',
+	c: 'make run',
+	cpp: 'make run'
+};
+
+/** The file a new project opens on. */
+export const ENTRY_FILE: Record<Language, string> = {
+	python: 'main.py',
+	node: 'index.js',
+	bash: 'main.sh',
+	ruby: 'main.rb',
+	go: 'main.go',
+	rust: 'src/main.rs',
+	c: 'src/main.c',
+	cpp: 'src/main.cpp'
+};
+
+/** Indentation per language, as its own formatter writes it. */
+export const INDENT: Record<Language, { tabSize: number; insertSpaces: boolean }> = {
+	python: { tabSize: 4, insertSpaces: true },
+	node: { tabSize: 2, insertSpaces: true },
+	bash: { tabSize: 2, insertSpaces: true },
+	ruby: { tabSize: 2, insertSpaces: true },
+	go: { tabSize: 4, insertSpaces: false },
+	rust: { tabSize: 4, insertSpaces: true },
+	c: { tabSize: 4, insertSpaces: true },
+	cpp: { tabSize: 4, insertSpaces: true }
+};
+
+/** Monaco's mode for any file name: the project languages, plus the usual project files. */
+export function monacoLanguageOf(name: string): string {
+	const language = languageOf(name);
+	if (language) return MONACO_LANGUAGE[language];
+	const base = name.split('/').at(-1)?.toLowerCase() ?? '';
+	if (base === 'makefile') return 'makefile';
+	if (base === 'dockerfile') return 'dockerfile';
+	const ext = base.includes('.') ? base.split('.').at(-1) : '';
+	const byExt: Record<string, string> = {
+		ts: 'typescript',
+		mts: 'typescript',
+		json: 'json',
+		md: 'markdown',
+		toml: 'ini',
+		yaml: 'yaml',
+		yml: 'yaml',
+		html: 'html',
+		css: 'css',
+		h: 'c',
+		sql: 'sql',
+		txt: 'plaintext',
+		mod: 'go',
+		lock: 'plaintext'
+	};
+	return byExt[ext ?? ''] ?? 'plaintext';
+}
+
 /** The language a file name means, by its extension. */
 export function languageOf(name: string): Language | null {
 	const ext = name.split('.').at(-1)?.toLowerCase();

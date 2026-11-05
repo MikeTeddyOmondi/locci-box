@@ -109,8 +109,24 @@ export interface BoxTerminalSession {
 
 export type BoxStatus = "running" | "stopped";
 
+const MAX_NAME_CHARS = 64;
+
+/** A box's name: trimmed, 1 to MAX_NAME_CHARS characters; null when none is given. */
+function boxName(name: unknown): string | null {
+  if (name === undefined || name === null) return null;
+  const trimmed = typeof name === "string" ? name.trim() : "";
+  if (!trimmed || trimmed.length > MAX_NAME_CHARS) {
+    throw new BoxError(`name must be 1 to ${MAX_NAME_CHARS} characters`, 400);
+  }
+  return trimmed;
+}
+
 export interface BoxInfo {
   box_id: string;
+  /** A project's name, set by whoever created the box; null for an unnamed box. */
+  name: string | null;
+  /** The language the box was created for; null for the default image. */
+  language: string | null;
   status: BoxStatus;
   image: string;
   memory_mib: number;
@@ -285,13 +301,15 @@ export class BoxService {
   /**
    * Create a box for `language` (BOX_IMAGE when none), or with `boxId`,
    * reattach to one the caller owns (starting it if stopped; it keeps its image).
+   * `name` labels a new box (the console's projects).
    */
-  async create(owner: BoxOwner, boxId?: string, language?: string): Promise<BoxInfo> {
+  async create(owner: BoxOwner, boxId?: string, language?: string, name?: unknown): Promise<BoxInfo> {
     if (boxId) {
       await this.ensureRunning(owner, boxId);
       return this.info(await this.row(owner, boxId));
     }
 
+    const label = boxName(name);
     const image = boxImage(language);
     await this.assertImageReady(image, language);
     await this.reserve(owner.tenantId);
@@ -307,6 +325,8 @@ export class BoxService {
         image,
         memoryMib: env.BOX_MEMORY_MIB,
         workspacePath,
+        name: label,
+        language: language || null,
         createdAt: at,
         startedAt: at,
         lastUsedAt: at,
@@ -469,6 +489,15 @@ export class BoxService {
 
   async get(owner: BoxOwner, boxId: string): Promise<BoxInfo> {
     return this.info(await this.row(owner, boxId));
+  }
+
+  /** Give a box a new name (a project rename); it does not start a stopped box. */
+  async rename(owner: BoxOwner, boxId: string, name: unknown): Promise<BoxInfo> {
+    const row = await this.row(owner, boxId);
+    const label = boxName(name);
+    if (!label) throw new BoxError("name is required", 400);
+    await db.update(boxes).set({ name: label }).where(eq(boxes.id, row.id));
+    return this.info({ ...row, name: label });
   }
 
   /** Stop boxes idle past BOX_IDLE_MINUTES or running past BOX_MAX_HOURS. */
@@ -700,6 +729,8 @@ export class BoxService {
     const running = row.status === "running";
     return {
       box_id: row.id,
+      name: row.name,
+      language: row.language,
       status: row.status as BoxStatus,
       image: row.image,
       memory_mib: row.memoryMib,

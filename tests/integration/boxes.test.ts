@@ -369,6 +369,30 @@ describe("agent boxes", () => {
     expect(plain.body.data.image).toBe(env.BOX_IMAGE);
   });
 
+  it("keeps a project's name and language, and renames it with PATCH", async () => {
+    const res = await request(app)
+      .post("/api/boxes")
+      .set("Authorization", alice)
+      .send({ language: "cpp", name: "  ray tracer  " });
+    expect(res.status).toBe(201);
+    expect(res.body.data).toMatchObject({ name: "ray tracer", language: "cpp" });
+    const id = res.body.data.box_id;
+
+    const renamed = await request(app).patch(`/api/boxes/${id}`).set("Authorization", alice).send({ name: "tracer" });
+    expect(renamed.body.data.name).toBe("tracer");
+    expect((await request(app).get("/api/boxes").set("Authorization", alice)).body.data[0]).toMatchObject({
+      name: "tracer",
+      language: "cpp",
+    });
+    expect((await request(app).patch(`/api/boxes/${id}`).set("Authorization", bob).send({ name: "x" })).status).toBe(404);
+    expect((await request(app).patch(`/api/boxes/${id}`).set("Authorization", alice).send({ name: " " })).status).toBe(400);
+
+    const plain = await request(app).post("/api/boxes").set("Authorization", alice);
+    expect(plain.body.data).toMatchObject({ name: null, language: null });
+    const long = await request(app).post("/api/boxes").set("Authorization", alice).send({ name: "x".repeat(65) });
+    expect(long.status).toBe(400);
+  });
+
   it("refuses an unknown language", async () => {
     const res = await request(app).post("/api/boxes").set("Authorization", alice).send({ language: "cobol" });
     expect(res.status).toBe(400);

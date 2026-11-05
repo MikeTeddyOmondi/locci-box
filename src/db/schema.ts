@@ -92,6 +92,10 @@ export const boxes = pgTable(
     image: text("image").notNull(),
     memoryMib: integer("memory_mib").notNull(),
     workspacePath: text("workspace_path"),
+    // Set by the console for a box that holds a project. language is kept
+    // because the image does not tell it (c and cpp share gcc).
+    name: text("name"),
+    language: text("language"),
     createdAt: text("created_at").notNull(),
     startedAt: text("started_at").notNull(),
     lastUsedAt: text("last_used_at").notNull(),

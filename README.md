@@ -184,8 +184,9 @@ owner's box id answers `404`.
 
 | Method | Path | Body / query | Description |
 |--------|------|--------------|-------------|
-| POST | `/api/boxes` | `{language?, box_id?}` | Create a box (`201`), or reattach to one, starting it if stopped (`200`; it keeps its image) |
-| GET | `/api/boxes` | | Your boxes, running and stopped |
+| POST | `/api/boxes` | `{language?, name?, box_id?}` | Create a box (`201`), or reattach to one, starting it if stopped (`200`; it keeps its image). `name` (1 to 64 characters) labels it, as the console's Code projects do |
+| GET | `/api/boxes` | | Your boxes, running and stopped, with `name` and `language` (null when not given) |
+| PATCH | `/api/boxes/:id` | `{name}` | Rename a box |
 | GET | `/api/boxes/:id` | | One box |
 | POST | `/api/boxes/:id/exec` | `{command, timeout?}` | `sh -c` in `/workspace`; `timeout` seconds (default 120, max 600); a timeout answers `exit_code` 124, `timed_out: true` |
 | PUT | `/api/boxes/:id/files` | `{path, content, encoding?}` | Write a file (up to 5 MB; `encoding: "base64"` for binary); relative paths are under `/workspace` |

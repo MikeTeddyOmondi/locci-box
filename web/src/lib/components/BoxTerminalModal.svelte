@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { RotateCcw, Terminal, X } from '@lucide/svelte';
-	import { mode } from 'mode-watcher';
 	import { onMount } from 'svelte';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import * as Select from '$lib/components/ui/select';
-	import BoxTerminal, { TERMINAL_THEMES, type TerminalTheme } from './BoxTerminal.svelte';
+	import { terminalTheme } from '$lib/terminal-theme.svelte';
+	import BoxTerminal, { TERMINAL_THEMES } from './BoxTerminal.svelte';
 
 	/**
 	 * A box's terminal over the whole page, after iaas-service's
@@ -26,35 +26,8 @@
 		if (box) closed = false;
 	});
 
-	/**
-	 * The terminal theme for each console mode: Gruvbox Light in light mode and
-	 * One Dark in dark mode, unless one was picked in that mode.
-	 */
-	const DEFAULT_THEME = { light: 'gruvbox-light', dark: 'one-dark' } as const satisfies Record<string, TerminalTheme>;
-	const themeKey = (m: keyof typeof DEFAULT_THEME) => `locci-box.terminal-theme.${m}`;
-	let picked = $state<Partial<Record<keyof typeof DEFAULT_THEME, TerminalTheme>>>({});
-	const current = $derived(mode.current === 'light' ? 'light' : 'dark');
-	const theme = $derived(picked[current] ?? DEFAULT_THEME[current]);
-
-	onMount(() => {
-		try {
-			for (const m of ['light', 'dark'] as const) {
-				const saved = localStorage.getItem(themeKey(m));
-				if (saved && saved in TERMINAL_THEMES) picked[m] = saved as TerminalTheme;
-			}
-		} catch {
-			// storage blocked: the defaults
-		}
-	});
-
-	function setTheme(value: string) {
-		picked[current] = value as TerminalTheme;
-		try {
-			localStorage.setItem(themeKey(current), value);
-		} catch {
-			// storage blocked: the choice lasts until reload
-		}
-	}
+	onMount(() => terminalTheme.load());
+	const theme = $derived(terminalTheme.current);
 
 	const language = $derived(box ? (box.image.split('/').at(-1) ?? box.image).replace('golang', 'go') : '');
 </script>
@@ -95,7 +68,7 @@
 						<RotateCcw class="size-3.5" /> Reconnect
 					</button>
 				{/if}
-				<Select.Root type="single" value={theme} onValueChange={setTheme}>
+				<Select.Root type="single" value={theme} onValueChange={(v) => terminalTheme.set(v)}>
 					<Select.Trigger size="sm" class="h-7 w-36 text-xs" aria-label="Terminal theme">{TERMINAL_THEMES[theme].label}</Select.Trigger>
 					<Select.Content>
 						{#each Object.entries(TERMINAL_THEMES) as [value, { label }] (value)}

@@ -74,12 +74,15 @@
 		boxId,
 		theme = 'one-dark',
 		focusOnOpen = true,
+		onOutput,
 		onClose
 	}: {
 		boxId: string;
 		theme?: TerminalTheme;
 		/** Take the keyboard once connected (off for a terminal opened alongside an editor). */
 		focusOnOpen?: boolean;
+		/** The shell printed something. */
+		onOutput?: () => void;
 		onClose?: () => void;
 	} = $props();
 
@@ -149,7 +152,10 @@
 			const text = typeof event.data === 'string' ? event.data : new TextDecoder().decode(event.data);
 			try {
 				const msg = JSON.parse(text) as { type?: string; data?: string; code?: number };
-				if (msg.type === 'stdout' && msg.data) term?.write(fromBase64(msg.data));
+				if (msg.type === 'stdout' && msg.data) {
+					term?.write(fromBase64(msg.data));
+					onOutput?.();
+				}
 				if (msg.type === 'exit') term?.write(`\r\n\x1b[90m[shell exited with ${msg.code}]\x1b[0m`);
 			} catch {
 				term?.write(text);

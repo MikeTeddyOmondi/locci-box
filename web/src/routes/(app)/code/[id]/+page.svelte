@@ -19,6 +19,7 @@
 		checkProject,
 		createPath,
 		deletePath,
+		getDir,
 		getProject,
 		getTree,
 		readProjectFile,
@@ -90,8 +91,42 @@
 	const errorCount = $derived(problems.filter((p) => p.severity === 'error').length);
 	const warningCount = $derived(problems.filter((p) => p.severity === 'warning').length);
 
+	/** Folders the box listing leaves closed (build, target, node_modules...), loaded because they were opened. */
+	const SKIPPED = ['node_modules', 'target', '.venv', '__pycache__', 'build'];
+	const loadedDirs = new Set<string>();
+
+	/** The tree, plus one level of every skipped folder that is open (one that is gone is forgotten). */
 	async function refreshTree() {
-		entries = await getTree(id);
+		const [base, ...dirs] = await Promise.all([
+			getTree(id),
+			...[...loadedDirs].map((path) => getDir({ id, path }).catch(() => [] as string[]))
+		]);
+		[...loadedDirs].forEach((path, i) => {
+			if (dirs[i].length === 0 && !base.includes(`${path}/`)) loadedDirs.delete(path);
+		});
+		entries = [...new Set([...base, ...dirs.flat()])].sort((a, b) => a.localeCompare(b));
+	}
+
+	async function expandDir(path: string) {
+		if (loadedDirs.has(path) || !path.split('/').some((part) => SKIPPED.includes(part))) return;
+		loadedDirs.add(path);
+		try {
+			const listed = await getDir({ id, path });
+			entries = [...new Set([...entries, ...listed])].sort((a, b) => a.localeCompare(b));
+		} catch (err) {
+			loadedDirs.delete(path);
+			toast.error(errMessage(err, `${path} could not be listed`));
+		}
+	}
+
+	/**
+	 * Commands in the terminal change files (make, npm install, cargo build):
+	 * the tree follows once the terminal has been quiet for a moment.
+	 */
+	let syncTimer: ReturnType<typeof setTimeout> | undefined;
+	function terminalActivity() {
+		clearTimeout(syncTimer);
+		syncTimer = setTimeout(() => void refreshTree().catch(() => {}), 1500);
 	}
 
 	onMount(() => {
@@ -134,6 +169,7 @@
 		window.addEventListener('keydown', onKey);
 		return () => {
 			gone = true;
+			clearTimeout(syncTimer);
 			window.removeEventListener('keydown', onKey);
 			markerListener?.dispose();
 			// This project's models go with the page; another project starts clean.
@@ -396,6 +432,7 @@
 					onRename={rename}
 					onDelete={remove}
 					onRefresh={refreshTree}
+					onExpand={expandDir}
 				/>
 			</aside>
 		{/if}
@@ -445,7 +482,7 @@
 					aria-label="Resize the panel"
 					onpointerdown={resizePanel}
 				></div>
-				<BottomPanel bind:this={panel} boxId={id} {problems} bind:tab={panelTab} onJump={jump} onHide={() => (panelOpen = false)} />
+				<BottomPanel bind:this={panel} boxId={id} {problems} bind:tab={panelTab} onJump={jump} onHide={() => (panelOpen = false)} onActivity={terminalActivity} />
 			</div>
 		</div>
 	</div>

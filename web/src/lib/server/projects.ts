@@ -35,6 +35,13 @@ export function workspacePath(path: string): string | null {
  */
 export const TREE_COMMAND = `find . -mindepth 1 -name '.git' -prune -o ${PRUNE} -printf '%P/\\n' -o -type d -printf '%P/\\n' -o -printf '%P\\n' | head -n 2000`;
 
+/**
+ * One level of `dir` (a SKIPPED_DIRS folder, or one inside it, opened in the
+ * tree), paths relative to /workspace, folders ending in "/". At most 500.
+ */
+export const dirCommand = (dir: string) =>
+	`find ${sq(dir)} -mindepth 1 -maxdepth 1 \\( -type d -printf '%p/\\n' -o -printf '%p\\n' \\) | head -n 500`;
+
 /** A name usable as a package or crate name: lowercase letters, digits, - and _. */
 function slug(name: string): string {
 	const s = name

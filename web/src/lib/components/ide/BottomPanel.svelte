@@ -18,9 +18,11 @@
 		tab: 'problems' | 'terminal';
 		onJump: (d: Diagnostic) => void;
 		onHide: () => void;
+		/** A terminal printed something (a command may have changed files). */
+		onActivity?: () => void;
 	}
 
-	let { boxId, problems, tab = $bindable(), onJump, onHide }: Props = $props();
+	let { boxId, problems, tab = $bindable(), onJump, onHide, onActivity }: Props = $props();
 
 	onMount(() => terminalTheme.load());
 
@@ -184,6 +186,7 @@
 					{boxId}
 					theme={terminalTheme.current}
 					focusOnOpen={s.focus}
+					onOutput={onActivity}
 					onClose={() => (s.ended = true)}
 				/>
 			</div>

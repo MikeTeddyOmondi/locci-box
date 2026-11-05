@@ -74,11 +74,15 @@
 		onRename: (from: string, to: string) => void;
 		onDelete: (path: string, folder: boolean) => void;
 		onRefresh: () => void;
+		/** A folder was opened: the page loads one whose contents the box listing left out. */
+		onExpand?: (path: string) => void;
 	}
 
-	let { title, entries, activePath, problems, onOpen, onCreate, onRename, onDelete, onRefresh }: Props = $props();
+	let { title, entries, activePath, problems, onOpen, onCreate, onRename, onDelete, onRefresh, onExpand }: Props = $props();
 
+	/** Build output and installs: listed dimmed, as VS Code dims ignored files, and loaded when opened. */
 	const SKIPPED = new Set(['node_modules', 'target', '.venv', '__pycache__', 'build']);
+	const inSkipped = (path: string) => path.split('/').some((part) => SKIPPED.has(part));
 
 	const tree = $derived(buildTree(entries));
 	let expanded = $state(new Set<string>(['src', 'lib']));
@@ -107,7 +111,10 @@
 	function toggle(path: string) {
 		const next = new Set(expanded);
 		if (next.has(path)) next.delete(path);
-		else next.add(path);
+		else {
+			next.add(path);
+			onExpand?.(path);
+		}
 		expanded = next;
 		selectedDir = path;
 	}
@@ -199,7 +206,7 @@
 					title={node.path}
 					onclick={() => {
 						if (node.folder) {
-							if (!SKIPPED.has(node.name)) toggle(node.path);
+							toggle(node.path);
 						} else {
 							const cut = node.path.lastIndexOf('/');
 							selectedDir = cut < 0 ? '' : node.path.slice(0, cut);
@@ -208,20 +215,20 @@
 					}}
 				>
 					{#if node.folder}
-						{#if expanded.has(node.path) && !SKIPPED.has(node.name)}
+						{#if expanded.has(node.path)}
 							<ChevronDown class="size-3.5 shrink-0" />
 							<FolderOpen class="size-3.5 shrink-0 text-muted-foreground" />
 						{:else}
-							<ChevronRight class={['size-3.5 shrink-0', SKIPPED.has(node.name) && 'opacity-40']} />
+							<ChevronRight class="size-3.5 shrink-0" />
 							<Folder class="size-3.5 shrink-0 text-muted-foreground" />
 						{/if}
 					{:else}
 						<span class="size-3.5 shrink-0"></span>
 						<FileCode2 class="size-3.5 shrink-0 text-muted-foreground" />
 					{/if}
-					<span class={['truncate', SKIPPED.has(node.name) && 'text-muted-foreground']}>{node.name}</span>
+					<span class={['truncate', inSkipped(node.path) && 'text-muted-foreground']}>{node.name}</span>
 				</button>
-				{#if !SKIPPED.has(node.name)}
+				{#if !inSkipped(node.path)}
 					<button
 						type="button"
 						class="cursor-pointer p-0.5 text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-foreground focus:opacity-100"
@@ -240,7 +247,7 @@
 					<Trash2 class="size-3" />
 				</button>
 			</div>
-			{#if node.folder && expanded.has(node.path) && !SKIPPED.has(node.name)}
+			{#if node.folder && expanded.has(node.path)}
 				{@render nodes(node.children, depth + 1, node.path)}
 			{/if}
 		{/if}

@@ -2,7 +2,7 @@ import { error } from '@sveltejs/kit';
 import { command, query } from '$app/server';
 import * as v from 'valibot';
 import { boxApi } from '$lib/server/box-api';
-import { CHECK_COMMAND, CHECK_TIMEOUT, sq, template, TREE_COMMAND, workspacePath } from '$lib/server/projects';
+import { CHECK_COMMAND, CHECK_TIMEOUT, dirCommand, sq, template, TREE_COMMAND, workspacePath } from '$lib/server/projects';
 import { parseDiagnostics } from '$lib/diagnostics';
 import { LANGUAGES, type BoxInfo, type Diagnostic, type Language, type TreeEntry } from '$lib/types';
 import { getBoxes } from './boxes.remote';
@@ -86,6 +86,12 @@ export const getTree = command(v.string(), async (id): Promise<TreeEntry[]> => {
 		.split('\n')
 		.filter((p) => p && p !== '/')
 		.sort((a, b) => a.localeCompare(b));
+});
+
+/** One level of a folder the tree lists without opening (build, target, node_modules...); empty once it is gone. */
+export const getDir = command(At, async ({ id, path }): Promise<TreeEntry[]> => {
+	const r = await exec(id, dirCommand(pathOf(path)), 30);
+	return r.stdout.split('\n').filter(Boolean);
 });
 
 export const readProjectFile = command(At, async ({ id, path }) => {

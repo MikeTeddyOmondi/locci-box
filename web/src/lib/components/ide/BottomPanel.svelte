@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { ChevronDown, CircleX, Info, Plus, SquareTerminal, TriangleAlert, X } from '@lucide/svelte';
 	import { onMount } from 'svelte';
-	import BoxTerminal from '$lib/components/BoxTerminal.svelte';
+	import BoxTerminal, { TERMINAL_THEMES } from '$lib/components/BoxTerminal.svelte';
+	import * as Select from '$lib/components/ui/select';
 	import { terminalTheme } from '$lib/terminal-theme.svelte';
 	import type { Diagnostic } from '$lib/types';
 
@@ -130,6 +131,14 @@
 				<button type="button" class="cursor-pointer rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground" title="New terminal" aria-label="New terminal" onclick={() => addTerminal()}>
 					<Plus class="size-3.5" />
 				</button>
+				<Select.Root type="single" value={terminalTheme.current} onValueChange={(v) => terminalTheme.set(v)}>
+					<Select.Trigger size="sm" class="h-6 w-32 text-[11px]" aria-label="Terminal theme">{TERMINAL_THEMES[terminalTheme.current].label}</Select.Trigger>
+					<Select.Content>
+						{#each Object.entries(TERMINAL_THEMES) as [value, { label }] (value)}
+							<Select.Item {value} class="text-xs">{label}</Select.Item>
+						{/each}
+					</Select.Content>
+				</Select.Root>
 			</div>
 		{/if}
 		<button type="button" class="cursor-pointer rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground" title="Hide the panel (Cmd/Ctrl+J)" aria-label="Hide the panel" onclick={onHide}>

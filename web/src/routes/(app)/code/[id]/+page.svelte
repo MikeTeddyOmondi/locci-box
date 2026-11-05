@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ArrowLeft, FolderTree, PanelBottom, Play } from '@lucide/svelte';
+	import { ArrowLeft, FolderTree, Play } from '@lucide/svelte';
 	import { onMount, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import type * as Monaco from 'monaco-editor';
@@ -368,12 +368,18 @@
 		</Button>
 		<Button
 			size="icon"
-			variant={panelOpen ? 'secondary' : 'ghost'}
+			variant="ghost"
 			aria-label="Toggle the panel"
-			title="Toggle the panel (Cmd/Ctrl+J)"
+			aria-pressed={panelOpen}
+			title="{panelOpen ? 'Hide' : 'Show'} the panel (Cmd/Ctrl+J)"
 			onclick={() => (panelOpen = !panelOpen)}
 		>
-			<PanelBottom class="size-4" />
+			<!-- lucide's panel-bottom, with the panel filled in while it is open (as VS Code's layout toggle) -->
+			<svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+				<rect width="18" height="18" x="3" y="3" rx="2" />
+				<path d="M3 15h18" />
+				{#if panelOpen}<path d="M3 15h18v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" fill="currentColor" />{/if}
+			</svg>
 		</Button>
 	</div>
 

@@ -2,13 +2,13 @@ import { mode } from 'mode-watcher';
 import { TERMINAL_THEMES, type TerminalTheme } from './components/BoxTerminal.svelte';
 
 /**
- * The terminal theme for each console mode: Gruvbox Light in light mode and
+ * The terminal theme for each console mode: GitHub Light in light mode and
  * One Dark in dark mode, unless one was picked in that mode. Picks are kept in
  * this browser and shared by every box terminal (the full-page modal and the
  * Code page's panel).
  */
 
-const DEFAULT_THEME = { light: 'gruvbox-light', dark: 'one-dark' } as const satisfies Record<string, TerminalTheme>;
+const DEFAULT_THEME = { light: 'github-light', dark: 'one-dark' } as const satisfies Record<string, TerminalTheme>;
 type Mode = keyof typeof DEFAULT_THEME;
 const themeKey = (m: Mode) => `locci-box.terminal-theme.${m}`;
 

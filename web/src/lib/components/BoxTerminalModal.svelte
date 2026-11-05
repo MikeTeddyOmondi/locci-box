@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { RotateCcw, Terminal, X } from '@lucide/svelte';
+	import { Palette, RotateCcw, Terminal, X } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import * as Select from '$lib/components/ui/select';
@@ -48,29 +48,34 @@
 		trapFocus={false}
 		class="bg-background text-foreground"
 	>
-		<Dialog.Header class="flex shrink-0 flex-row items-center justify-between border-b px-4 py-2">
-			<Dialog.Title class="flex items-center gap-2 font-mono text-sm font-medium">
-				<Terminal class="size-4" />
-				{box?.box_id}
-				<span class="text-muted-foreground">{language}</span>
+		<Dialog.Header class="flex shrink-0 flex-row items-center justify-between gap-2 border-b px-3 py-2 sm:px-4">
+			<Dialog.Title class="flex min-w-0 items-center gap-2 font-mono text-sm font-medium">
+				<Terminal class="size-4 shrink-0" />
+				<span class="truncate">{box?.box_id}</span>
+				<span class="hidden text-muted-foreground sm:inline">{language}</span>
 			</Dialog.Title>
 			<Dialog.Description class="sr-only">An interactive shell in the box, in /workspace</Dialog.Description>
-			<div class="flex items-center gap-3">
+			<div class="flex shrink-0 items-center gap-2 sm:gap-3">
 				{#if closed}
 					<button
 						type="button"
 						class="flex cursor-pointer items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+						aria-label="Reconnect"
+						title="Reconnect"
 						onclick={() => {
 							closed = false;
 							session++;
 						}}
 					>
-						<RotateCcw class="size-3.5" /> Reconnect
+						<RotateCcw class="size-3.5" /><span class="hidden sm:inline">Reconnect</span>
 					</button>
 				{/if}
 				<Select.Root type="single" value={theme} onValueChange={(v) => terminalTheme.set(v)}>
-					<Select.Trigger size="sm" class="h-7 w-36 text-xs" aria-label="Terminal theme">{TERMINAL_THEMES[theme].label}</Select.Trigger>
-					<Select.Content>
+					<!-- The theme's name on a wide screen; a palette icon on a phone. -->
+					<Select.Trigger size="sm" class="h-7 w-auto gap-1 text-xs sm:w-36" aria-label="Terminal theme: {TERMINAL_THEMES[theme].label}" title="Terminal theme">
+						<Palette class="size-4 sm:hidden" /><span class="hidden sm:inline">{TERMINAL_THEMES[theme].label}</span>
+					</Select.Trigger>
+					<Select.Content align="end">
 						{#each Object.entries(TERMINAL_THEMES) as [value, { label }] (value)}
 							<Select.Item {value} class="text-xs">{label}</Select.Item>
 						{/each}

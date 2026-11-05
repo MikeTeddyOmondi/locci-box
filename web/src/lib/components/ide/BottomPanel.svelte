@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ChevronDown, CircleX, Info, Plus, SquareTerminal, TriangleAlert, X } from '@lucide/svelte';
+	import { ChevronDown, CircleAlert, CircleX, Info, Palette, Plus, SquareTerminal, TriangleAlert, X } from '@lucide/svelte';
 	import { onMount } from 'svelte';
 	import BoxTerminal, { TERMINAL_THEMES } from '$lib/components/BoxTerminal.svelte';
 	import * as Select from '$lib/components/ui/select';
@@ -95,47 +95,69 @@
 </script>
 
 <div class="flex h-full min-h-0 flex-col bg-background">
-	<div class="flex shrink-0 items-center gap-4 border-b px-3 text-[11px] font-medium tracking-wider uppercase">
+	<!-- Icons, as in VS Code's panel bar, so it fits a phone; each says what it is on hover and to screen readers. -->
+	<div class="flex shrink-0 items-center gap-1 border-b px-1.5">
 		<button
 			type="button"
-			class={['cursor-pointer border-b py-1.5', tab === 'problems' ? 'border-foreground text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground']}
+			class={['relative flex cursor-pointer items-center gap-1 border-b-2 px-1.5 py-1.5', tab === 'problems' ? 'border-foreground text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground']}
+			aria-label="Problems ({problems.length})"
+			aria-pressed={tab === 'problems'}
+			title="Problems"
 			onclick={() => (tab = 'problems')}
 		>
-			Problems
-			{#if problems.length}<span class="ml-1 rounded-full bg-muted px-1.5 py-px text-[10px]">{problems.length}</span>{/if}
+			<CircleAlert class="size-4" />
+			{#if problems.length}<span class="rounded-full bg-muted px-1.5 text-[10px] leading-4">{problems.length}</span>{/if}
 		</button>
 		<button
 			type="button"
-			class={['cursor-pointer border-b py-1.5', tab === 'terminal' ? 'border-foreground text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground']}
+			class={['flex cursor-pointer items-center border-b-2 px-1.5 py-1.5', tab === 'terminal' ? 'border-foreground text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground']}
+			aria-label="Terminal"
+			aria-pressed={tab === 'terminal'}
+			title="Terminal"
 			onclick={() => (tab = 'terminal')}
 		>
-			Terminal
+			<SquareTerminal class="size-4" />
 		</button>
-		<div class="flex-1"></div>
+		<div class="min-w-2 flex-1"></div>
 		{#if tab === 'terminal'}
-			<div class="flex items-center gap-1 normal-case tracking-normal">
-				{#each sessions as s, i (s.id)}
-					<div
-						class={[
-							'group flex items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[11px]',
-							s.id === activeId ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent/50'
-						]}
-					>
-						<button type="button" class="flex cursor-pointer items-center gap-1" onclick={() => (activeId = s.id)}>
-							<SquareTerminal class="size-3" />
-							bash {i + 1}{s.ended ? ' (ended)' : ''}
-						</button>
-						<button type="button" class="cursor-pointer opacity-60 hover:opacity-100" aria-label="Kill terminal {i + 1}" onclick={() => closeTerminal(s.id)}>
-							<X class="size-3" />
-						</button>
-					</div>
-				{/each}
-				<button type="button" class="cursor-pointer rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground" title="New terminal" aria-label="New terminal" onclick={() => addTerminal()}>
-					<Plus class="size-3.5" />
+			<div class="flex min-w-0 items-center gap-0.5">
+				<!-- One chip per shell: its number, an X to kill it; an ended one is struck through. -->
+				<div class="flex min-w-0 items-center gap-0.5 overflow-x-auto">
+					{#each sessions as s, i (s.id)}
+						<div
+							class={[
+								'flex shrink-0 items-center rounded font-mono text-[11px]',
+								s.id === activeId ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent/50'
+							]}
+						>
+							<button
+								type="button"
+								class={['flex cursor-pointer items-center gap-1 py-1 pl-1.5', s.ended && 'line-through opacity-60']}
+								aria-label="Terminal {i + 1}{s.ended ? ', ended' : ''}"
+								title="bash {i + 1}{s.ended ? ' (ended)' : ''}"
+								onclick={() => (activeId = s.id)}
+							>
+								<SquareTerminal class="size-3.5" />{i + 1}
+							</button>
+							<button type="button" class="cursor-pointer px-1 py-1 opacity-60 hover:opacity-100" aria-label="Kill terminal {i + 1}" title="Kill terminal {i + 1}" onclick={() => closeTerminal(s.id)}>
+								<X class="size-3" />
+							</button>
+						</div>
+					{/each}
+				</div>
+				<button type="button" class="shrink-0 cursor-pointer rounded p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground" title="New terminal" aria-label="New terminal" onclick={() => addTerminal()}>
+					<Plus class="size-4" />
 				</button>
 				<Select.Root type="single" value={terminalTheme.current} onValueChange={(v) => terminalTheme.set(v)}>
-					<Select.Trigger size="sm" class="h-6 w-32 text-[11px]" aria-label="Terminal theme">{TERMINAL_THEMES[terminalTheme.current].label}</Select.Trigger>
-					<Select.Content>
+					<Select.Trigger
+						size="sm"
+						class="h-7 w-auto shrink-0 gap-0.5 border-0 px-1.5 text-muted-foreground shadow-none hover:bg-accent hover:text-foreground dark:bg-transparent"
+						aria-label="Terminal theme: {TERMINAL_THEMES[terminalTheme.current].label}"
+						title="Terminal theme: {TERMINAL_THEMES[terminalTheme.current].label}"
+					>
+						<Palette class="size-4" />
+					</Select.Trigger>
+					<Select.Content align="end">
 						{#each Object.entries(TERMINAL_THEMES) as [value, { label }] (value)}
 							<Select.Item {value} class="text-xs">{label}</Select.Item>
 						{/each}
@@ -143,8 +165,8 @@
 				</Select.Root>
 			</div>
 		{/if}
-		<button type="button" class="cursor-pointer rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground" title="Hide the panel (Cmd/Ctrl+J)" aria-label="Hide the panel" onclick={onHide}>
-			<ChevronDown class="size-3.5" />
+		<button type="button" class="shrink-0 cursor-pointer rounded p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground" title="Hide the panel (Cmd/Ctrl+J)" aria-label="Hide the panel" onclick={onHide}>
+			<ChevronDown class="size-4" />
 		</button>
 	</div>
 
@@ -161,7 +183,7 @@
 				{#each list as d, i (`${d.line}:${d.column}:${d.source}:${i}`)}
 					<button
 						type="button"
-						class="flex w-full cursor-pointer items-start gap-2 py-0.5 pr-3 pl-6 text-left text-xs hover:bg-accent/50"
+						class="flex w-full cursor-pointer flex-wrap items-start gap-x-2 py-0.5 pr-3 pl-3 text-left text-xs hover:bg-accent/50 sm:flex-nowrap sm:pl-6"
 						onclick={() => onJump(d)}
 					>
 						{#if d.severity === 'error'}
@@ -172,7 +194,7 @@
 							<Info class="mt-0.5 size-3.5 shrink-0 text-sky-600 dark:text-sky-400" />
 						{/if}
 						<span class="min-w-0 flex-1">{d.message}</span>
-						<span class="shrink-0 text-muted-foreground">{d.source} [Ln {d.line}, Col {d.column}]</span>
+						<span class="basis-full pl-5.5 text-muted-foreground sm:basis-auto sm:shrink-0 sm:pl-0">{d.source} [Ln {d.line}, Col {d.column}]</span>
 					</button>
 				{/each}
 			{/each}

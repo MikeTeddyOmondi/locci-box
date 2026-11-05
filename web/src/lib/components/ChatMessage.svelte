@@ -154,7 +154,7 @@
 				<CollapsibleText text={part.text} />
 			{/if}
 		{/each}
-		<div class="flex opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100">
+		<div class="flex opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 [@media(hover:none)]:opacity-100 sm:focus-within:opacity-100">
 			<IconButton label={copied ? 'Copied' : 'Copy message'} size="icon" class="rounded-full transition-transform active:scale-90" onclick={copy}>
 				{#if copied}<Check class="copy-pop" />{:else}<Copy />{/if}
 			</IconButton>
@@ -207,7 +207,7 @@
 		{/each}
 
 		{#if !streaming && plainText}
-			<div class="-ml-2 flex items-center opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100">
+			<div class="-ml-2 flex items-center opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 [@media(hover:none)]:opacity-100 sm:focus-within:opacity-100">
 				<IconButton label={copied ? 'Copied' : 'Copy reply'} size="icon" class="rounded-full transition-transform active:scale-90" onclick={copy}>
 					{#if copied}<Check class="copy-pop" />{:else}<Copy />{/if}
 				</IconButton>

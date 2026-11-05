@@ -1,5 +1,18 @@
 <script lang="ts">
-	import { ArrowLeft, CircleX, Download, FilePlus, FileCode2, Info, Play, Trash2, TriangleAlert } from '@lucide/svelte';
+	import {
+		ArrowLeft,
+		CircleAlert,
+		CircleX,
+		Download,
+		FilePlus,
+		FileCode2,
+		Info,
+		LoaderCircle,
+		Play,
+		SquareChevronRight,
+		Trash2,
+		TriangleAlert
+	} from '@lucide/svelte';
 	import { onMount, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import type * as Monaco from 'monaco-editor';
@@ -238,7 +251,7 @@
 					{/if}
 					<button
 						type="button"
-						class="cursor-pointer opacity-0 group-hover:opacity-100 hover:text-destructive focus:opacity-100"
+						class="cursor-pointer opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 hover:text-destructive focus:opacity-100"
 						aria-label="Delete {file.name}"
 						onclick={() => removeFile(file.id)}
 					>
@@ -251,23 +264,22 @@
 
 	<!-- Editor and output -->
 	<div class="flex min-h-0 min-w-0 flex-1 flex-col">
-		<div class="flex flex-wrap items-center gap-2 border-b px-3 py-2">
-			<span class="font-mono text-sm">{active.name}</span>
+		<div class="flex items-center gap-2 border-b px-3 py-2">
+			<span class="min-w-0 truncate font-mono text-sm">{active.name}</span>
 			<div class="flex-1"></div>
 			<Select.Root type="single" bind:value={picked} onValueChange={(v) => setLanguage(v as Language)}>
-				<Select.Trigger class="h-8 w-32" aria-label="Language">{LANGUAGE_LABELS[picked]}</Select.Trigger>
+				<Select.Trigger class="h-8 w-28 shrink-0" aria-label="Language">{LANGUAGE_LABELS[picked]}</Select.Trigger>
 				<Select.Content>
 					{#each LANGUAGES as l (l)}
 						<Select.Item value={l}>{LANGUAGE_LABELS[l]}</Select.Item>
 					{/each}
 				</Select.Content>
 			</Select.Root>
-			<Button size="icon" variant="ghost" aria-label="Download {active.name}" onclick={download}>
+			<Button size="icon" variant="ghost" class="shrink-0" aria-label="Download {active.name}" title="Download {active.name}" onclick={download}>
 				<Download class="size-4" />
 			</Button>
-			<Button size="sm" onclick={run} disabled={running} title="Run (Cmd/Ctrl + Enter)">
-				<Play class="size-4" />
-				{running ? 'Running...' : 'Run'}
+			<Button size="icon" class="shrink-0" onclick={run} disabled={running} aria-label={running ? 'Running' : 'Run'} title="Run (Cmd/Ctrl+Enter)">
+				{#if running}<LoaderCircle class="size-4 animate-spin" />{:else}<Play class="size-4" />{/if}
 			</Button>
 		</div>
 		<div class="grid min-h-0 flex-1 grid-rows-[minmax(16rem,1fr)_minmax(10rem,40%)] xl:grid-cols-[1fr_24rem] xl:grid-rows-1">
@@ -283,15 +295,18 @@
 				class="h-full"
 			/>
 			<div class="flex min-h-0 flex-col border-t xl:border-t-0 xl:border-l">
-				<div class="flex shrink-0 gap-4 border-b px-3 text-[11px] font-medium tracking-wider uppercase">
-					{#each [['output', 'Output'], ['problems', 'Problems']] as const as [key, label] (key)}
+				<div class="flex shrink-0 gap-1 border-b px-1.5">
+					{#each [['output', 'Output', SquareChevronRight], ['problems', 'Problems', CircleAlert]] as const as [key, label, Icon] (key)}
 						<button
 							type="button"
-							class={['cursor-pointer border-b py-1.5', rightTab === key ? 'border-foreground text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground']}
+							class={['flex cursor-pointer items-center gap-1 border-b-2 px-1.5 py-1.5', rightTab === key ? 'border-foreground text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground']}
+							aria-label={key === 'problems' ? `${label} (${problems.length})` : label}
+							aria-pressed={rightTab === key}
+							title={label}
 							onclick={() => (rightTab = key)}
 						>
-							{label}
-							{#if key === 'problems' && problems.length}<span class="ml-1 rounded-full bg-muted px-1.5 py-px text-[10px]">{problems.length}</span>{/if}
+							<Icon class="size-4" />
+							{#if key === 'problems' && problems.length}<span class="rounded-full bg-muted px-1.5 text-[10px] leading-4">{problems.length}</span>{/if}
 						</button>
 					{/each}
 				</div>

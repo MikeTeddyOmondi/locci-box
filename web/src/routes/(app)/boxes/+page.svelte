@@ -111,7 +111,45 @@
 						<p class="text-sm text-muted-foreground">Create one, or let an agent create one with the box_create MCP tool.</p>
 					</div>
 				{:else}
-					<div class="overflow-x-auto">
+					{#snippet actions(box: BoxInfo)}
+						<div class="flex shrink-0 justify-end gap-1">
+							<Button size="icon" variant="ghost" aria-label="Terminal" title="Terminal" onclick={() => (terminal = box)}>
+								<Terminal class="size-4" />
+							</Button>
+							{#if box.status === 'running'}
+								<Button size="icon" variant="ghost" aria-label="Stop" title="Stop" disabled={busy === box.box_id} onclick={() => act(box, 'stop')}>
+									<Square class="size-4" />
+								</Button>
+							{:else}
+								<Button size="icon" variant="ghost" aria-label="Start" title="Start" disabled={busy === box.box_id} onclick={() => act(box, 'start')}>
+									<Play class="size-4" />
+								</Button>
+							{/if}
+							<Button size="icon" variant="ghost" aria-label="Delete" title="Delete" disabled={busy === box.box_id} onclick={() => act(box, 'remove')}>
+								<Trash2 class="size-4" />
+							</Button>
+						</div>
+					{/snippet}
+
+					<!-- A phone gets one card per box, so the actions are in reach without scrolling a table sideways. -->
+					<ul class="divide-y md:hidden">
+						{#each boxes as box (box.box_id)}
+							<li class="flex items-center gap-2 py-3 first:pt-0 last:pb-0">
+								<div class="min-w-0 flex-1 space-y-1">
+									<p class="truncate font-mono text-xs">{box.box_id}</p>
+									{#if box.name}<p class="truncate text-sm font-medium">{box.name}</p>{/if}
+									<div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+										<Badge variant={box.status === 'running' ? 'default' : 'secondary'}>{box.status}</Badge>
+										<span class="font-mono">{imageLabel(box.image)}</span>
+										<span>{formatDate(box.last_used_at)}</span>
+									</div>
+								</div>
+								{@render actions(box)}
+							</li>
+						{/each}
+					</ul>
+
+					<div class="hidden overflow-x-auto md:block">
 						<Table.Root>
 							<Table.Header>
 								<Table.Row>
@@ -125,31 +163,16 @@
 							<Table.Body>
 								{#each boxes as box (box.box_id)}
 									<Table.Row>
-										<Table.Cell class="font-mono text-xs">{box.box_id}</Table.Cell>
+										<Table.Cell>
+											<span class="font-mono text-xs">{box.box_id}</span>
+											{#if box.name}<span class="block text-xs text-muted-foreground">{box.name}</span>{/if}
+										</Table.Cell>
 										<Table.Cell class="font-mono text-xs">{imageLabel(box.image)}</Table.Cell>
 										<Table.Cell>
 											<Badge variant={box.status === 'running' ? 'default' : 'secondary'}>{box.status}</Badge>
 										</Table.Cell>
 										<Table.Cell class="text-muted-foreground">{formatDate(box.last_used_at)}</Table.Cell>
-										<Table.Cell>
-											<div class="flex justify-end gap-1">
-												<Button size="icon" variant="ghost" aria-label="Terminal" title="Terminal" onclick={() => (terminal = box)}>
-													<Terminal class="size-4" />
-												</Button>
-												{#if box.status === 'running'}
-													<Button size="icon" variant="ghost" aria-label="Stop" disabled={busy === box.box_id} onclick={() => act(box, 'stop')}>
-														<Square class="size-4" />
-													</Button>
-												{:else}
-													<Button size="icon" variant="ghost" aria-label="Start" disabled={busy === box.box_id} onclick={() => act(box, 'start')}>
-														<Play class="size-4" />
-													</Button>
-												{/if}
-												<Button size="icon" variant="ghost" aria-label="Delete" disabled={busy === box.box_id} onclick={() => act(box, 'remove')}>
-													<Trash2 class="size-4" />
-												</Button>
-											</div>
-										</Table.Cell>
+										<Table.Cell>{@render actions(box)}</Table.Cell>
 									</Table.Row>
 								{/each}
 							</Table.Body>

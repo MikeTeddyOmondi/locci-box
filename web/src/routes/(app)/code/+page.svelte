@@ -88,11 +88,11 @@
 			</p>
 		</div>
 		<div class="flex items-center gap-2">
-			<Button variant="outline" href="/code/scratch">
-				<NotebookPen class="size-4" /> Scratch
+			<Button variant="outline" href="/code/scratch" aria-label="Scratch" title="Scratch: one-off snippets">
+				<NotebookPen class="size-4" /><span class="hidden sm:inline">Scratch</span>
 			</Button>
-			<Button onclick={() => (open = true)}>
-				<Plus class="size-4" /> New project
+			<Button onclick={() => (open = true)} aria-label="New project" title="New project">
+				<Plus class="size-4" /><span class="hidden sm:inline">New project</span>
 			</Button>
 		</div>
 	</div>
@@ -131,7 +131,7 @@
 						<Button
 							size="icon"
 							variant="ghost"
-							class="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 focus:opacity-100"
+							class="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 focus:opacity-100"
 							aria-label="Delete {project.name}"
 							disabled={busy === project.box_id}
 							onclick={() => remove(project)}

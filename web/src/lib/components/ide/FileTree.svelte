@@ -231,7 +231,7 @@
 				{#if !inSkipped(node.path)}
 					<button
 						type="button"
-						class="cursor-pointer p-0.5 text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-foreground focus:opacity-100"
+						class="cursor-pointer p-0.5 text-muted-foreground opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 hover:text-foreground focus:opacity-100"
 						aria-label="Rename {node.name}"
 						onclick={() => (editing = { kind: 'rename', path: node.path })}
 					>
@@ -240,7 +240,7 @@
 				{/if}
 				<button
 					type="button"
-					class="cursor-pointer p-0.5 text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-destructive focus:opacity-100"
+					class="cursor-pointer p-0.5 text-muted-foreground opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100 hover:text-destructive focus:opacity-100"
 					aria-label="Delete {node.name}"
 					onclick={() => onDelete(node.path, node.folder)}
 				>

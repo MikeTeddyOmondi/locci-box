@@ -26,26 +26,32 @@
 </script>
 
 <div class="flex h-6 shrink-0 items-center gap-0.5 bg-[#007acc] px-1 text-[11px] text-white select-none dark:bg-[#1f6feb]">
-	<span class="flex items-center gap-1 px-1.5" title="Where this code runs">
-		<Box class="size-3" />
-		{target}
+	<!-- One line at any width: on a phone the words go and the icons stay (each keeps its title). -->
+	<span class="flex min-w-0 items-center gap-1 px-1.5" title="Where this code runs: {target}">
+		<Box class="size-3 shrink-0" />
+		<span class="hidden truncate sm:inline">{target}</span>
 	</span>
 	{#if busy}
-		<span class="flex items-center gap-1 px-1.5"><LoaderCircle class="size-3 animate-spin" /> {busy}</span>
+		<span class="flex shrink-0 items-center gap-1 px-1.5" title={busy}><LoaderCircle class="size-3 animate-spin" /><span class="hidden sm:inline">{busy}</span></span>
 	{/if}
-	<button type="button" class="flex cursor-pointer items-center gap-1 rounded-sm px-1.5 hover:bg-white/15" title="Problems: {errors} errors, {warnings} warnings" onclick={onProblems}>
+	<button
+		type="button"
+		class="flex shrink-0 cursor-pointer items-center gap-1 rounded-sm px-1.5 hover:bg-white/15"
+		title="Problems: {errors} errors, {warnings} warnings"
+		onclick={onProblems}
+	>
 		<CircleX class="size-3" />
 		{errors}
 		<TriangleAlert class="ml-1 size-3" />
 		{warnings}
 	</button>
 	{#if checking}
-		<span class="flex items-center gap-1 px-1.5 opacity-90"><LoaderCircle class="size-3 animate-spin" /> Checking...</span>
+		<span class="flex shrink-0 items-center gap-1 px-1.5 opacity-90" title="Checking"><LoaderCircle class="size-3 animate-spin" /><span class="hidden sm:inline">Checking...</span></span>
 	{/if}
 	<div class="flex-1"></div>
-	<span class="px-1.5">Ln {line}, Col {column}</span>
-	<span class="hidden px-1.5 sm:inline">{insertSpaces ? 'Spaces' : 'Tab Size'}: {tabSize}</span>
-	<span class="hidden px-1.5 sm:inline">UTF-8</span>
-	<span class="hidden px-1.5 sm:inline">LF</span>
-	<span class="px-1.5">{language}</span>
+	<span class="shrink-0 px-1.5 whitespace-nowrap">Ln {line}, Col {column}</span>
+	<span class="hidden px-1.5 whitespace-nowrap md:inline">{insertSpaces ? 'Spaces' : 'Tab Size'}: {tabSize}</span>
+	<span class="hidden px-1.5 md:inline">UTF-8</span>
+	<span class="hidden px-1.5 md:inline">LF</span>
+	<span class="hidden shrink-0 px-1.5 sm:inline">{language}</span>
 </div>

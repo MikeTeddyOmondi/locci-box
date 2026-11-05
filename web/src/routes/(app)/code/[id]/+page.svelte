@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ArrowLeft, FolderTree, Play } from '@lucide/svelte';
+	import { ArrowLeft, Play } from '@lucide/svelte';
 	import { onMount, tick } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import type * as Monaco from 'monaco-editor';
@@ -61,7 +61,20 @@
 	let checking = $state(false);
 	let cursor = $state({ line: 1, column: 1 });
 
-	let showTree = $state(true);
+	/** The Explorer starts collapsed; opening or closing it is remembered in this browser. */
+	const TREE_KEY = 'locci-box.code.explorer';
+	let showTree = $state(false);
+	/** Wide enough for the Explorer beside the editor (md); on a phone it lies over it. */
+	const wide = () => window.matchMedia('(min-width: 768px)').matches;
+
+	function setTree(open: boolean) {
+		showTree = open;
+		try {
+			localStorage.setItem(TREE_KEY, open ? 'open' : 'closed');
+		} catch {
+			// storage blocked: the choice lasts until reload
+		}
+	}
 	let panelOpen = $state(true);
 	/** Problems until the box is up; then the terminal opens (see onMount). */
 	let panelTab = $state<'problems' | 'terminal'>('problems');
@@ -126,10 +139,38 @@
 	let syncTimer: ReturnType<typeof setTimeout> | undefined;
 	function terminalActivity() {
 		clearTimeout(syncTimer);
-		syncTimer = setTimeout(() => void refreshTree().catch(() => {}), 1500);
+		syncTimer = setTimeout(() => {
+			void refreshTree().catch(() => {});
+			void reloadOpenFiles();
+		}, 1500);
+	}
+
+	/**
+	 * Open files a command rewrote (a formatter such as gofmt -w or prettier
+	 * --write, a linter's --fix) show the new text. A tab with unsaved edits is
+	 * left alone, so typing is never lost; its next save writes over the change.
+	 */
+	async function reloadOpenFiles() {
+		await Promise.all(
+			tabs
+				.filter((t) => t.loaded && !t.note && t.content === t.saved)
+				.map(async (tab) => {
+					const file = await readProjectFile({ id, path: tab.path }).catch(() => null);
+					if (!file || file.content === null || file.truncated) return;
+					// Still unedited, and the box has something else: take it.
+					if (tab.content === tab.saved && file.content !== tab.saved) tab.content = tab.saved = file.content;
+				})
+		);
 	}
 
 	onMount(() => {
+		try {
+			// A phone always starts on the editor; a wider screen as it was left.
+			showTree = wide() && localStorage.getItem(TREE_KEY) === 'open';
+			if (!wide()) panelHeight = Math.round(window.innerHeight * 0.35);
+		} catch {
+			// storage blocked: collapsed
+		}
 		let markerListener: Monaco.IDisposable | undefined;
 		let gone = false;
 		(async () => {
@@ -376,8 +417,20 @@
 		<Button size="icon" variant="ghost" href="/code" aria-label="All projects" title="All projects">
 			<ArrowLeft class="size-4" />
 		</Button>
-		<Button size="icon" variant="ghost" aria-label="Toggle the Explorer" title="Explorer" onclick={() => (showTree = !showTree)}>
-			<FolderTree class="size-4" />
+		<Button
+			size="icon"
+			variant="ghost"
+			aria-label="Toggle the Explorer"
+			aria-pressed={showTree}
+			title="{showTree ? 'Hide' : 'Show'} the Explorer"
+			onclick={() => setTree(!showTree)}
+		>
+			<!-- lucide's panel-left, with the sidebar filled in while it is open, like the panel toggle -->
+			<svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+				<rect width="18" height="18" x="3" y="3" rx="2" />
+				<path d="M9 3v18" />
+				{#if showTree}<path d="M9 3v18H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" fill="currentColor" />{/if}
+			</svg>
 		</Button>
 		{#if renamingProject}
 			<input
@@ -392,15 +445,27 @@
 				}}
 			/>
 		{:else}
-			<button type="button" class="cursor-pointer truncate text-sm font-medium" title="Double-click to rename" ondblclick={() => (renamingProject = true)}>
+			<button
+				type="button"
+				class="min-w-0 cursor-pointer truncate text-sm font-medium"
+				title="Double-click to rename"
+				ondblclick={() => (renamingProject = true)}
+			>
 				{project?.name ?? 'Project'}
 			</button>
 		{/if}
-		<span class="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">{LANGUAGE_LABELS[language]}</span>
+		<span class="hidden shrink-0 rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground sm:inline">{LANGUAGE_LABELS[language]}</span>
 		<div class="flex-1"></div>
 		<span class="hidden font-mono text-xs text-muted-foreground md:inline">{RUN_COMMAND[language]}</span>
-		<Button size="sm" onclick={run} disabled={!!busy} title="Run {RUN_COMMAND[language]} in the terminal">
-			<Play class="size-4" /> Run
+		<Button
+			size="icon"
+			class="shrink-0"
+			onclick={run}
+			disabled={!!busy}
+			aria-label="Run"
+			title="Run {RUN_COMMAND[language]} in the terminal (Cmd/Ctrl+Enter)"
+		>
+			<Play class="size-4" />
 		</Button>
 		<Button
 			size="icon"
@@ -419,15 +484,22 @@
 		</Button>
 	</div>
 
-	<div class="flex min-h-0 flex-1">
+	<div class="relative flex min-h-0 flex-1">
 		{#if showTree}
-			<aside class="flex w-56 shrink-0 flex-col border-r lg:w-64">
+			<!-- On a phone the Explorer lies over the editor; a tap beside it, or opening a file, closes it. -->
+			<button type="button" class="absolute inset-0 z-20 bg-black/40 md:hidden" aria-label="Close the Explorer" onclick={() => setTree(false)}></button>
+			<aside
+				class="absolute inset-y-0 left-0 z-30 flex w-72 max-w-[85%] flex-col border-r bg-background shadow-xl md:static md:z-auto md:w-56 md:max-w-none md:shrink-0 md:shadow-none lg:w-64"
+			>
 				<FileTree
 					title={project?.name ?? 'Explorer'}
 					{entries}
 					{activePath}
 					problems={problemsByFile}
-					onOpen={openFile}
+					onOpen={(path) => {
+						if (!wide()) setTree(false);
+						void openFile(path);
+					}}
 					onCreate={create}
 					onRename={rename}
 					onDelete={remove}
@@ -476,7 +548,7 @@
 			<!-- Kept mounted while hidden, so terminals keep their shells. -->
 			<div class={['relative flex shrink-0 flex-col border-t', !panelOpen && 'hidden']} style="height: {panelHeight}px">
 				<div
-					class="absolute inset-x-0 -top-1 z-10 h-2 cursor-row-resize"
+					class="absolute inset-x-0 -top-1 z-10 h-2 cursor-row-resize touch-none"
 					role="separator"
 					aria-orientation="horizontal"
 					aria-label="Resize the panel"

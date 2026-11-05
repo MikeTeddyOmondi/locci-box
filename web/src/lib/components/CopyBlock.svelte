@@ -20,7 +20,8 @@
 		type="button"
 		onclick={copy}
 		aria-label={copied ? 'Copied' : label}
-		class="absolute top-2 right-2 flex size-7 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+		class="absolute top-2 right-2 flex size-7 cursor-pointer items-center justify-center rounded-md border bg-background text-muted-foreground shadow-sm hover:bg-accent hover:text-foreground"
+		title={copied ? 'Copied' : label}
 	>
 		{#if copied}<Check class="size-4" />{:else}<Copy class="size-4" />{/if}
 	</button>

@@ -46,7 +46,7 @@
 					<span class="size-2 rounded-full bg-foreground/70 group-hover:hidden"></span>
 					<X class="hidden size-3 group-hover:block" />
 				{:else}
-					<X class={['size-3', tab.path === active ? 'opacity-100' : 'opacity-0 group-hover:opacity-100']} />
+					<X class={['size-3', tab.path === active ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100']} />
 				{/if}
 			</button>
 		</div>

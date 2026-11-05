@@ -36,11 +36,11 @@
 			<Card.Description>You sign in with Locci Auth; your profile lives there.</Card.Description>
 		</Card.Header>
 		<Card.Content class="space-y-4">
-			<dl class="grid grid-cols-[8rem_1fr] gap-y-2 text-sm">
+			<dl class="grid grid-cols-[6rem_minmax(0,1fr)] gap-y-2 text-sm sm:grid-cols-[8rem_minmax(0,1fr)]">
 				<dt class="text-muted-foreground">Email</dt>
-				<dd>{data.user.email}</dd>
+				<dd class="break-all">{data.user.email}</dd>
 				<dt class="text-muted-foreground">Locci user</dt>
-				<dd class="font-mono text-xs">{data.user.id}</dd>
+				<dd class="font-mono text-xs break-all">{data.user.id}</dd>
 			</dl>
 			<div class="flex flex-wrap gap-2">
 				<Button variant="outline" href={issuer} target="_blank" rel="noreferrer">

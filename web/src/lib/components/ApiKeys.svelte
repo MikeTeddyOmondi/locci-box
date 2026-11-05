@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { toast } from 'svelte-sonner';
 	import { env } from '$env/dynamic/public';
-	import { KeyRound, Copy, Check, Plus, TriangleAlert } from '@lucide/svelte';
+	import { Ban, KeyRound, Copy, Check, Plus, TriangleAlert } from '@lucide/svelte';
 
 	import { Button } from '$lib/components/ui/button';
 	import {
@@ -158,7 +158,32 @@
 				</p>
 			</div>
 		{:else}
-			<div class="overflow-x-auto">
+			<!-- A phone gets one row per key, so Revoke is in reach without scrolling a table sideways. -->
+			<ul class="divide-y md:hidden">
+				{#each keysQuery.current as key (key.id)}
+					<li class="flex items-center gap-2 py-3 first:pt-0">
+						<div class="min-w-0 flex-1 space-y-1">
+							<p class="truncate text-sm font-medium">{key.name}</p>
+							<p class="truncate font-mono text-xs text-muted-foreground">{key.prefix}…</p>
+							<p class="text-xs text-muted-foreground">
+								Used {formatDate(key.lastUsedAt) ?? 'never'} · expires {key.expiresAt ? formatDate(key.expiresAt) : 'never'}
+							</p>
+						</div>
+						<Button
+							variant="ghost"
+							size="icon"
+							class="shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+							aria-label="Revoke {key.name}"
+							title="Revoke"
+							onclick={() => revoke(key.id, key.name)}
+						>
+							<Ban class="size-4" />
+						</Button>
+					</li>
+				{/each}
+			</ul>
+
+			<div class="hidden overflow-x-auto md:block">
 				<Table>
 					<TableHeader>
 						<TableRow>

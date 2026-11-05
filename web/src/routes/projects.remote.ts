@@ -124,6 +124,17 @@ export const renamePath = command(v.object({ id: v.string(), from: v.string(), t
 	return { success: true as const };
 });
 
+/**
+ * Copy and Duplicate in the Explorer. Folders are copied whole. Plain `cp -R`:
+ * `cp -a` fails on the box's shared /workspace when it sets ownership.
+ */
+export const copyPath = command(v.object({ id: v.string(), from: v.string(), to: v.string() }), async ({ id, from, to }) => {
+	const [a, b] = [sq(pathOf(from)), sq(pathOf(to))];
+	const r = await exec(id, `[ -e ${b} ] && { echo 'Already exists' >&2; exit 3; }; mkdir -p "$(dirname ${b})" && cp -R ${a} ${b}`, 60);
+	if (r.exit_code !== 0) error(r.exit_code === 3 ? 409 : 502, `${to}: ${r.stderr.trim() || 'could not be copied'}`);
+	return { success: true as const };
+});
+
 export const deletePath = command(At, async ({ id, path }) => {
 	const r = await exec(id, `rm -rf -- ${sq(pathOf(path))}`, 30);
 	if (r.exit_code !== 0) error(502, r.stderr.trim() || `${path} could not be deleted`);

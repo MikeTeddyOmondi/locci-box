@@ -17,6 +17,7 @@
 	import { errMessage } from '$lib/utils';
 	import {
 		checkProject,
+		copyPath,
 		createPath,
 		deletePath,
 		getDir,
@@ -354,6 +355,17 @@
 		void check();
 	}
 
+	async function copy(from: string, to: string) {
+		await saveAll();
+		try {
+			await copyPath({ id, from, to });
+		} catch (err) {
+			return toast.error(errMessage(err, `${from} could not be copied`));
+		}
+		await refreshTree();
+		void check();
+	}
+
 	async function remove(path: string, folder: boolean) {
 		const ok = await confirmDialog({
 			title: `Delete ${path}?`,
@@ -502,6 +514,7 @@
 					}}
 					onCreate={create}
 					onRename={rename}
+					onCopy={copy}
 					onDelete={remove}
 					onRefresh={refreshTree}
 					onExpand={expandDir}

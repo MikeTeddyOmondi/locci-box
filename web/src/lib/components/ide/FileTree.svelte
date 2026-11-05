@@ -59,7 +59,8 @@
 
 	/**
 	 * The project's files, as VS Code's Explorer: folders collapse, a click opens
-	 * a file, and new file, new folder, rename and delete happen in place.
+	 * a file, new file, new folder, rename and delete happen in place, and files
+	 * and folders are dragged into another folder (or to the top level) to move them.
 	 * Folders the box skips (node_modules, target) are listed but empty.
 	 */
 
@@ -139,6 +140,58 @@
 		onCreate(state.dir ? `${state.dir}/${name}` : name, state.kind === 'folder');
 	}
 
+	/** Drag and drop: the path being dragged and the folder it would land in ('' is the top level). */
+	let dragging = $state<string | null>(null);
+	let dropDir = $state<string | null>(null);
+	let openTimer: ReturnType<typeof setTimeout> | undefined;
+	const parentOf = (path: string) => path.slice(0, Math.max(0, path.lastIndexOf('/')));
+
+	/** Not where it already is, not into itself, and not into node_modules and the like. */
+	function canDrop(dir: string): boolean {
+		if (dragging === null || inSkipped(dir)) return false;
+		return dir !== parentOf(dragging) && dir !== dragging && !dir.startsWith(`${dragging}/`);
+	}
+
+	function dragOver(e: DragEvent, dir: string) {
+		if (dragging === null) return;
+		e.preventDefault();
+		e.stopPropagation();
+		const ok = canDrop(dir);
+		if (e.dataTransfer) e.dataTransfer.dropEffect = ok ? 'move' : 'none';
+		const next = ok ? dir : null;
+		if (next === dropDir) return;
+		dropDir = next;
+		// A closed folder held under the pointer opens, as in VS Code.
+		clearTimeout(openTimer);
+		if (next && !expanded.has(next)) {
+			openTimer = setTimeout(() => {
+				expanded = new Set([...expanded, next]);
+				onExpand?.(next);
+			}, 600);
+		}
+	}
+
+	function drop(e: DragEvent) {
+		e.preventDefault();
+		e.stopPropagation();
+		const from = dragging;
+		const dir = dropDir;
+		endDrag();
+		if (from === null || dir === null) return;
+		const name = from.slice(from.lastIndexOf('/') + 1);
+		if (dir) expanded = new Set([...expanded, dir]);
+		onRename(from, dir ? `${dir}/${name}` : name);
+	}
+
+	function endDrag() {
+		clearTimeout(openTimer);
+		dragging = null;
+		dropDir = null;
+	}
+
+	/** The rows of the folder something would land in are tinted. */
+	const inDrop = (path: string) => dropDir !== null && dropDir !== '' && (path === dropDir || path.startsWith(`${dropDir}/`));
+
 	const focusInput = (node: HTMLInputElement) => {
 		node.focus();
 		// A rename selects the name without its extension, as VS Code does.
@@ -196,9 +249,28 @@
 			<div
 				class={[
 					'group flex items-center gap-1 py-0.5 pr-1 font-mono text-xs',
-					!node.folder && node.path === activePath ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50'
+					inDrop(node.path)
+						? 'bg-primary/10'
+						: !node.folder && node.path === activePath
+							? 'bg-accent text-accent-foreground'
+							: 'hover:bg-accent/50',
+					dragging === node.path && 'opacity-50'
 				]}
 				style="padding-left: {depth * 12 + 6}px"
+				role="treeitem"
+				tabindex="-1"
+				aria-selected={!node.folder && node.path === activePath}
+				draggable={!inSkipped(node.path)}
+				ondragstart={(e) => {
+					dragging = node.path;
+					if (e.dataTransfer) {
+						e.dataTransfer.effectAllowed = 'move';
+						e.dataTransfer.setData('text/plain', node.path);
+					}
+				}}
+				ondragend={endDrag}
+				ondragover={(e) => dragOver(e, node.folder ? node.path : parentOf(node.path))}
+				ondrop={drop}
 			>
 				<button
 					type="button"
@@ -281,8 +353,19 @@
 			<ChevronsDownUp class="size-3.5" />
 		</button>
 	</div>
-	<!-- A click on empty space puts new files at the top level. -->
-	<div class="min-h-0 flex-1 overflow-auto pb-4" role="tree" tabindex="-1" onclick={(e) => e.target === e.currentTarget && (selectedDir = '')} onkeydown={() => {}}>
+	<!-- A click on empty space puts new files at the top level, and a drop there moves to it. -->
+	<div
+		class={['min-h-0 flex-1 overflow-auto pb-4', dropDir === '' && 'bg-primary/5 outline-1 -outline-offset-1 outline-primary/40']}
+		role="tree"
+		tabindex="-1"
+		onclick={(e) => e.target === e.currentTarget && (selectedDir = '')}
+		onkeydown={() => {}}
+		ondragover={(e) => dragOver(e, '')}
+		ondragleave={(e) => {
+			if (!e.currentTarget.contains(e.relatedTarget as Node | null)) dropDir = null;
+		}}
+		ondrop={drop}
+	>
 		{@render nodes(tree, 0, '')}
 	</div>
 </div>

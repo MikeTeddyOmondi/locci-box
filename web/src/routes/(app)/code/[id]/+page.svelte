@@ -550,7 +550,8 @@
 						onCursor={(c) => (cursor = c)}
 						onReady={(_, e) => {
 							editor = e;
-							e.focus();
+							// A file opened from the Explorer leaves the focus there, so its shortcuts keep working.
+							if (!document.activeElement?.closest('[role=tree]')) e.focus();
 						}}
 						class="h-full"
 						ariaLabel="Editor, {active.path}"

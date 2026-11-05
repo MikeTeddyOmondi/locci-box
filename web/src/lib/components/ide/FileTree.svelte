@@ -275,6 +275,31 @@
 		onCopy(c.path, freeName(dir, nameOf(c.path), c.folder));
 	}
 
+	const mac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
+	/** Shortcut hints in the menu: ⌘C on a Mac, Ctrl+C elsewhere. */
+	const keys = (key: string) => (mac ? `⌘${key}` : `Ctrl+${key}`);
+
+	/**
+	 * Cmd/Ctrl+X, C and V in the tree, as in VS Code's Explorer: on the row that
+	 * has the focus, and a paste lands in that folder (or the file's folder).
+	 * With no row focused, a paste goes in the folder last clicked.
+	 */
+	function treeKey(e: KeyboardEvent) {
+		if (!(mac ? e.metaKey : e.ctrlKey) || e.altKey || e.shiftKey) return;
+		if ((e.target as Element).closest('input')) return;
+		const key = e.key.toLowerCase();
+		if (key !== 'x' && key !== 'c' && key !== 'v') return;
+		const t = targetOf(e.target);
+		if (key === 'v') {
+			if (!clip) return;
+			paste(!t.row ? selectedDir : t.folder ? t.path : parentOf(t.path));
+		} else {
+			if (!t.row || inSkipped(t.path)) return;
+			clip = { path: t.path, folder: t.folder, cut: key === 'x' };
+		}
+		e.preventDefault();
+	}
+
 	async function copyText(text: string) {
 		try {
 			await navigator.clipboard.writeText(text);
@@ -546,7 +571,7 @@
 			e.preventDefault();
 			e.stopPropagation();
 		}}
-		onkeydown={() => {}}
+		onkeydown={treeKey}
 		oncontextmenu={(e) => {
 			if ((e.target as Element).closest('input')) return;
 			e.preventDefault();
@@ -606,13 +631,18 @@
 				<DropdownMenu.Separator />
 			{/if}
 			{#if path !== '' && !skipped}
-				<DropdownMenu.Item onSelect={() => (clip = { path, folder, cut: true })}><Scissors />Cut</DropdownMenu.Item>
-				<DropdownMenu.Item onSelect={() => (clip = { path, folder, cut: false })}><Copy />Copy</DropdownMenu.Item>
+				<DropdownMenu.Item onSelect={() => (clip = { path, folder, cut: true })}>
+					<Scissors />Cut<DropdownMenu.Shortcut class="hidden md:inline">{keys('X')}</DropdownMenu.Shortcut>
+				</DropdownMenu.Item>
+				<DropdownMenu.Item onSelect={() => (clip = { path, folder, cut: false })}>
+					<Copy />Copy<DropdownMenu.Shortcut class="hidden md:inline">{keys('C')}</DropdownMenu.Shortcut>
+				</DropdownMenu.Item>
 			{/if}
 			{#if !skipped}
 				<DropdownMenu.Item disabled={!clip} onSelect={() => paste(dir)}>
 					<ClipboardPaste />
 					<span class="min-w-0 flex-1 truncate">Paste{clip ? ` ${nameOf(clip.path)}` : ''}</span>
+					<DropdownMenu.Shortcut class="hidden md:inline">{keys('V')}</DropdownMenu.Shortcut>
 				</DropdownMenu.Item>
 			{/if}
 			{#if path !== '' && !skipped}

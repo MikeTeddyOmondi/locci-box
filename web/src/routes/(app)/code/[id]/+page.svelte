@@ -12,7 +12,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { confirmDialog } from '$lib/confirm.svelte';
 	import { ENTRY_FILE, INDENT, languageOf, monacoLanguageOf, RUN_COMMAND } from '$lib/languages';
-	import { disposeModels, loadMonaco, modelFor, setCheckerMarkers, workerDiagnostics } from '$lib/monaco';
+	import { disposeModels, loadMonaco, modelFor, setCheckerMarkers, setProjectCompilerOptions, workerDiagnostics } from '$lib/monaco';
 	import { LANGUAGE_LABELS, type BoxInfo, type Diagnostic, type Language } from '$lib/types';
 	import { errMessage } from '$lib/utils';
 	import {
@@ -141,7 +141,10 @@
 	function terminalActivity() {
 		clearTimeout(syncTimer);
 		syncTimer = setTimeout(() => {
-			void refreshTree().catch(() => {});
+			// A command may have written the tsconfig.json (tsc --init) too.
+			void refreshTree()
+				.then(() => (language === 'node' ? applyConfig() : undefined))
+				.catch(() => {});
 			void reloadOpenFiles();
 		}, 1500);
 	}
@@ -190,7 +193,7 @@
 				const entry = ENTRY_FILE[language];
 				const first = entries.includes(entry) ? entry : entries.find((e) => !e.endsWith('/'));
 				if (first) await openFile(first);
-				if (language === 'node') await preloadScripts();
+				if (language === 'node') await Promise.all([applyConfig(), preloadScripts()]);
 				void check();
 			} catch (err) {
 				busy = null;
@@ -214,8 +217,11 @@
 			clearTimeout(syncTimer);
 			window.removeEventListener('keydown', onKey);
 			markerListener?.dispose();
-			// This project's models go with the page; another project starts clean.
-			if (monaco) for (const model of monaco.editor.getModels()) if (model.uri.path.startsWith(`/${ROOT}/`)) model.dispose();
+			// This project's models and options go with the page; another project (or Scratch) starts clean.
+			if (monaco) {
+				for (const model of monaco.editor.getModels()) if (model.uri.path.startsWith(`/${ROOT}/`)) model.dispose();
+				setProjectCompilerOptions(monaco, null);
+			}
 		};
 	});
 
@@ -253,6 +259,22 @@
 		tab.loaded = true;
 	}
 
+	/** Where a project sets its TypeScript options, the first one found wins (as tsc and VS Code look). */
+	const CONFIG_FILES = ['tsconfig.json', 'jsconfig.json'];
+	/** The last reason the config could not be read, so it is reported once. */
+	let configProblem: string | null = null;
+
+	/** The project's tsconfig.json (or jsconfig.json) sets the editor's TypeScript checker, as it sets VS Code's. */
+	async function applyConfig() {
+		if (!monaco) return;
+		const name = CONFIG_FILES.find((n) => entries.includes(n));
+		const file = name ? await readProjectFile({ id, path: name }).catch(() => null) : null;
+		if (!monaco) return;
+		const problem = setProjectCompilerOptions(monaco, file?.content ?? null);
+		if (problem && problem !== configProblem) toast.error(`${name} could not be read, so the editor checks with its defaults: ${problem}`);
+		configProblem = problem;
+	}
+
 	async function save(path: string) {
 		const tab = tabs.find((t) => t.path === path);
 		if (!tab || tab.note || tab.content === tab.saved) return;
@@ -260,6 +282,7 @@
 		try {
 			await saveProjectFile({ id, path, content });
 			tab.saved = content;
+			if (CONFIG_FILES.includes(path)) await applyConfig();
 			void check();
 		} catch (err) {
 			toast.error(errMessage(err, `${path} could not be saved`));

@@ -40,8 +40,12 @@ export function printTable(
     return;
   }
 
+  // Pad by what shows on screen: colour codes take no width.
+  const pad = (str: string, width?: number) =>
+    width ? str + " ".repeat(Math.max(0, width - str.replace(/\x1b\[[0-9;]*m/g, "").length)) : str;
+
   // Print header
-  const header = columns.map((col) => pc.bold(col.label)).join("  ");
+  const header = columns.map((col) => pc.bold(pad(col.label, col.width))).join("  ");
   console.log("\n" + header);
   console.log(pc.dim("─".repeat(80)));
 
@@ -51,7 +55,7 @@ export function printTable(
       .map((col) => {
         const value = row[col.key] ?? "";
         const str = String(value);
-        return col.width ? str.padEnd(col.width) : str;
+        return pad(str, col.width);
       })
       .join("  ");
     console.log(rowStr);

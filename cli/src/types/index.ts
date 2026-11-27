@@ -15,7 +15,8 @@ export interface Profile {
 /**
  * Sandbox Types
  */
-export type SupportedLanguage = "python" | "node" | "bash" | "ruby";
+export const SUPPORTED_LANGUAGES = ["python", "node", "bash", "ruby", "go", "rust", "c", "cpp"] as const;
+export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
 
 export interface RunParams {
   language: SupportedLanguage;
@@ -108,3 +109,36 @@ export interface ApiKey {
 }
 
 // Made with Bob
+
+/** An agent box: a long-lived microVM (GET /api/boxes). */
+export interface BoxInfo {
+  box_id: string;
+  status: "running" | "stopped";
+  image: string;
+  memory_mib: number;
+  workdir: string;
+  created_at: string;
+  started_at: string;
+  last_used_at: string;
+  stopped_at: string | null;
+  idle_stop_at: string | null;
+}
+
+export interface BoxExecResult {
+  box_id: string;
+  exit_code: number;
+  stdout: string;
+  stderr: string;
+  duration_ms: number;
+  timed_out: boolean;
+  truncated: boolean;
+}
+
+export interface BoxFile {
+  box_id: string;
+  path: string;
+  size: number;
+  encoding: "utf8" | "base64";
+  content: string;
+  truncated: boolean;
+}

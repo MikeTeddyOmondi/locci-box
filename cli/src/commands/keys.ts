@@ -11,8 +11,8 @@ import {
   formatTimestamp,
 } from "../lib/output.js";
 
-function authOrExit() {
-  const profile = getProfile();
+function authOrExit(profileName?: string) {
+  const profile = getProfile(profileName);
   if (!profile) {
     printError("No configuration found. Run 'loccibox init' to set up the CLI.");
     return null;
@@ -41,8 +41,9 @@ export function createKeysCommand(): Command {
   command
     .command("list")
     .description("List all your API keys")
-    .action(async () => {
-      const auth = authOrExit();
+    .option("--profile <name>", "Use a specific profile")
+    .action(async (opts) => {
+      const auth = authOrExit(opts.profile);
       if (!auth) return;
       try {
         const keys = await auth.api.listKeys(auth.jwt);
@@ -78,8 +79,9 @@ export function createKeysCommand(): Command {
     .command("create")
     .description("Create a new API key")
     .requiredOption("-n, --name <name>", "Name for the new key")
+    .option("--profile <name>", "Use a specific profile")
     .action(async (opts) => {
-      const auth = authOrExit();
+      const auth = authOrExit(opts.profile);
       if (!auth) return;
       try {
         const key = await auth.api.createKey(opts.name, auth.jwt);
@@ -96,8 +98,9 @@ export function createKeysCommand(): Command {
     .command("revoke")
     .description("Revoke an API key (marks it inactive, keeps history)")
     .argument("<key-id>", "ID of the key to revoke")
-    .action(async (keyId) => {
-      const auth = authOrExit();
+    .option("--profile <name>", "Use a specific profile")
+    .action(async (keyId, opts) => {
+      const auth = authOrExit(opts.profile);
       if (!auth) return;
       try {
         await auth.api.revokeKey(keyId, auth.jwt);
@@ -112,8 +115,9 @@ export function createKeysCommand(): Command {
     .command("delete")
     .description("Permanently delete an API key")
     .argument("<key-id>", "ID of the key to delete")
-    .action(async (keyId) => {
-      const auth = authOrExit();
+    .option("--profile <name>", "Use a specific profile")
+    .action(async (keyId, opts) => {
+      const auth = authOrExit(opts.profile);
       if (!auth) return;
       try {
         await auth.api.deleteKey(keyId, auth.jwt);

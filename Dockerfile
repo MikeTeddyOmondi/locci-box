@@ -25,8 +25,15 @@ RUN pnpm build
 FROM node-base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
-# Install microsandbox CLI (msb) — needs glibc 2.39, satisfied by ubuntu:24.04
-RUN curl -fsSL https://install.microsandbox.dev | sh
+# The microsandbox runtime (msb, libkrunfw) comes with the SDK's platform package
+# in node_modules, so it always matches the SDK; docker-entrypoint.sh points
+# MSB_PATH at it. (An unpinned install.microsandbox.dev runtime once ran ahead of
+# the SDK and migrated its database to a schema the SDK could not read.)
+# JuiceFS CE client for optional in-container self-mount (JFS_SELF_MOUNT=true).
+# Use the official CE binary (self-contained for S3) — NOT the juicedata/mount
+# image binary, which is dynamically linked to librados/libfdb (Ceph/FDB) and
+# fails with "librados.so.2: cannot open shared object file" on a minimal image.
+RUN curl -fsSL https://d.juicefs.com/install | sh
 COPY --from=builder /app/dist ./dist
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json docker-entrypoint.sh ./

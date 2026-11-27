@@ -1,23 +1,15 @@
-// @lovable.dev/vite-tanstack-config already includes the following — do NOT add them manually
-// or the app will break with duplicate plugins:
-//   - tanstackStart, viteReact, tailwindcss, tsConfigPaths, cloudflare (build-only),
-//     componentTagger (dev-only), VITE_* env injection, @ path alias, React/TanStack dedupe,
-//     error logger plugins, and sandbox detection (port/host/strictPort).
-// You can pass additional config via defineConfig({ vite: { ... } }) if needed.
-import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import tailwindcss from '@tailwindcss/vite';
+import { sveltekit } from '@sveltejs/kit/vite';
+import { defineConfig } from 'vite';
 
-// Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
-// @cloudflare/vite-plugin builds from this — wrangler.jsonc main alone is insufficient.
 export default defineConfig({
-  tanstackStart: {
-    server: { entry: "server" },
-  },
-  vite: {
-    server: {
-      allowedHosts: ["box.locci.cloud", "api-box.locci.cloud", "localhost", "127.0.0.1"],
-    },
-    preview: {
-      allowedHosts: ["box.locci.cloud", "api-box.locci.cloud", "localhost", "127.0.0.1"],
-    },
-  },
+	plugins: [tailwindcss(), sveltekit()],
+	// Browser-only (loaded on demand in the page), so kept out of the server
+	// bundle: bundling them there ran the image build out of memory.
+	ssr: { external: ['monaco-editor', 'shiki'] },
+	build: {
+		// The biggest chunks are Monaco (loaded only by the Code and Playground
+		// pages) and single Shiki grammars, fetched when a reply needs them.
+		chunkSizeWarningLimit: 5000
+	}
 });

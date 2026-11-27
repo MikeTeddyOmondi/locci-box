@@ -7,7 +7,7 @@ A B2B platform that lets businesses and AI agents run untrusted code safely insi
 | Package | Description |
 |---------|-------------|
 | `src/` | Express API — sandbox execution, JWT + API-key auth, multi-tenancy, MCP |
-| `web/` | TanStack Start web app — playground, code editor, auth UI |
+| `web/` | SvelteKit console: overview, code editor, playground, boxes, BOB, API keys, docs; signs in with Locci Auth |
 | `cli/` | `loccibox` CLI — compiled binary, API-key authenticated |
 | `.bob_sessions/` | Contains all the IBM Bob chat sessions |
 
@@ -23,10 +23,18 @@ A B2B platform that lets businesses and AI agents run untrusted code safely insi
 
 ## Supported Languages
 
-- Python
-- Node.js (JavaScript / TypeScript)
-- Bash
-- Ruby
+| `language` | Runtime (image) | Runs |
+|---|---|---|
+| `python` | Python 3.15 (`python:3.15-slim`) | `python3 main.py` |
+| `node` | Node.js 26 (`node:26-alpine`) | `node main.js` |
+| `bash` | Bash 5.3 (`bash:5.3`) | `bash main.sh` |
+| `ruby` | Ruby 4.0 (`ruby:4.0-alpine`) | `ruby main.rb` |
+| `go` | Go 1.27 (`golang:1.27-alpine`) | `go run main.go` |
+| `rust` | Rust 1.99 (`rust:1.99-alpine`) | `rustc main.rs && ./main` |
+| `c` | GCC 16.2 (`gcc:16.2`) | `gcc main.c -lm && ./main` |
+| `cpp` | GCC 16.2, C++23 (`gcc:16.2`) | `g++ -std=c++23 main.cpp && ./main` |
+
+The code is written to a file in the sandbox's scratch folder and run from there, so Go, Rust, C and C++ take a whole program (`package main` and `func main`, `fn main`, `int main`). Each image is the latest stable release pinned to its minor version. Compilers get at least 512 MB (Go, Rust) or 256 MB (C, C++). Compiling has its own 120 s limit; `timeout` limits the program's run (a run past it answers `status: "timeout"`, exit code 124), and a compile error comes back as the compiler's output and exit code. Go builds its standard library into its cache on first use (4.6 s per run on an M-series Mac, 280 s on a busy 2-core host), so the API builds it once per Go version into `RUNTIME_CACHE_ROOT` (181 MB) and each run links it read-only into its own cache: a Go program using `encoding/json` and `net/http` then builds and runs in 1.2 s. Measured on an M-series Mac with the images cached: Python, Node, Bash, Ruby and C in 0.3 to 0.5 s, Rust 0.7 s, C++ 1.1 s, Go 1.2 s. The API pulls missing runtime images at startup (gcc is about 1.4 GB) and answers `503` for a language whose image is still downloading. Each run's microVM is deleted when it ends.
 
 ---
 
@@ -35,13 +43,8 @@ A B2B platform that lets businesses and AI agents run untrusted code safely insi
 ### Prerequisites
 
 - **Node.js 22+** and **pnpm 9+**
-- **microsandbox CLI** — required for sandbox execution (KVM-based microVMs):
-  ```bash
-  curl -fsSL https://install.microsandbox.dev | sh
-  msb start          # start the microsandbox daemon
-  msb status         # verify it's running
-  ```
-  > Requires Linux with KVM support (`/dev/kvm`). The daemon must be running before starting the API.
+- **microsandbox** (KVM-based microVMs) comes with the SDK: `pnpm install` brings `microsandbox` 0.7.8 and its platform package, which carries the runtime (`msb`, `libkrunfw`). Linux needs KVM (`/dev/kvm`); macOS runs it on Apple silicon.
+  > A runtime in `~/.microsandbox` takes precedence over the bundled one. If it is another version (an older `install.microsandbox.dev` install), set `MSB_PATH` and `MSB_LIBKRUNFW_PATH` to the bundled files, or `MSB_HOME` to a separate (short) folder: a runtime of another version migrates or cannot read the other's database. The Docker image does this in `docker-entrypoint.sh`.
 
 ### Development
 
@@ -70,10 +73,7 @@ pnpm dev:all
 See [docs/DOCKER.md](./docs/DOCKER.md) for full instructions.
 
 ```bash
-# 1. Install and start microsandbox daemon (on the host)
-curl -fsSL https://install.microsandbox.dev | sh && msb start
-
-# 2. Configure and start
+# 1. Configure and start (the microsandbox runtime ships in the image, matching the SDK)
 cp .env.example .env   # fill in ADMIN_API_KEY and JWT_SECRET
 docker compose up -d
 ```
@@ -87,9 +87,21 @@ docker compose up -d
 
 ## Authentication
 
-### Web App (JWT)
+### Web console (Locci Auth)
 
-The web app authenticates via `POST /api/auth/login` or `POST /api/auth/register` and receives a 24-hour JWT stored in `localStorage`. A demo account (`demo@loccibox.dev` / `demo1234`) is seeded automatically.
+The console signs in with Locci Auth, the OpenAuth issuer locci-platform uses, with the same
+settings (`PUBLIC_OPENAUTH_ISSUER`, `PUBLIC_OPENAUTH_CLIENT_ID`). The session lives in httpOnly
+cookies; the console's server verifies it in `hooks.server.ts` and calls this API with the
+user's access token. Pages reach the API through SvelteKit remote functions; `/api/*` on the
+console passes through to this API, for the BOB chat stream and for scripts.
+
+With `LOCCI_AUTH_ISSUER` set, the API accepts Locci Auth access tokens and Locci API keys
+(`locci_sk_live_...`, created on the console's API keys page or in locci-platform), trading a key
+for a token at the issuer's `/keys/token` as locci-registry does. Either maps to the local user
+with that email, created on first sight. An issuer that cannot be reached answers `503`, not
+`401` (as locci-storage does), and `LOCCI_AUTH_INTERNAL_ORIGIN` redirects its key fetches when
+the issuer's address is not reachable from a container. The API's own `/api/auth/login` and
+`lbk_live_` keys keep working.
 
 ### CLI / API (API Key)
 
@@ -142,7 +154,72 @@ curl -X POST http://localhost:5757/api/sandbox/run \
 }
 ```
 
-**Parameters:** `language` (`python` | `node` | `bash` | `ruby`), `code` (max 1 MB), `timeout` (seconds, default 30).
+**Parameters:** `language` (`python` | `node` | `bash` | `ruby` | `go` | `rust` | `c` | `cpp`), `code` (max 1 MB), `timeout` (seconds, default 30).
+
+### Agent boxes
+
+A box is a microVM an AI works in across calls, the way a person works in a VM: a Debian image
+with apt, git, curl, gcc and make, plus the toolchain of the `language` asked for. Each language
+has its own official image rather than one image with every toolchain:
+
+| `language` | Image |
+|---|---|
+| `node` (default), `bash` | `BOX_IMAGE`, `docker.io/library/node:26` |
+| `python` | `docker.io/library/python:3.15` |
+| `go` | `docker.io/library/golang:1.27` |
+| `rust` | `docker.io/library/rust:1.99` |
+| `ruby` | `docker.io/library/ruby:4.0` |
+| `c`, `cpp` | `docker.io/library/gcc:16.2` |
+
+All but gcc are built on `buildpack-deps:trixie`, so microsandbox stores that base once and each
+extra language costs only its toolchain. A box has
+1 GB of memory and 2 vCPUs by default, work in `/workspace`. It keeps running between calls,
+stops after 15 minutes without one (or 8 hours after it started), and starts again under the
+same id on the next call with its disk as it was: files, apt and npm installs. Egress is open to
+the public internet; private, CGNAT, loopback, link-local (cloud metadata included) and
+multicast ranges, the host itself and their IPv6 equivalents are refused. A running box counts
+against the tenant's sandbox limit like a `run_sandbox` run. Boxes belong to the user behind the
+key or token (all user keys share `tenant_default`), or to the tenant for a tenant key; another
+owner's box id answers `404`.
+
+| Method | Path | Body / query | Description |
+|--------|------|--------------|-------------|
+| POST | `/api/boxes` | `{language?, name?, box_id?}` | Create a box (`201`), or reattach to one, starting it if stopped (`200`; it keeps its image). `name` (1 to 64 characters) labels it, as the console's Code projects do |
+| GET | `/api/boxes` | | Your boxes, running and stopped, with `name` and `language` (null when not given) |
+| PATCH | `/api/boxes/:id` | `{name}` | Rename a box |
+| GET | `/api/boxes/:id` | | One box |
+| POST | `/api/boxes/:id/exec` | `{command, timeout?}` | `sh -c` in `/workspace`; `timeout` seconds (default 120, max 600); a timeout answers `exit_code` 124, `timed_out: true` |
+| PUT | `/api/boxes/:id/files` | `{path, content, encoding?}` | Write a file (up to 5 MB; `encoding: "base64"` for binary); relative paths are under `/workspace` |
+| GET | `/api/boxes/:id/files` | `?path=` | Read a file (up to 1 MB; binary comes back base64) |
+| POST | `/api/boxes/:id/terminal` | | A one-time ticket for the box's terminal, good for 30 s: `{ticket, expires_in}` |
+| GET (websocket) | `/api/boxes/:id/terminal` | `?ticket=` | An interactive shell on a terminal in the box, until it exits; see below |
+| POST | `/api/boxes/:id/stop` | | Stop it, keeping its disk and `/workspace` |
+| DELETE | `/api/boxes/:id` | | Delete the box and its `/workspace` |
+
+```json
+POST /api/boxes/box_mG6f118Otufb/exec  {"command": "apt-get install -y -qq jq >/dev/null && jq --version"}
+{ "success": true, "data": { "box_id": "box_mG6f118Otufb", "exit_code": 0, "stdout": "jq-1.6\n",
+  "stderr": "", "duration_ms": 9131, "timed_out": false, "truncated": false } }
+```
+
+The terminal websocket speaks JSON frames, with bytes in base64: the client sends `{"type":"stdin","data":...}` and `{"type":"resize","width":cols,"height":rows}`; the API sends `{"type":"stdout","data":...}` and, when the shell ends, `{"type":"exit","code":n}`. A stopped box starts first. An open terminal keeps the box from the idle stop; one nobody types in for `BOX_IDLE_MINUTES` closes. At most 4 terminals are open per user. The console's Boxes page and `loccibox box shell` use it.
+
+On a host that has not cached `BOX_IMAGE`, the API pulls it in the background at startup (about
+1 GB unpacked; over 10 minutes on a busy host) and answers `503` to box creates until it is done,
+so a client is told to retry instead of waiting out its own timeout. The language images follow
+`BOX_IMAGE_WARMUP`: `auto` (the default) pulls them all at startup, each in its own background
+task, on a host with 8 GB of memory and 40 GB free where microsandbox keeps images; a smaller
+host pulls a language's image the first time a box asks for it, answering `503` to that create
+(and to others for the same language) until it is cached. `all` and `default` force either way.
+
+Measured on an M-series Mac (microsandbox's darwin-arm64 build): a box boots in ~0.3 s once
+the image is cached, restarts after a stop in
+~0.2 s, `apt-get update && apt-get install jq` takes 9 s. Before stopping a box the API runs
+`sync` in it: without it, writes from the last seconds were lost on restart. `/workspace` is a
+JuiceFS directory (`workspaces/<owner>/boxes/<box id>`) with `JFS_ENABLED=true`, otherwise a
+host directory under `BOX_LOCAL_ROOT`; the rest of the disk lives with the microVM, so a box
+restarted on another host keeps only `/workspace`. After an API restart, boxes still running are
+reconnected; the rest are marked stopped.
 
 ### Admin
 
@@ -169,6 +246,9 @@ loccibox init                                     # configure API URL + key
 loccibox run -l python -c "print('hello')"        # run code
 loccibox run -l node   -f script.js               # run file
 loccibox status <sandbox-id>                      # check status
+loccibox box create                               # an agent box (prints its id)
+loccibox box shell <box-id>                       # a shell in it, until you exit
+loccibox box exec <box-id> -- python3 --version   # one command, its exit code
 loccibox metrics                                  # view usage
 ```
 
@@ -185,10 +265,17 @@ pnpm mcp   # or: node dist/mcp/server.js
 Register with Claude Code:
 
 ```bash
-claude mcp add --transport stdio locci-box -- node dist/mcp/server.js
+claude mcp add LocciBox \
+  --scope local \
+  --env LOCCIBOX_API_KEY=lbk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx \
+  --env LOCCIBOX_API_URL=https://api-box.locci.cloud \
+  -- loccibox mcp start
 ```
 
-Available tools: `run_sandbox`, `get_sandbox_status`, `stop_sandbox`.
+Available tools: `run_sandbox`, `get_sandbox_status`, `stop_sandbox`, and the agent box tools
+`box_create`, `box_exec`, `box_write_file`, `box_read_file`, `box_stop` (`remove: true` deletes),
+`box_list` (see [Agent boxes](#agent-boxes)). A box error (not found, limit reached) comes back
+as a tool error the model can act on.
 
 ---
 
@@ -205,8 +292,8 @@ DEFAULT_SANDBOX_TIMEOUT_SECONDS=30
 DEFAULT_RATE_LIMIT_PER_MINUTE=60
 LOG_LEVEL=info
 
-# Web app (browser)
-VITE_API_URL=http://localhost:5757
+# Locci Auth (the API accepts its tokens and Locci API keys)
+LOCCI_AUTH_ISSUER=http://localhost:8787
 
 # Docker Compose
 WEB_PORT=4173
@@ -237,7 +324,7 @@ locci-box/
 │   │   └── errorHandler.ts
 │   ├── mcp/server.ts
 │   └── config/env.ts
-├── web/                    # TanStack Start web app
+├── web/                    # SvelteKit console (adapter-node)
 │   ├── src/
 │   │   ├── routes/
 │   │   │   ├── index.tsx   # Landing page
@@ -255,7 +342,8 @@ locci-box/
 │   ├── QUICKSTART.md
 │   └── ...
 ├── Dockerfile              # API image
-├── compose.yaml
+├── compose.yaml            # api, web (and postgres with --profile prod-db)
+├── compose.jfs.yaml        # opt-in JuiceFS volumes on top of compose.yaml
 ├── .env.example
 └── pnpm-workspace.yaml
 ```

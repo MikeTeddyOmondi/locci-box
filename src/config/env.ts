@@ -56,9 +56,19 @@ const EnvSchema = v.object({
 
   // JWT Secret for web app authentication
   JWT_SECRET: v.optional(v.string(), "locci-box-dev-secret-change-in-production"),
+  /** Locci Auth (OpenAuth) issuer: its access tokens are accepted as a user's login. Unset: off. */
+  LOCCI_AUTH_ISSUER: v.optional(v.string()),
+  /**
+   * Where to fetch the issuer's keys from when LOCCI_AUTH_ISSUER is not reachable
+   * from here (in a container, the issuer's localhost is the host's). Tokens
+   * still have to say LOCCI_AUTH_ISSUER. As in locci-storage.
+   */
+  LOCCI_AUTH_INTERNAL_ORIGIN: v.optional(v.string()),
 
   // Groq API key for BOB code-review assistant
   GROQ_API_KEY: v.optional(v.string()),
+  /** BOB's model on Groq. Groq retires models: llama-3.3-70b-versatile was gone by October 2026. */
+  BOB_MODEL: v.optional(v.string(), "qwen/qwen3.8-27b"),
 
   // Database mode: pglite (dev/embedded) or postgresql (production)
   DATABASE_MODE: v.optional(v.picklist(["pglite", "postgresql"]), "pglite"),
@@ -68,6 +78,32 @@ const EnvSchema = v.object({
 
   // PGLite database path — used when DATABASE_MODE=pglite
   DB_PATH: v.optional(v.string(), "./data/locci-box"),
+
+  // Persistent volumes via JuiceFS (optional — default off is a no-op tmpfs fallback)
+  JFS_ENABLED: v.optional(
+    v.pipe(
+      v.string(),
+      v.transform((val) => val === "true"),
+    ),
+    "false",
+  ),
+  JFS_ROOT: v.optional(v.string(), "/mnt/locci-box"),
+  JFS_QUOTA_MIB: v.optional(v.pipe(v.string(), v.transform(Number)), "512"),
+
+  // Agent boxes: long-lived microVMs an AI works in across calls (src/services/BoxService.ts)
+  BOX_IMAGE: v.optional(v.string(), "docker.io/library/node:26"),
+  /** Language box images at startup: all, default (on first use), or auto (all on a large host). */
+  BOX_IMAGE_WARMUP: v.optional(v.picklist(["auto", "all", "default"]), "auto"),
+  BOX_MEMORY_MIB: v.optional(v.pipe(v.string(), v.transform(Number), v.minValue(256)), "1024"),
+  BOX_CPUS: v.optional(v.pipe(v.string(), v.transform(Number), v.minValue(1)), "2"),
+  BOX_IDLE_MINUTES: v.optional(v.pipe(v.string(), v.transform(Number), v.minValue(1)), "15"),
+  BOX_MAX_HOURS: v.optional(v.pipe(v.string(), v.transform(Number), v.minValue(1)), "8"),
+  BOX_EXEC_TIMEOUT_SECONDS: v.optional(v.pipe(v.string(), v.transform(Number), v.minValue(1)), "120"),
+  BOX_EXEC_MAX_SECONDS: v.optional(v.pipe(v.string(), v.transform(Number), v.minValue(1)), "600"),
+  // Where a box's /workspace lives when JuiceFS is off (a host directory, so it survives a stop)
+  BOX_LOCAL_ROOT: v.optional(v.string(), "./data/boxes"),
+  // Prebuilt toolchain caches for run_sandbox (Go's standard library), one folder per image.
+  RUNTIME_CACHE_ROOT: v.optional(v.string(), "./data/runtime-cache"),
 });
 
 /**
@@ -87,10 +123,26 @@ function parseEnv() {
       MCP_HTTP_ENABLED: process.env.MCP_HTTP_ENABLED,
       MCP_HTTP_PORT: process.env.MCP_HTTP_PORT,
       JWT_SECRET: process.env.JWT_SECRET,
+      LOCCI_AUTH_ISSUER: process.env.LOCCI_AUTH_ISSUER || undefined,
+      LOCCI_AUTH_INTERNAL_ORIGIN: process.env.LOCCI_AUTH_INTERNAL_ORIGIN || undefined,
       GROQ_API_KEY: process.env.GROQ_API_KEY,
+      BOB_MODEL: process.env.BOB_MODEL || undefined,
       DATABASE_MODE: process.env.DATABASE_MODE,
       DATABASE_URL: process.env.DATABASE_URL,
       DB_PATH: process.env.DB_PATH,
+      JFS_ENABLED: process.env.JFS_ENABLED,
+      JFS_ROOT: process.env.JFS_ROOT,
+      JFS_QUOTA_MIB: process.env.JFS_QUOTA_MIB,
+      BOX_IMAGE: process.env.BOX_IMAGE,
+      BOX_IMAGE_WARMUP: process.env.BOX_IMAGE_WARMUP,
+      BOX_MEMORY_MIB: process.env.BOX_MEMORY_MIB,
+      BOX_CPUS: process.env.BOX_CPUS,
+      BOX_IDLE_MINUTES: process.env.BOX_IDLE_MINUTES,
+      BOX_MAX_HOURS: process.env.BOX_MAX_HOURS,
+      BOX_EXEC_TIMEOUT_SECONDS: process.env.BOX_EXEC_TIMEOUT_SECONDS,
+      BOX_EXEC_MAX_SECONDS: process.env.BOX_EXEC_MAX_SECONDS,
+      BOX_LOCAL_ROOT: process.env.BOX_LOCAL_ROOT,
+      RUNTIME_CACHE_ROOT: process.env.RUNTIME_CACHE_ROOT,
     });
 
     return parsed;

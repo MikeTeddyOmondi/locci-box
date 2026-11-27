@@ -10,6 +10,7 @@ import { createMetricsCommand } from "./commands/metrics.js";
 import { createKeysCommand } from "./commands/keys.js";
 import { createMcpCommand } from "./commands/mcp.js";
 import { createSandboxesCommand } from "./commands/sandboxes.js";
+import { createBoxCommand } from "./commands/box.js";
 import { configExists } from "./lib/config.js";
 import { printWarning } from "./lib/output.js";
 
@@ -18,7 +19,7 @@ const program = new Command();
 program
   .name("loccibox")
   .description("CLI for Locci Box - Execute code in isolated sandboxes")
-  .version("1.1.0");
+  .version("1.5.0");
 
 // Init command (special - doesn't require config)
 program
@@ -35,6 +36,7 @@ program.addCommand(createMetricsCommand());
 program.addCommand(createKeysCommand());
 program.addCommand(createMcpCommand());
 program.addCommand(createSandboxesCommand());
+program.addCommand(createBoxCommand());
 
 // Show warning if config doesn't exist and command is not init
 const args = process.argv.slice(2);

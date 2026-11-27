@@ -9,7 +9,7 @@ import {
   printMetadata,
   formatDuration,
 } from "../lib/output.js";
-import type { SupportedLanguage } from "../types/index.js";
+import { SUPPORTED_LANGUAGES, type SupportedLanguage } from "../types/index.js";
 import pc from "picocolors";
 
 /**
@@ -22,7 +22,7 @@ export function createRunCommand(): Command {
     .description("Execute code in an isolated sandbox")
     .option(
       "-l, --lang <language>",
-      "Programming language (python, node, bash, ruby)",
+      `Programming language (${SUPPORTED_LANGUAGES.join(", ")})`,
     )
     .option("-c, --code <code>", "Code to execute (inline)")
     .option("-f, --file <path>", "Path to file containing code")
@@ -34,6 +34,18 @@ export function createRunCommand(): Command {
 
   return command;
 }
+
+/** One-line programs that run as typed, shown in the code prompt. */
+const EXAMPLES: Record<SupportedLanguage, string> = {
+  python: "print('Hello, World!')",
+  node: "console.log('Hello, World!')",
+  bash: "echo Hello, World!",
+  ruby: "puts 'Hello, World!'",
+  go: 'package main; import "fmt"; func main() { fmt.Println("Hello, World!") }',
+  rust: 'fn main() { println!("Hello, World!"); }',
+  c: 'int main(void) { __builtin_printf("Hello, World!\\n"); return 0; }',
+  cpp: 'int main() { __builtin_printf("Hello, World!\\n"); }',
+};
 
 interface RunOptions {
   lang?: string;
@@ -63,6 +75,10 @@ async function runCommand(options: RunOptions): Promise<void> {
         { value: "node", label: "Node.js" },
         { value: "bash", label: "Bash" },
         { value: "ruby", label: "Ruby" },
+        { value: "go", label: "Go" },
+        { value: "rust", label: "Rust" },
+        { value: "c", label: "C" },
+        { value: "cpp", label: "C++" },
       ],
     });
 
@@ -75,12 +91,7 @@ async function runCommand(options: RunOptions): Promise<void> {
   }
 
   // Validate language
-  const validLanguages: SupportedLanguage[] = [
-    "python",
-    "node",
-    "bash",
-    "ruby",
-  ];
+  const validLanguages: readonly SupportedLanguage[] = SUPPORTED_LANGUAGES;
   if (!validLanguages.includes(language)) {
     printError(
       `Invalid language: ${language}. Supported: ${validLanguages.join(", ")}`,
@@ -102,8 +113,8 @@ async function runCommand(options: RunOptions): Promise<void> {
   } else if (!code) {
     // Prompt for code
     const codeInput = await clack.text({
-      message: "Enter your code",
-      placeholder: "print('Hello, World!')",
+      message: "Enter your code (one line; use -f <file> for a longer program)",
+      placeholder: EXAMPLES[language],
       validate: (value) => {
         if (!value) return "Code is required";
         return undefined;

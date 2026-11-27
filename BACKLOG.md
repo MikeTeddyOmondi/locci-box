@@ -2,6 +2,13 @@
 
 ## Features / Updates
 
+- [ ] **Admin pages — system-wide metrics dashboard** — Web UI for service-wide
+  metrics (`GET /api/metrics`, admin-only via `authenticateAdmin`). Since the web
+  is JWT-only (no admin key bundled), fetch this through a TanStack **server
+  function** (`createServerFn().handler()` reading `process.env.ADMIN_API_KEY`
+  per-request) so the admin key stays server-side. Gate the page to admins.
+  (Note: the admin key is currently used by the CLI, not the web.)
+
 - [x] **Downloads Page** — New web page showing users how to get the CLI. Options:
   - Pull the CLI Docker image from Docker Hub: `docker pull locci/box-cli` and run it with `docker run --rm -e LOCCIBOX_API_URL=... -e LOCCIBOX_API_KEY=... locci/box-cli --help`
   - Download prebuilt binaries hosted on GitHub Releases (Linux x64/arm64, macOS arm64)
@@ -59,6 +66,8 @@
 
 ## Dev / DX
 
+- [x] **CLI — `keys` subcommand honors `--profile`** — `loccibox keys list/create/revoke/delete` ignored the global `--profile` flag (used `getProfile()` with no arg → always the default profile), unlike `run`/`sandboxes`/`metrics`/`stop`/`status`/`login`. Added `--profile <name>` to each `keys` subcommand and threaded it through `authOrExit()` in `cli/src/commands/keys.ts`. (v1.5.0)
+
 - [ ] **CLI — Remove `~/.loccibox` migration shim** — The one-time migration from `~/.loccibox/config.json` → `~/.locci/box/config.json` added in v1.2.3 can be removed once the old path is no longer in circulation (target: next minor bump after ~2 versions).
 
 - [ ] **PGlite auto-reset on corruption (dev only)** — add `DB_AUTO_RESET=true` env flag; on startup, if the initial schema migration throws, wipe `data/locci-box` and reinitialize automatically. Guard must be env-gated so it never fires in production.
@@ -85,6 +94,35 @@
 
 - [ ] **Sandbox allowlist — Ruby gems** — `rubygems.org` and `*.rubygems.org` not yet in the domain allowlist. Ruby sandboxes can run code but `gem install` will fail. Add when Ruby runtime usage warrants it.
 
+- [x] **JuiceFS persistent workspaces — v1.5.0** — `JFS_ENABLED=true` + Redis + external
+  S3/RustFS mounts a per-user `/workspace` volume backed by JuiceFS into every sandbox.
+  Enables stateful agent sessions, output artifact persistence, and per-user storage
+  billing via `VolumeService.measureUsage()` (surfaced as `storage_bytes`/`storage_mib` on
+  `GET /api/stats`). Fully opt-in: `docker compose --profile jfs up -d`; default
+  `JFS_ENABLED=false` is a zero-change tmpfs fallback. Implemented in
+  `src/services/VolumeService.ts`, wired into `src/services/SandboxService.ts`,
+  `src/config/env.ts`, `src/routes/stats.ts`, `compose.yaml`, `.env.example`.
+  Upgrade path: swap Redis metadata engine for TiKV for production HA.
+  - [ ] **Named persistent volumes (paid)** — expose `POST /api/volumes`, `GET /api/volumes/:name`,
+    `DELETE /api/volumes/:name`; mount `volumes/<userId>/<volumeName>/` instead of the per-run
+    `workspaces/<userId>/<sandboxId>/` path and skip `cleanup()` for named volumes so data
+    survives across runs. Gate behind `pro+` plan.
+  - [ ] **Plan/tier gating for volumes** — add `plan: free | pro | team` enum to tenant schema;
+    drive named-volume allowance, max volume count, and `JFS_QUOTA_MIB` override from plan tier.
+  - [ ] **Hard quota enforcement** — replace best-effort `juicefs quota set` (no-op in CE) with a
+    pre-flight `du` check in `VolumeService.provision()`; reject with `storage_limit_exceeded`
+    when tenant is over quota.
+  - [ ] **Volume TTL / data lifecycle** — add `last_accessed_at` to volume metadata; cron job
+    archives/deletes volumes inactive beyond plan-configured TTL (e.g. 30 days on pro).
+  - [ ] **Shared datasets as a paid feature** — expose a UI for teams to upload read-only datasets
+    mounted at `/shared`; `SandboxService` already wires the bind mount when the directory exists.
+- [x] **Agent boxes (branch `feat/agent-boxes`)**: let an AI work in a box the way a person works in a VM: run any shell command, install what it misses, and keep the result. Today `run_sandbox` boots a microVM per snippet with 128 MB, a 30 s timeout, a slim per-language image and egress limited to DNS plus HTTPS to PyPI, npm and Alpine, so `apt`, `git clone` and arbitrary downloads fail and nothing carries over between calls. First client: the locci-ai-inference chat (its `shell` tool from the web app, and CLI threads resumed with `--continue` / `--resume <thread id>`).
+  - [x] **Long-lived boxes**: MCP tools `box_create` (returns a box id), `box_exec` (a shell command in `/workspace`, state kept between calls), `box_write_file`, `box_read_file`, `box_stop`; an idle timeout stops a box; counted against the tenant's sandbox limit like `run_sandbox`. Done in `src/services/BoxService.ts`, plus `box_list` and the same operations over REST (`/api/boxes`) for server-side callers; the CLI's stdio MCP server proxies them. Owned per user (user keys all map to `tenant_default`, so the tenant alone could not tell users apart); another owner's box is a 404.
+  - [x] **Reattach**: a box id the caller stored (one per chat thread) reattaches while the box runs; after an idle stop, a new box mounts the same persistent `/workspace` (JuiceFS, so this builds on `feat/juicefs-persistent-volumes`), so files and installed packages under it survive. Needs a stable per-box workspace path rather than the per-run `workspaces/<userId>/<sandboxId>/` (see Named persistent volumes above). Done: a stopped box restarts under its id with its whole disk (apt installs included, measured), not just `/workspace`, which is `workspaces/<owner>/boxes/<box id>` on JuiceFS or a host directory under `BOX_LOCAL_ROOT` without it. The API runs `sync` before a stop; without it the last seconds of writes were lost. If the microVM is gone (another host), a fresh one gets the same `/workspace`. Open: a box only restarts with its disk on the host that ran it; moving it needs a microsandbox snapshot exported to shared storage.
+  - [x] **A general image and room to work**: Debian or Ubuntu with apt, git, curl, build tools, Python and Node; 1 to 2 GB of memory; per-command timeouts in minutes, with a cap per box. Done: `node:22-bookworm` (Debian 12, Python 3.11, Node 22), 1 GB and 2 vCPUs, 120 s per command by default and 600 s at most, stopped after 15 idle minutes or 8 hours (all `BOX_*` env vars).
+  - [x] **Open egress, host protected**: allow outbound traffic in general but deny private (10/8, 172.16/12, 192.168/16), link-local (169.254/16, cloud metadata included), CGNAT (100.64/10) and loopback ranges, IPv6 equivalents too, so the AI can install anything without reaching the host's network. Keep the current allowlist policy for `run_sandbox`. Abuse limits (bandwidth, connection rate) before it is offered beyond trusted tenants. Done with a microsandbox policy (`boxNetworkPolicy`): DNS to its resolver first (it sits at a CGNAT address), then the groups and CIDRs denied, then public allowed. Measured from a box: https://example.com 200; a listener on the Mac's LAN address (200 from the host), 169.254.169.254, 127.0.0.1, 10.0.0.1, 100.64.0.1 and fd00::1 all refused. Open: the abuse limits, still.
+  - [ ] **Expose a port (later)**: `box_expose` for a server started in the box, through a preview URL; needs public routing, so separate from the above.
+  - [x] Test where microsandbox runs: Linux with KVM; check its darwin-arm64 build before relying on a Mac for local tests. The darwin-arm64 build works: every check above ran on an M-series Mac. Linux too, on thanos (x86_64, KVM, 2 cores, busy with k0s and an incus VM; 2026-10-20): every check above passes. A box boots in 3.2 s, restarts after a stop in 5.2 s, `apt-get install jq` takes 78 s; refused from the box: the host's LAN address, its tailscale (100.67.136.11) and incus bridge (10.176.160.1) addresses, a docker-published port on the host (:3000) and its IPv6 ULA; an API restart reconnects to the running box (guest uptime unbroken); the idle stop fired. The first pull of `node:22-bookworm` into an empty microsandbox cache took 16 minutes there, longer than a client waits for a create, hence the warm-up at API startup with `503` until it is done. On thanos the existing test suite's `initDb` hook (PGLite in WASM) times out at 30 s under that load, on `feat/juicefs-persistent-volumes` too; it passes on the Mac. Found on the way: microsandbox 0.4.6's `.policy()` sends the group `link-local`, which its own parser rejects (`policyFromBuilder` avoids the JSON round trip); and `run_sandbox` never removes the microVMs it stops, so `~/.microsandbox/sandboxes` keeps every run (about 120 on this Mac).
 - [ ] **Redis for rate limiting + caching** — move the in-process rate limiter to Redis so limits survive restarts and work across multiple API replicas
 - [ ] **WebSocket support** — real-time output streaming for long-running sandbox executions instead of polling
 - [ ] **Webhook notifications** — POST to a user-configured URL on sandbox job completion/failure

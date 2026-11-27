@@ -90,7 +90,7 @@
 
 	<aside
 		class={[
-			'fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r bg-sidebar text-sidebar-foreground transition-transform lg:static lg:translate-x-0',
+			'fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-sidebar text-sidebar-foreground transition-transform lg:static lg:translate-x-0',
 			sidebarOpen ? 'translate-x-0' : '-translate-x-full',
 			// Hiding applies from lg only: below it, the drawer is opened and closed on its own.
 			collapsed && 'lg:hidden'
@@ -103,30 +103,33 @@
 			<span class="text-[15px] font-semibold tracking-tight text-muted-foreground">Box</span>
 		</a>
 
-		<nav class="flex-1 space-y-1 overflow-y-auto p-3">
-			{#each NAV as item (item.href)}
-				<a
-					href={item.href}
-					onclick={() => (sidebarOpen = false)}
-					aria-current={isActive(item.href) ? 'page' : undefined}
-					class={[
-						'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-						isActive(item.href)
-							? 'bg-sidebar-accent text-sidebar-accent-foreground'
-							: 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground'
-					]}
-				>
-					<item.icon class="size-4 shrink-0" />
-					<span>{item.label}</span>
-				</a>
-			{/each}
-		</nav>
+		<!-- The right border starts below the wordmark, so its bottom line runs on into the top bar's. -->
+		<div class="flex min-h-0 flex-1 flex-col border-r">
+			<nav class="flex-1 space-y-1 overflow-y-auto p-3">
+				{#each NAV as item (item.href)}
+					<a
+						href={item.href}
+						onclick={() => (sidebarOpen = false)}
+						aria-current={isActive(item.href) ? 'page' : undefined}
+						class={[
+							'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+							isActive(item.href)
+								? 'bg-sidebar-accent text-sidebar-accent-foreground'
+								: 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground'
+						]}
+					>
+						<item.icon class="size-4 shrink-0" />
+						<span>{item.label}</span>
+					</a>
+				{/each}
+			</nav>
 
-		<div class="border-t p-3">
-			<Button variant="ghost" class="w-full justify-start gap-3 text-sidebar-foreground/70" onclick={handleSignOut}>
-				<LogOut class="size-4" />
-				<span>Sign out</span>
-			</Button>
+			<div class="border-t p-3">
+				<Button variant="ghost" class="w-full justify-start gap-3 text-sidebar-foreground/70" onclick={handleSignOut}>
+					<LogOut class="size-4" />
+					<span>Sign out</span>
+				</Button>
+			</div>
 		</div>
 	</aside>
 

@@ -1,7 +1,7 @@
 import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 
-/** The console starts at the overview; signed-out visitors land on sign-in. */
+/** Signed-in users go straight to the console; everyone else gets the landing page. */
 export const load: PageServerLoad = async ({ locals }) => {
-	redirect(303, locals.user ? '/dashboard' : '/login');
+	if (locals.user) redirect(303, '/dashboard');
 };

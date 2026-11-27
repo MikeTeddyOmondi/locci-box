@@ -28,14 +28,15 @@
 	 * bar with the theme toggle and the account menu, and the page. Signed-out
 	 * visitors are sent to /login by +layout.server.ts.
 	 *
-	 * On wide screens the sidebar collapses to an icon rail (remembered in this
-	 * browser); on narrow ones it is a drawer behind the menu button.
+	 * On wide screens the sidebar can be hidden altogether, so the editor gets
+	 * the whole width (remembered in this browser); on narrow ones it is a
+	 * drawer behind the menu button.
 	 */
 
 	let { data, children } = $props();
 	/** The drawer, below lg. */
 	let sidebarOpen = $state(false);
-	/** The icon rail, from lg up. */
+	/** Hidden, from lg up. */
 	let collapsed = $state(false);
 
 	const COLLAPSED_KEY = 'locci-box.sidebar-collapsed';
@@ -89,20 +90,17 @@
 
 	<aside
 		class={[
-			'fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r bg-sidebar text-sidebar-foreground transition-[transform,width] lg:static lg:translate-x-0',
+			'fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r bg-sidebar text-sidebar-foreground transition-transform lg:static lg:translate-x-0',
 			sidebarOpen ? 'translate-x-0' : '-translate-x-full',
-			collapsed && 'lg:w-16'
+			// Hiding applies from lg only: below it, the drawer is opened and closed on its own.
+			collapsed && 'lg:hidden'
 		]}
 		aria-label="Sections"
 	>
 		<!-- The wordmark with the product beside it, as locci-ai-inference's sidebar does it. -->
-		<a
-			href="/dashboard"
-			class={['flex h-14 items-center gap-1.5 border-b px-4', collapsed && 'lg:justify-center lg:px-2']}
-			aria-label="Locci Box, overview"
-		>
+		<a href="/dashboard" class="flex h-14 items-center gap-1.5 border-b px-4" aria-label="Locci Box, overview">
 			<Logo class="h-5" />
-			<span class={['text-[15px] font-semibold tracking-tight text-muted-foreground', collapsed && 'lg:hidden']}>Box</span>
+			<span class="text-[15px] font-semibold tracking-tight text-muted-foreground">Box</span>
 		</a>
 
 		<nav class="flex-1 space-y-1 overflow-y-auto p-3">
@@ -111,30 +109,23 @@
 					href={item.href}
 					onclick={() => (sidebarOpen = false)}
 					aria-current={isActive(item.href) ? 'page' : undefined}
-					title={collapsed ? item.label : undefined}
 					class={[
 						'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-						collapsed && 'lg:justify-center lg:px-0',
 						isActive(item.href)
 							? 'bg-sidebar-accent text-sidebar-accent-foreground'
 							: 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground'
 					]}
 				>
 					<item.icon class="size-4 shrink-0" />
-					<span class={collapsed ? 'lg:sr-only' : ''}>{item.label}</span>
+					<span>{item.label}</span>
 				</a>
 			{/each}
 		</nav>
 
 		<div class="border-t p-3">
-			<Button
-				variant="ghost"
-				class={['w-full justify-start gap-3 text-sidebar-foreground/70', collapsed && 'lg:justify-center lg:px-0']}
-				title={collapsed ? 'Sign out' : undefined}
-				onclick={handleSignOut}
-			>
+			<Button variant="ghost" class="w-full justify-start gap-3 text-sidebar-foreground/70" onclick={handleSignOut}>
 				<LogOut class="size-4" />
-				<span class={collapsed ? 'lg:sr-only' : ''}>Sign out</span>
+				<span>Sign out</span>
 			</Button>
 		</div>
 	</aside>
@@ -151,7 +142,7 @@
 				{#if sidebarOpen}<X class="size-5" />{:else}<Menu class="size-5" />{/if}
 			</Button>
 			<div class="hidden lg:block">
-				<IconButton label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} side="bottom" onclick={toggleCollapsed}>
+				<IconButton label={collapsed ? 'Show sidebar' : 'Hide sidebar'} side="bottom" onclick={toggleCollapsed}>
 					{#if collapsed}<PanelLeftOpen />{:else}<PanelLeftClose />{/if}
 				</IconButton>
 			</div>

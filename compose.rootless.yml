@@ -1,6 +1,6 @@
 # ── Rootless-Docker deployment variant ────────────────────────────────────────
 # Rootless Docker cannot propagate a :shared bind mount between containers, so the
-# default compose.yaml `jfs` profile (separate juicefs mount container) fails with
+# rootful compose.jfs.yaml (separate juicefs mount container) fails with
 # "path /mnt/locci-box ... is not a shared mount". This standalone file instead
 # mounts JuiceFS *inside* the api container (JFS_SELF_MOUNT=true), eliminating
 # cross-container propagation entirely.

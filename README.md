@@ -342,7 +342,8 @@ locci-box/
 │   ├── QUICKSTART.md
 │   └── ...
 ├── Dockerfile              # API image
-├── compose.yaml
+├── compose.yaml            # api, web (and postgres with --profile prod-db)
+├── compose.jfs.yaml        # opt-in JuiceFS volumes on top of compose.yaml
 ├── .env.example
 └── pnpm-workspace.yaml
 ```

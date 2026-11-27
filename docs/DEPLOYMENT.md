@@ -88,8 +88,16 @@ access — i.e. rootful Docker or bare-metal.** (See §6.)
 
 ### 4A. Rootful Docker — recommended for production VPS
 
-Uses the default [`compose.yaml`](../compose.yaml) `jfs` profile: a **sidecar `juicefs`
-container** mounts `/mnt/locci-box` and shares it to `api` via a `:shared` bind.
+Without JuiceFS, [`compose.yaml`](../compose.yaml) alone runs `api` and `web` (add
+`--profile prod-db` for the bundled Postgres):
+
+```bash
+docker compose --profile prod-db up -d --build
+```
+
+JuiceFS is opt-in with [`compose.jfs.yaml`](../compose.jfs.yaml) on top: a **sidecar
+`juicefs` container** mounts `/mnt/locci-box` and shares it to `api` via a `:shared`
+bind, and `JFS_ENABLED` defaults to true.
 
 ```bash
 # One-time: make the mount point a shared mount (required for :shared propagation)
@@ -97,8 +105,8 @@ sudo mkdir -p /mnt/locci-box
 sudo mount --bind /mnt/locci-box /mnt/locci-box
 sudo mount --make-shared /mnt/locci-box
 
-docker compose --profile jfs up -d --build
-docker compose --profile jfs ps
+docker compose -f compose.yaml -f compose.jfs.yaml up -d --build
+docker compose -f compose.yaml -f compose.jfs.yaml ps
 ```
 
 Services: `api`, `web`, `valkey`, `juicefs-init` (one-shot format), `juicefs` (mount).
@@ -182,7 +190,7 @@ sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
 **Result:** with that rule in place, **code execution runs to completion on rootless
 Docker** (verified on thanos: `print(2+2)` → `stdout "4\n"`, exit 0; first boot ~20–25s).
 On **rootful Docker** `/dev/kvm` is directly usable, so a standard production VPS works
-with `compose.yaml --profile jfs` without the udev tweak.
+with `compose.yaml` + `compose.jfs.yaml` without the udev tweak.
 
 ### `RUSTFS_ENDPOINT` must be container-reachable
 Inside a container, `127.0.0.1` is the container itself. Use the host LAN IP
@@ -216,7 +224,7 @@ and **juicefs against the direct RustFS endpoint works**. So:
 | `juicefs format` + FUSE mount vs RustFS (bare-metal) | ✅ |
 | Durability round-trip (unmount → cache wipe → remount, md5 match) | ✅ |
 | Docker image build (api + web) | ✅ |
-| `compose.yaml --profile jfs` (rootless) `:shared` propagation | ❌ rootless limitation |
+| `compose.yaml` + `compose.jfs.yaml` (rootless) `:shared` propagation | ❌ rootless limitation |
 | `compose.rootless.yml` api self-mount JuiceFS (`--enable-xattr`) | ✅ |
 | In-container write → object appears in RustFS | ✅ |
 | microsandbox KVM boot (rootless, after `/dev/kvm` 0666 udev rule) | ✅ |

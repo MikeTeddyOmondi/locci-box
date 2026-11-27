@@ -406,7 +406,7 @@ Add after the existing `DATABASE_*` block:
 # ── JuiceFS Persistent Volumes ────────────────────────────────────────────────
 # Set JFS_ENABLED=true to give each sandbox a persistent /workspace volume
 # backed by JuiceFS → Redis (metadata) + RustFS/S3 (data blocks).
-# Requires starting with: docker compose --profile jfs up -d
+# Requires starting with: docker compose -f compose.yaml -f compose.jfs.yaml up -d
 JFS_ENABLED=false
 JFS_ROOT=/mnt/locci-box
 JFS_QUOTA_MIB=512
@@ -432,7 +432,7 @@ docker pull juicedata/mount:ce-v1.3.1
 JFS_ENABLED=true \
 RUSTFS_ACCESS_KEY=<key> \
 RUSTFS_SECRET_KEY=<secret> \
-docker compose --profile jfs up -d
+docker compose -f compose.yaml -f compose.jfs.yaml up -d
 
 # Verify the mount is live
 docker exec locci-box-jfs juicefs status redis://valkey:6379/2
@@ -452,7 +452,7 @@ cp .env .env.prod
 #   RUSTFS_SECRET_KEY=<prod-secret>
 #   JFS_QUOTA_MIB=1024
 
-docker compose --env-file .env.prod --profile jfs up -d
+docker compose --env-file .env.prod -f compose.yaml -f compose.jfs.yaml up -d
 ```
 
 ### Rootless Docker (single-container variant)
@@ -604,7 +604,7 @@ Add to `BACKLOG.md` under **Production Hardening**:
   mounts a per-user `/workspace` volume backed by JuiceFS into every sandbox.
   Enables stateful agent sessions, output artifact persistence, and
   per-user storage billing via `VolumeService.measureUsage()`.
-  Compose profile: `docker compose --profile jfs up -d`
+  Compose: `docker compose -f compose.yaml -f compose.jfs.yaml up -d`
   Upgrade path: swap Redis metadata engine for TiKV for production HA.
 ```
 

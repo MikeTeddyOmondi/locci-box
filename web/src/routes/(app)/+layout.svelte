@@ -97,8 +97,9 @@
 		]}
 		aria-label="Sections"
 	>
-		<!-- The wordmark with the product beside it, as locci-ai-inference's sidebar does it. -->
-		<a href="/dashboard" class="flex h-14 items-center gap-1.5 border-b px-4" aria-label="Locci Box, overview">
+		<!-- The wordmark with the product beside it, as locci-ai-inference's sidebar does it,
+			on the top bar's background so the strip across the top is one piece. -->
+		<a href="/dashboard" class="flex h-14 items-center gap-1.5 border-b bg-background px-4" aria-label="Locci Box, overview">
 			<Logo class="h-5" />
 			<span class="text-[15px] font-semibold tracking-tight text-muted-foreground">Box</span>
 		</a>

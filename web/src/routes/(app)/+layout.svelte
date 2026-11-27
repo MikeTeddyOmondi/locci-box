@@ -5,13 +5,13 @@
 		BookOpen,
 		Boxes,
 		Bug,
+		ChevronLeft,
+		ChevronRight,
 		FileCode2,
 		KeyRound,
 		LayoutDashboard,
 		LogOut,
 		Menu,
-		PanelLeftClose,
-		PanelLeftOpen,
 		Split,
 		X
 	} from '@lucide/svelte';
@@ -90,7 +90,7 @@
 
 	<aside
 		class={[
-			'fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-sidebar text-sidebar-foreground transition-transform lg:static lg:translate-x-0',
+			'fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-sidebar text-sidebar-foreground transition-transform lg:relative lg:translate-x-0',
 			sidebarOpen ? 'translate-x-0' : '-translate-x-full',
 			// Hiding applies from lg only: below it, the drawer is opened and closed on its own.
 			collapsed && 'lg:hidden'
@@ -103,6 +103,17 @@
 			<Logo class="h-5" />
 			<span class="text-[15px] font-semibold tracking-tight text-muted-foreground">Box</span>
 		</a>
+
+		<!-- Hide, on wide screens: a small round button sitting on the right border, just below the top line. -->
+		<IconButton
+			label="Hide sidebar"
+			side="right"
+			variant="outline"
+			class="absolute top-14 right-0 z-10 mt-3 hidden size-6 translate-x-1/2 rounded-full bg-background text-muted-foreground shadow-sm hover:text-foreground lg:inline-flex [&_svg]:size-3.5"
+			onclick={toggleCollapsed}
+		>
+			<ChevronLeft />
+		</IconButton>
 
 		<!-- The right border starts below the wordmark, so its bottom line runs on into the top bar's. -->
 		<div class="flex min-h-0 flex-1 flex-col border-r">
@@ -134,7 +145,19 @@
 		</div>
 	</aside>
 
-	<div class="flex min-w-0 flex-1 flex-col overflow-hidden">
+	<div class="relative flex min-w-0 flex-1 flex-col overflow-hidden">
+		{#if collapsed}
+			<!-- Show, on wide screens: a tab on the left edge where the border was, at the same height. -->
+			<IconButton
+				label="Show sidebar"
+				side="right"
+				variant="outline"
+				class="absolute top-14 left-0 z-10 mt-3 hidden h-7 w-5 rounded-l-none rounded-r-full border-l-0 bg-background text-muted-foreground shadow-sm hover:text-foreground lg:inline-flex [&_svg]:size-3.5"
+				onclick={toggleCollapsed}
+			>
+				<ChevronRight />
+			</IconButton>
+		{/if}
 		<header class="flex h-14 shrink-0 items-center gap-2 border-b px-4 lg:px-4">
 			<Button
 				variant="ghost"
@@ -145,11 +168,6 @@
 			>
 				{#if sidebarOpen}<X class="size-5" />{:else}<Menu class="size-5" />{/if}
 			</Button>
-			<div class="hidden lg:block">
-				<IconButton label={collapsed ? 'Show sidebar' : 'Hide sidebar'} side="bottom" onclick={toggleCollapsed}>
-					{#if collapsed}<PanelLeftOpen />{:else}<PanelLeftClose />{/if}
-				</IconButton>
-			</div>
 			<div class="flex-1"></div>
 			<ThemeToggle />
 			<UserMenu email={data.user.email} />

@@ -168,6 +168,13 @@
 			>
 				{#if sidebarOpen}<X class="size-5" />{:else}<Menu class="size-5" />{/if}
 			</Button>
+			{#if collapsed}
+				<!-- The sidebar (and its wordmark) is hidden on a wide screen: the top bar carries the wordmark instead. -->
+				<a href="/dashboard" class="hidden items-center gap-1.5 lg:flex" aria-label="Locci Box, overview">
+					<Logo class="h-5" />
+					<span class="text-[15px] font-semibold tracking-tight text-muted-foreground">Box</span>
+				</a>
+			{/if}
 			<div class="flex-1"></div>
 			<ThemeToggle />
 			<UserMenu email={data.user.email} />
